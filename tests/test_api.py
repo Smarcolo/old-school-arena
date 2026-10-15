@@ -5,14 +5,21 @@ from app.api.main import app
 client = TestClient(app)
 
 
+def comando(id_partita, testo):
+    return client.post(f"/api/partite/{id_partita}/comando", json={"testo": testo}).json()
+
+
 def test_partita_completa_via_api():
     p = client.post("/api/partite").json()
     assert isinstance(p["giocatori"][1]["mano"], int)  # mano avversaria nascosta
-    r = client.post(f"/api/partite/{p['id']}/comando", json={"testo": "mano"}).json()
-    assert r["messaggio"].startswith("Mano:")
-    # Passa finché il turno non torna a te: nel frattempo l'AI gioca il suo turno.
-    for _ in range(7):
-        r = client.post(f"/api/partite/{p['id']}/comando", json={"testo": "passa"}).json()
+    assert p["priorita"] == "Tu" and p["pila"] == []
+    assert comando(p["id"], "mano")["messaggio"].startswith("Mano:")
+    # Avanti finché non torna il tuo turno: l'AI gioca il suo, rispondendo «passa» quando lancia qualcosa.
+    r = {"partita": p}
+    for _ in range(20):
+        r = comando(p["id"], "passa" if r["partita"]["pila"] else "fine turno")
+        if r["partita"]["turno"] >= 3:
+            break
     assert r["partita"]["attivo"] == "Tu" and r["partita"]["turno"] == 3
 
 

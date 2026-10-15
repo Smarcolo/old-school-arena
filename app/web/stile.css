@@ -4,8 +4,8 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 header { display: flex; gap: 1rem; align-items: center; padding: .75rem 1rem; border-bottom: 1px solid #0004; }
 header h1 { font-size: 1.3rem; margin: 0; color: var(--accento); }
 #info { flex: 1; opacity: .85; }
-main { display: grid; grid-template-columns: 1fr 280px; grid-template-rows: auto auto; gap: 1rem; padding: 1rem; }
-aside { grid-column: 2; grid-row: 1 / 3; background: var(--tavolo); border-radius: 8px; padding: .5rem 1rem; max-height: 70vh; overflow: auto; font-size: .85rem; }
+main { align-items: start; display: grid; grid-template-columns: 1fr 280px; grid-template-rows: auto auto auto; gap: 1rem; padding: 1rem; }
+aside { grid-column: 2; grid-row: 1 / 4; background: var(--tavolo); border-radius: 8px; padding: .5rem 1rem; max-height: 70vh; overflow: auto; font-size: .85rem; }
 .giocatore { background: var(--tavolo); border-radius: 8px; padding: .75rem 1rem; }
 .giocatore h2 { margin: 0 0 .5rem; font-size: 1rem; }
 .fila { display: flex; flex-wrap: wrap; gap: .4rem; min-height: 2rem; margin-bottom: .5rem; }
@@ -18,3 +18,7 @@ button { padding: .6rem 1rem; font: inherit; border-radius: 6px; border: 0; back
 button:disabled { opacity: .5; }
 #messaggio { padding: 0 1rem; min-height: 1.5rem; }
 @media (max-width: 700px) { main { grid-template-columns: 1fr; } aside { grid-column: 1; grid-row: auto; } }
+.pila { border: 1px dashed var(--accento); border-radius: 8px; padding: .5rem 1rem; }
+.carta.appena-entrata { outline: 2px dotted var(--accento); }
+.carta .pt { font-weight: bold; margin-left: .3rem; }
+.priorita { color: var(--accento); }

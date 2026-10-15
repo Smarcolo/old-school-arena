@@ -3,5 +3,7 @@
   {"nome": "Mountain", "tipo": "Basic Land — Mountain", "costo": "", "testo": "({T}: Add {R}.)"},
   {"nome": "Grizzly Bears", "tipo": "Creature — Bear", "costo": "{1}{G}", "forza": 2, "costituzione": 2, "testo": ""},
   {"nome": "Llanowar Elves", "tipo": "Creature — Elf Druid", "costo": "{G}", "forza": 1, "costituzione": 1, "testo": "{T}: Add {G}."},
-  {"nome": "Lightning Bolt", "tipo": "Instant", "costo": "{R}", "testo": "Lightning Bolt deals 3 damage to any target."}
+  {"nome": "Lightning Bolt", "tipo": "Instant", "costo": "{R}", "testo": "Lightning Bolt deals 3 damage to any target."},
+  {"nome": "Gray Ogre", "tipo": "Creature — Ogre", "costo": "{2}{R}", "forza": 2, "costituzione": 2, "testo": ""},
+  {"nome": "Hill Giant", "tipo": "Creature — Giant", "costo": "{3}{R}", "forza": 3, "costituzione": 3, "testo": ""}
 ]

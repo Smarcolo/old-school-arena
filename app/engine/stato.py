@@ -35,6 +35,15 @@ class Carta:
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
     tappata: bool = False
     proprietario: str = ""
+    entrata_nel_turno: int | None = None  # per la debolezza da evocazione
+
+    @property
+    def is_istantaneo(self) -> bool:
+        return "Instant" in self.tipo
+
+    @property
+    def is_permanente(self) -> bool:
+        return any(t in self.tipo for t in ("Creature", "Artifact", "Enchantment", "Land"))
 
     @property
     def is_terra(self) -> bool:
@@ -51,9 +60,16 @@ class Giocatore:
     vita: int = 20
     zone: dict[Zona, list[Carta]] = field(default_factory=lambda: {z: [] for z in Zona if z != Zona.PILA})
     terre_giocate_nel_turno: int = 0
+    riserva: dict[str, int] = field(default_factory=lambda: dict.fromkeys("WUBRGC", 0))
 
     def __getitem__(self, zona: Zona) -> list[Carta]:
         return self.zone[zona]
+
+
+@dataclass
+class OggettoPila:
+    carta: Carta
+    controllore: str
 
 
 @dataclass
@@ -63,13 +79,23 @@ class Partita:
     turno: int = 1
     attivo: int = 0
     fase: Fase = Fase.PRINCIPALE_1
-    pila: list[Carta] = field(default_factory=list)
+    pila: list[OggettoPila] = field(default_factory=list)
+    priorita: int = 0  # indice del giocatore che ha la priorità
+    passaggi: int = 0  # passaggi consecutivi di priorità: a 2 si risolve la pila o si cambia fase
     registro: RegistroEventi = field(default_factory=RegistroEventi)
     vincitore: str | None = None
 
     @property
     def giocatore_attivo(self) -> Giocatore:
         return self.giocatori[self.attivo]
+
+    @property
+    def giocatore_con_priorita(self) -> Giocatore:
+        return self.giocatori[self.priorita]
+
+    def ha_debolezza_da_evocazione(self, carta: Carta) -> bool:
+        """Una creatura entrata in questo turno non può attaccare né usare abilità con {T}."""
+        return carta.is_creatura and carta.entrata_nel_turno == self.turno
 
     def giocatore(self, nome: str) -> Giocatore:
         for g in self.giocatori:

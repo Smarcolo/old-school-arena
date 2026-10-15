@@ -1,4 +1,6 @@
 """Controlli di legalità delle azioni. Ogni funzione ritorna None se l'azione è legale, altrimenti il motivo."""
+from app.engine import mana
+from app.engine.effetti import EFFETTI
 from app.engine.stato import Carta, Fase, Partita
 from app.engine.zone import Zona
 
@@ -9,16 +11,34 @@ class AzioneIllegale(Exception):
     pass
 
 
+def _priorita(partita: Partita, nome_giocatore: str) -> str | None:
+    if partita.vincitore:
+        return "la partita è finita"
+    if partita.giocatore_con_priorita.nome != nome_giocatore:
+        return "non hai la priorità"
+    return None
+
+
+def _velocita_stregoneria(partita: Partita, nome_giocatore: str, cosa: str) -> str | None:
+    if partita.giocatore_attivo.nome != nome_giocatore:
+        return f"{cosa} solo nel tuo turno"
+    if partita.fase not in FASI_PRINCIPALI:
+        return f"{cosa} solo in una fase principale"
+    if partita.pila:
+        return "la pila deve essere vuota"
+    return None
+
+
 def puo_giocare_terra(partita: Partita, nome_giocatore: str, carta: Carta) -> str | None:
     g = partita.giocatore(nome_giocatore)
     if partita.vincitore:
         return "la partita è finita"
     if g is not partita.giocatore_attivo:
         return "puoi giocare terre solo nel tuo turno"
-    if partita.fase not in FASI_PRINCIPALI:
-        return "le terre si giocano solo in una fase principale"
-    if partita.pila:
-        return "la pila deve essere vuota"
+    if motivo := _velocita_stregoneria(partita, nome_giocatore, "le terre si giocano"):
+        return motivo
+    if motivo := _priorita(partita, nome_giocatore):
+        return motivo
     if not carta.is_terra:
         return f"{carta.nome} non è una terra"
     if carta not in g[Zona.MANO]:
@@ -34,4 +54,39 @@ def puo_tappare(partita: Partita, nome_giocatore: str, carta: Carta) -> str | No
         return f"{carta.nome} non è sul tuo campo di battaglia"
     if carta.tappata:
         return f"{carta.nome} è già tappata"
+    if partita.ha_debolezza_da_evocazione(carta):
+        return f"{carta.nome} è entrata in questo turno e non può tappare"
     return None
+
+
+def fonti_di_mana(partita: Partita, nome_giocatore: str) -> list[tuple[Carta, str]]:
+    """Permanenti stappati che possono produrre mana adesso."""
+    fonti = []
+    for c in partita.giocatore(nome_giocatore)[Zona.CAMPO]:
+        colore = mana.mana_prodotto(c)
+        if colore and puo_tappare(partita, nome_giocatore, c) is None:
+            fonti.append((c, colore))
+    return fonti
+
+
+def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta) -> str | None:
+    g = partita.giocatore(nome_giocatore)
+    if motivo := _priorita(partita, nome_giocatore):
+        return motivo
+    if carta not in g[Zona.MANO]:
+        return f"{carta.nome} non è nella tua mano"
+    if carta.is_terra:
+        return f"{carta.nome} è una terra: si gioca, non si lancia"
+    if not carta.is_istantaneo:
+        if motivo := _velocita_stregoneria(partita, nome_giocatore, f"{carta.nome} si può lanciare"):
+            return motivo
+    if not carta.is_permanente and carta.nome not in EFFETTI:
+        return f"l'effetto di {carta.nome} non è ancora implementato"
+    costo = mana.analizza_costo(carta.costo)
+    if mana.piano_pagamento(g.riserva, fonti_di_mana(partita, nome_giocatore), costo) is None:
+        return f"non hai abbastanza mana per {carta.nome} ({carta.costo})"
+    return None
+
+
+def puo_passare(partita: Partita, nome_giocatore: str) -> str | None:
+    return _priorita(partita, nome_giocatore)

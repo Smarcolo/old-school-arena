@@ -15,11 +15,14 @@ SINONIMI = {
     "passa": "passa", "avanti": "passa", "ok": "passa",
     "mano": "mano", "mostra mano": "mano",
     "stato": "stato", "campo": "stato",
+    "mana": "mana", "riserva": "mana",
+    "fine turno": "fineturno", "fine": "fineturno",
     "aiuto": "aiuto", "help": "aiuto", "?": "aiuto",
 }
 
 PATTERN = [
     (re.compile(r"^(?:gioca|metti)\s+(?:la\s+terra\s+|terra\s+)?(.+)$"), "gioca"),
+    (re.compile(r"^(?:lancia|evoca)\s+(.+)$"), "lancia"),
     (re.compile(r"^tappa\s+(.+)$"), "tappa"),
     (re.compile(r"^pesca\s+(\d+)$"), "pesca"),
     (re.compile(r"^(?:vita|punti vita)\s+([+-]?\d+)$"), "vita"),

@@ -13,12 +13,20 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/judge/` — indice FTS5 dei testi in `data/regole/*.md` e risposte del giudice.
 - `app/ai/` — avversaria. Usa solo le funzioni pubbliche di `engine`.
 - `app/commands/` — `parser.py` (testo → Comando) ed `esegui.py` (Comando → azione + messaggio).
+- `app/regia.py` — flusso umano contro AI: esegue i comandi, fa agire l'AI quando ha la priorità e salta le
+  priorità dell'umano a pila vuota fuori dalle sue fasi principali.
 - `app/api/main.py` — FastAPI; serve anche il frontend statico in `app/web/`.
 - `data/` — database, cache immagini, bulk Scryfall: generati, non versionati (vedi `.gitignore`).
 
 ## Regole del motore
 - Ogni modifica allo stato passa da una funzione in `engine/azioni.py`, che **valida** (via `validazione.py`,
   sollevando `AzioneIllegale` con un motivo in italiano) e **scrive un Evento** nel registro. Mai modificare lo stato da fuori.
+- Priorità: chi lancia la mantiene; due passaggi di fila risolvono la cima della pila (poi priorità al giocatore
+  attivo) o, a pila vuota, chiudono la fase. Le abilità di mana non usano la pila.
+- Mana: `engine/mana.py`. A fine fase le riserve si svuotano con mana burn. `lancia` tappa da solo le fonti
+  necessarie (`piano_pagamento`), usando prima la riserva e, per il generico, prima le terre delle creature.
+- Istantanei e stregonerie si lanciano solo se il loro effetto è registrato in `engine/effetti.py`
+  (`@effetto("Nome Carta")`). I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
 - Terminologia 93/94: "rimosse dal gioco" (non esilio), mana burn e interrupt esistono, niente fase di cleanup separata.
 - Il motore è deterministico dato un `seed`: i test devono passare il seed.
 
@@ -35,8 +43,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Import carte reali: `python -m app.cards.scryfall` (scarica il bulk Scryfall, pesante).
 
 ## Prossimi passi
-1. Pila e lancio magie (costi di mana, pool di mana, mana burn).
-2. Combattimento: attaccanti, bloccanti, danno.
-3. Editor mazzi con `valida_mazzo` e mazzi salvati.
-4. AI che lancia magie e attacca.
-5. Immagini delle carte in cache in `data/immagini/`.
+1. Fatto: mana, pila, priorità, lancio creature, mana burn, debolezza da evocazione.
+2. Istantanei con bersaglio (Lightning Bolt) e risposte in pila; l'AI che risponde.
+3. Combattimento: attaccanti, bloccanti, danno.
+4. Editor mazzi con `valida_mazzo` e mazzi salvati.
+5. AI che attacca e sceglie i bersagli.
+6. Immagini delle carte in cache in `data/immagini/`.

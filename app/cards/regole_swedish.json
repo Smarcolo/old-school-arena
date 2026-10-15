@@ -1,0 +1,9 @@
+{
+  "_nota": "DA VERIFICARE con il regolamento Swedish 93/94 ufficiale in vigore prima di usarlo. Liste bandite/ristrette lasciate vuote apposta: vanno compilate a mano dalla fonte ufficiale.",
+  "set_ammessi": ["lea", "leb", "2ed", "3ed", "arn", "atq", "leg", "drk", "fem"],
+  "minimo_carte_mazzo": 60,
+  "massimo_sideboard": 15,
+  "massimo_copie": 4,
+  "bandite": [],
+  "ristrette": []
+}

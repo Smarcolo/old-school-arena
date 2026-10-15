@@ -1,0 +1,68 @@
+"""Database locale delle carte (SQLite). Si popola con carte_base.json o con l'import da Scryfall."""
+import json
+import sqlite3
+from pathlib import Path
+
+from app.config import DB_CARTE
+from app.engine.stato import Carta
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS carte (
+    nome TEXT PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    costo TEXT DEFAULT '',
+    forza INTEGER,
+    costituzione INTEGER,
+    testo TEXT DEFAULT '',
+    set_codici TEXT DEFAULT '',     -- set 93/94 in cui è stata stampata, separati da virgola
+    immagine_url TEXT DEFAULT ''
+);
+"""
+
+CARTE_BASE = Path(__file__).with_name("carte_base.json")
+
+
+def connetti(percorso: Path | str = DB_CARTE) -> sqlite3.Connection:
+    Path(percorso).parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(percorso, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.executescript(SCHEMA)
+    return conn
+
+
+def salva(conn: sqlite3.Connection, righe: list[dict]) -> int:
+    conn.executemany(
+        """INSERT INTO carte (nome, tipo, costo, forza, costituzione, testo, set_codici, immagine_url)
+           VALUES (:nome, :tipo, :costo, :forza, :costituzione, :testo, :set_codici, :immagine_url)
+           ON CONFLICT(nome) DO UPDATE SET tipo=excluded.tipo, costo=excluded.costo,
+             forza=excluded.forza, costituzione=excluded.costituzione, testo=excluded.testo,
+             set_codici=excluded.set_codici, immagine_url=excluded.immagine_url""",
+        [
+            {"costo": "", "forza": None, "costituzione": None, "testo": "", "set_codici": "", "immagine_url": "", **r}
+            for r in righe
+        ],
+    )
+    conn.commit()
+    return len(righe)
+
+
+def carica_carte_base(conn: sqlite3.Connection) -> int:
+    return salva(conn, json.loads(CARTE_BASE.read_text(encoding="utf-8")))
+
+
+def cerca(conn: sqlite3.Connection, nome: str) -> Carta | None:
+    r = conn.execute("SELECT * FROM carte WHERE nome = ? COLLATE NOCASE", (nome.strip(),)).fetchone()
+    if not r:
+        return None
+    return Carta(nome=r["nome"], tipo=r["tipo"], costo=r["costo"], forza=r["forza"],
+                 costituzione=r["costituzione"], testo=r["testo"])
+
+
+def mazzo_da_lista(conn: sqlite3.Connection, lista: dict[str, int]) -> list[Carta]:
+    """Trasforma {nome: copie} in una lista di istanze Carta. Solleva KeyError per carte sconosciute."""
+    mazzo = []
+    for nome, copie in lista.items():
+        if cerca(conn, nome) is None:
+            raise KeyError(f"carta sconosciuta: {nome}")
+        mazzo.extend(cerca(conn, nome) for _ in range(copie))
+    return mazzo

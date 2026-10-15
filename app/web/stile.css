@@ -1,0 +1,20 @@
+:root { --sfondo: #1d2b22; --tavolo: #2a3d30; --testo: #efe8d8; --carta: #f4ecd8; --inchiostro: #2a2118; --accento: #c9a24a; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: var(--sfondo); color: var(--testo); }
+header { display: flex; gap: 1rem; align-items: center; padding: .75rem 1rem; border-bottom: 1px solid #0004; }
+header h1 { font-size: 1.3rem; margin: 0; color: var(--accento); }
+#info { flex: 1; opacity: .85; }
+main { display: grid; grid-template-columns: 1fr 280px; grid-template-rows: auto auto; gap: 1rem; padding: 1rem; }
+aside { grid-column: 2; grid-row: 1 / 3; background: var(--tavolo); border-radius: 8px; padding: .5rem 1rem; max-height: 70vh; overflow: auto; font-size: .85rem; }
+.giocatore { background: var(--tavolo); border-radius: 8px; padding: .75rem 1rem; }
+.giocatore h2 { margin: 0 0 .5rem; font-size: 1rem; }
+.fila { display: flex; flex-wrap: wrap; gap: .4rem; min-height: 2rem; margin-bottom: .5rem; }
+.carta { background: var(--carta); color: var(--inchiostro); border-radius: 6px; padding: .35rem .5rem; font-size: .85rem; cursor: pointer; border: 1px solid #0003; }
+.carta.tappata { transform: rotate(8deg); opacity: .7; }
+.etichetta { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; opacity: .7; }
+form { display: flex; gap: .5rem; padding: 0 1rem; }
+input { flex: 1; padding: .6rem; font: inherit; border-radius: 6px; border: 0; }
+button { padding: .6rem 1rem; font: inherit; border-radius: 6px; border: 0; background: var(--accento); color: var(--inchiostro); cursor: pointer; }
+button:disabled { opacity: .5; }
+#messaggio { padding: 0 1rem; min-height: 1.5rem; }
+@media (max-width: 700px) { main { grid-template-columns: 1fr; } aside { grid-column: 1; grid-row: auto; } }

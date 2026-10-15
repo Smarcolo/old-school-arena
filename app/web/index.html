@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Old School Arena</title>
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+<header>
+  <h1>Old School Arena</h1>
+  <span id="info">Nessuna partita</span>
+  <button id="nuova">Nuova partita</button>
+</header>
+<main>
+  <section class="giocatore" id="avversaria"></section>
+  <section class="giocatore" id="tu"></section>
+  <aside>
+    <h2>Registro</h2>
+    <ol id="eventi"></ol>
+  </aside>
+</main>
+<form id="comando">
+  <input id="testo" autocomplete="off" placeholder="Scrivi un comando: gioca forest, passa, mano, aiuto…" disabled>
+  <button disabled>Invia</button>
+</form>
+<p id="messaggio" role="status"></p>
+<script src="app.js"></script>
+</body>
+</html>

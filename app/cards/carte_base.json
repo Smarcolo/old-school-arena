@@ -1,0 +1,7 @@
+[
+  {"nome": "Forest", "tipo": "Basic Land — Forest", "costo": "", "testo": "({T}: Add {G}.)"},
+  {"nome": "Mountain", "tipo": "Basic Land — Mountain", "costo": "", "testo": "({T}: Add {R}.)"},
+  {"nome": "Grizzly Bears", "tipo": "Creature — Bear", "costo": "{1}{G}", "forza": 2, "costituzione": 2, "testo": ""},
+  {"nome": "Llanowar Elves", "tipo": "Creature — Elf Druid", "costo": "{G}", "forza": 1, "costituzione": 1, "testo": "{T}: Add {G}."},
+  {"nome": "Lightning Bolt", "tipo": "Instant", "costo": "{R}", "testo": "Lightning Bolt deals 3 damage to any target."}
+]

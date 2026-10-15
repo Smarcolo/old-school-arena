@@ -25,8 +25,11 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   attivo) o, a pila vuota, chiudono la fase. Le abilità di mana non usano la pila.
 - Mana: `engine/mana.py`. A fine fase le riserve si svuotano con mana burn. `lancia` tappa da solo le fonti
   necessarie (`piano_pagamento`), usando prima la riserva e, per il generico, prima le terre delle creature.
-- Istantanei e stregonerie si lanciano solo se il loro effetto è registrato in `engine/effetti.py`
-  (`@effetto("Nome Carta")`). I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
+- Istantanei e stregonerie si lanciano solo se il loro effetto è registrato con `@effetto("Nome Carta", bersaglio=...)`
+  in `engine/carte_implementate.py`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
+- Bersagli: stringhe `"giocatore:<nome>"` o `"carta:<id>"`, risolte con `Partita.risolvi_bersaglio`. Se alla
+  risoluzione il bersaglio non è più valido la magia non ha effetto. Dopo ogni risoluzione girano `azioni_di_stato`
+  (creature con danni letali al cimitero). A fine turno danni e bonus "fino alla fine del turno" si azzerano.
 - Terminologia 93/94: "rimosse dal gioco" (non esilio), mana burn e interrupt esistono, niente fase di cleanup separata.
 - Il motore è deterministico dato un `seed`: i test devono passare il seed.
 
@@ -44,7 +47,7 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 
 ## Prossimi passi
 1. Fatto: mana, pila, priorità, lancio creature, mana burn, debolezza da evocazione.
-2. Istantanei con bersaglio (Lightning Bolt) e risposte in pila; l'AI che risponde.
+2. Fatto: istantanei con bersaglio (Lightning Bolt, Giant Growth), risposte in pila, AI che usa Bolt anche in risposta.
 3. Combattimento: attaccanti, bloccanti, danno.
 4. Editor mazzi con `valida_mazzo` e mazzi salvati.
 5. AI che attacca e sceglie i bersagli.

@@ -7,7 +7,9 @@ from pydantic import BaseModel
 
 from app.cards import database
 from app.engine import mana
+from app.engine.azioni import descrivi_bersaglio
 from app.engine.stato import Partita, nuova_partita
+from app.engine.validazione import tipo_bersaglio
 from app.engine.zone import Zona
 from app.judge.giudice import Giudice
 from app.regia import avanza, esegui_comando
@@ -16,8 +18,8 @@ UMANO = "Tu"
 AI = "Avversaria"
 
 # Mazzi di prova finché non c'è l'editor dei mazzi (non rispettano il limite di 4 copie).
-MAZZO_VERDE = {"Forest": 20, "Llanowar Elves": 8, "Grizzly Bears": 12}
-MAZZO_ROSSO = {"Mountain": 20, "Gray Ogre": 8, "Hill Giant": 6, "Lightning Bolt": 6}  # Bolt resta in mano finché non ha l'effetto
+MAZZO_VERDE = {"Forest": 18, "Llanowar Elves": 8, "Grizzly Bears": 10, "Giant Growth": 4}
+MAZZO_ROSSO = {"Mountain": 20, "Gray Ogre": 8, "Hill Giant": 6, "Lightning Bolt": 6}
 
 app = FastAPI(title="Old School Arena")
 partite: dict[str, Partita] = {}
@@ -34,7 +36,9 @@ def vista(p: Partita) -> dict:
     """Stato visibile al giocatore umano: la mano dell'avversaria resta nascosta."""
     def zona(g, z):
         return [{"id": c.id, "nome": c.nome, "tipo": c.tipo, "costo": c.costo, "tappata": c.tappata,
-                 "forza": c.forza, "costituzione": c.costituzione,
+                 "forza": c.forza_attuale if c.is_creatura else None,
+                 "costituzione": c.costituzione_attuale if c.is_creatura else None,
+                 "danni": c.danni, "bersaglio": tipo_bersaglio(c),
                  "appena_entrata": p.ha_debolezza_da_evocazione(c)} for c in g[z]]
 
     giocatori = []
@@ -47,7 +51,8 @@ def vista(p: Partita) -> dict:
     return {
         "id": p.id, "turno": p.turno, "fase": p.fase.value, "attivo": p.giocatore_attivo.nome,
         "priorita": p.giocatore_con_priorita.nome,
-        "pila": [{"nome": o.carta.nome, "controllore": o.controllore} for o in p.pila],
+        "pila": [{"nome": o.carta.nome, "controllore": o.controllore,
+                  "bersaglio": descrivi_bersaglio(p, o.bersagli[0]) if o.bersagli else None} for o in p.pila],
         "vincitore": p.vincitore, "giocatori": giocatori,
         "eventi": [e.descrizione for e in p.registro.ultimi(30)],
     }

@@ -1,5 +1,11 @@
 let partita = null;
+let magiaInAttesa = null; // nome di una magia che aspetta il clic sul bersaglio
 const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...figli) => {
+  const e = Object.assign(document.createElement(tag), props);
+  e.append(...figli);
+  return e;
+};
 
 async function api(percorso, opzioni = {}) {
   const r = await fetch(percorso, { headers: { "Content-Type": "application/json" }, ...opzioni });
@@ -7,30 +13,53 @@ async function api(percorso, opzioni = {}) {
   return r.json();
 }
 
-function carte(lista, cliccabile) {
-  const fila = document.createElement("div");
-  fila.className = "fila";
-  for (const c of lista) {
-    const el = document.createElement("span");
-    el.className = "carta" + (c.tappata ? " tappata" : "") + (c.appena_entrata ? " appena-entrata" : "");
-    el.textContent = c.nome;
-    if (c.forza != null) el.append(Object.assign(document.createElement("span"), { className: "pt", textContent: `${c.forza}/${c.costituzione}` }));
-    el.title = [c.tipo, c.costo, c.appena_entrata ? "appena entrata: non può tappare" : ""].filter(Boolean).join(" · ");
-    if (cliccabile) el.onclick = () => invia(cliccabile + " " + c.nome);
-    fila.append(el);
+function avvisa(testo) {
+  $("messaggio").textContent = testo;
+}
+
+function scegliBersaglio(rif) {
+  const magia = magiaInAttesa;
+  magiaInAttesa = null;
+  document.body.classList.remove("mirino");
+  invia(`gioca ${magia} su ${rif}`);
+}
+
+function cartaEl(c, azione) {
+  const classi = ["carta", c.tappata && "tappata", c.appena_entrata && "appena-entrata", c.danni && "ferita"];
+  const e = el("span", { className: classi.filter(Boolean).join(" ") }, c.nome);
+  if (c.forza != null) e.append(el("span", { className: "pt", textContent: `${c.forza}/${c.costituzione - c.danni}` }));
+  e.title = [c.tipo, c.costo, c.danni ? `${c.danni} danni` : "", c.appena_entrata ? "appena entrata" : ""]
+    .filter(Boolean).join(" · ");
+  e.onclick = () => azione(c);
+  return e;
+}
+
+function suCampo(c, mio) {
+  if (magiaInAttesa) return scegliBersaglio(c.id);
+  if (mio) invia(`tappa ${c.id}`);
+}
+
+function suMano(c) {
+  if (c.bersaglio) {
+    magiaInAttesa = c.nome;
+    document.body.classList.add("mirino");
+    avvisa(`Scegli il bersaglio di ${c.nome}: clicca una creatura o il nome di un giocatore (Esc per annullare).`);
+    return;
   }
-  return fila;
+  invia(`gioca ${c.nome}`);
 }
 
 function disegnaGiocatore(sezione, g, umano) {
-  sezione.replaceChildren();
-  const h = document.createElement("h2");
-  h.textContent = `${g.nome} — ${g.vita} vita · grimorio ${g.grimorio} · mana ${g.riserva}` + (umano ? "" : ` · mano ${g.mano}`);
-  if (partita.priorita === g.nome && !partita.vincitore) h.append(Object.assign(document.createElement("span"), { className: "priorita", textContent: " · ha la priorità" }));
-  sezione.append(h);
-  const etichetta = (t) => Object.assign(document.createElement("div"), { className: "etichetta", textContent: t });
-  sezione.append(etichetta("Campo"), carte(g.campo, umano ? "tappa" : null));
-  if (umano) sezione.append(etichetta("Mano"), carte(g.mano, "gioca"));
+  const titolo = el("h2", {
+    className: "nome-giocatore",
+    textContent: `${g.nome} — ${g.vita} vita · grimorio ${g.grimorio} · mana ${g.riserva}` + (umano ? "" : ` · mano ${g.mano}`),
+    onclick: () => magiaInAttesa && scegliBersaglio(umano ? "me" : "avversaria"),
+  });
+  if (partita.priorita === g.nome && !partita.vincitore) titolo.append(el("span", { className: "priorita", textContent: " · ha la priorità" }));
+  const etichetta = (t) => el("div", { className: "etichetta", textContent: t });
+  const fila = (carte, azione) => el("div", { className: "fila" }, ...carte.map((c) => cartaEl(c, azione)));
+  sezione.replaceChildren(titolo, etichetta("Campo"), fila(g.campo, (c) => suCampo(c, umano)));
+  if (umano) sezione.append(etichetta("Mano"), fila(g.mano, suMano));
 }
 
 function disegna() {
@@ -40,19 +69,20 @@ function disegna() {
   disegnaGiocatore($("avversaria"), partita.giocatori[1], false);
   disegnaGiocatore($("tu"), partita.giocatori[0], true);
   $("pila").replaceChildren(...(partita.pila.length
-    ? partita.pila.slice().reverse().map((o) => Object.assign(document.createElement("span"), { className: "carta", textContent: `${o.nome} (${o.controllore})` }))
-    : [Object.assign(document.createElement("span"), { textContent: "vuota" })]));
-  $("eventi").replaceChildren(...partita.eventi.slice().reverse().map((t) => Object.assign(document.createElement("li"), { textContent: t })));
+    ? partita.pila.slice().reverse().map((o) => el("span", { className: "carta",
+        textContent: `${o.nome}${o.bersaglio ? " → " + o.bersaglio : ""} (${o.controllore})` }))
+    : [el("span", { textContent: "vuota" })]));
+  $("eventi").replaceChildren(...partita.eventi.slice().reverse().map((t) => el("li", { textContent: t })));
 }
 
 async function invia(testo) {
   try {
     const r = await api(`/api/partite/${partita.id}/comando`, { method: "POST", body: JSON.stringify({ testo }) });
     partita = r.partita;
-    $("messaggio").textContent = r.messaggio;
+    avvisa(r.messaggio);
     disegna();
   } catch (e) {
-    $("messaggio").textContent = "Errore: " + e.message;
+    avvisa("Errore: " + e.message);
   }
 }
 
@@ -60,7 +90,7 @@ $("nuova").onclick = async () => {
   partita = await api("/api/partite", { method: "POST" });
   $("testo").disabled = false;
   $("comando").querySelectorAll("button").forEach((b) => (b.disabled = false));
-  $("messaggio").textContent = "Partita iniziata. Scrivi «aiuto» per i comandi.";
+  avvisa("Partita iniziata. Scrivi «aiuto» per i comandi.");
   disegna();
   $("testo").focus();
 };
@@ -73,3 +103,11 @@ $("comando").onsubmit = (e) => {
 };
 
 document.querySelectorAll(".rapido").forEach((b) => (b.onclick = () => invia(b.dataset.comando)));
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && magiaInAttesa) {
+    magiaInAttesa = null;
+    document.body.classList.remove("mirino");
+    avvisa("Annullato.");
+  }
+});

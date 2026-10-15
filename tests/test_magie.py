@@ -71,9 +71,9 @@ def test_serve_la_priorita(p):
 
 
 def test_istantaneo_senza_effetto_non_si_lancia(p):
-    p.giocatore("A")[Zona.MANO].append(Carta("Giant Growth", "Instant", "{G}"))
+    p.giocatore("A")[Zona.MANO].append(Carta("Healing Salve", "Instant", "{W}"))
     with pytest.raises(AzioneIllegale, match="non è ancora implementato"):
-        azioni.lancia(p, "A", carta(p, "giant growth"))
+        azioni.lancia(p, "A", carta(p, "healing salve"))
 
 
 def test_debolezza_da_evocazione_e_turno_dopo(p):

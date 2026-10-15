@@ -22,3 +22,6 @@ button:disabled { opacity: .5; }
 .carta.appena-entrata { outline: 2px dotted var(--accento); }
 .carta .pt { font-weight: bold; margin-left: .3rem; }
 .priorita { color: var(--accento); }
+.carta.ferita .pt { color: #a3241b; }
+.mirino .carta, .mirino .nome-giocatore { cursor: crosshair; }
+.mirino .giocatore .fila .carta:hover, .mirino .nome-giocatore:hover { outline: 2px solid #a3241b; }

@@ -36,6 +36,21 @@ class Carta:
     tappata: bool = False
     proprietario: str = ""
     entrata_nel_turno: int | None = None  # per la debolezza da evocazione
+    danni: int = 0  # danni subiti in questo turno
+    bonus_forza: int = 0  # modifiche "fino alla fine del turno"
+    bonus_costituzione: int = 0
+
+    @property
+    def forza_attuale(self) -> int:
+        return (self.forza or 0) + self.bonus_forza
+
+    @property
+    def costituzione_attuale(self) -> int:
+        return (self.costituzione or 0) + self.bonus_costituzione
+
+    def azzera_stato_in_campo(self) -> None:
+        """Quando lascia il campo o a fine turno: niente danni né bonus."""
+        self.danni = self.bonus_forza = self.bonus_costituzione = 0
 
     @property
     def is_istantaneo(self) -> bool:
@@ -70,6 +85,7 @@ class Giocatore:
 class OggettoPila:
     carta: Carta
     controllore: str
+    bersagli: list[str] = field(default_factory=list)  # "giocatore:<nome>" o "carta:<id>"
 
 
 @dataclass
@@ -105,6 +121,21 @@ class Partita:
 
     def avversario_di(self, nome: str) -> Giocatore:
         return next(g for g in self.giocatori if g.nome != nome)
+
+    def trova_in_campo(self, id_carta: str) -> tuple[Giocatore, Carta] | None:
+        for g in self.giocatori:
+            for c in g[Zona.CAMPO]:
+                if c.id == id_carta:
+                    return g, c
+        return None
+
+    def risolvi_bersaglio(self, rif: str) -> Giocatore | Carta | None:
+        """Da "giocatore:<nome>" o "carta:<id>" all'oggetto, se è ancora un bersaglio esistente."""
+        tipo, _, valore = rif.partition(":")
+        if tipo == "giocatore":
+            return next((g for g in self.giocatori if g.nome == valore), None)
+        trovato = self.trova_in_campo(valore)
+        return trovato[1] if trovato else None
 
 
 def nuova_partita(mazzi: dict[str, list[Carta]], mano_iniziale: int = 7, seed: int | None = None) -> Partita:

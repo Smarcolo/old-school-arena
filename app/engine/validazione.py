@@ -1,10 +1,11 @@
 """Controlli di legalità delle azioni. Ogni funzione ritorna None se l'azione è legale, altrimenti il motivo."""
 from app.engine import mana
-from app.engine.effetti import EFFETTI
+from app.engine.effetti import EFFETTI, bersaglio_legale
 from app.engine.stato import Carta, Fase, Partita
 from app.engine.zone import Zona
 
 FASI_PRINCIPALI = {Fase.PRINCIPALE_1, Fase.PRINCIPALE_2}
+NOMI_BERSAGLI = {"qualsiasi": "una creatura o un giocatore", "creatura": "una creatura", "giocatore": "un giocatore"}
 
 
 class AzioneIllegale(Exception):
@@ -69,7 +70,12 @@ def fonti_di_mana(partita: Partita, nome_giocatore: str) -> list[tuple[Carta, st
     return fonti
 
 
-def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta) -> str | None:
+def tipo_bersaglio(carta: Carta) -> str | None:
+    effetto = EFFETTI.get(carta.nome)
+    return effetto.bersaglio if effetto else None
+
+
+def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta, bersagli: list[str] | None = None) -> str | None:
     g = partita.giocatore(nome_giocatore)
     if motivo := _priorita(partita, nome_giocatore):
         return motivo
@@ -82,6 +88,14 @@ def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta) -> str | N
             return motivo
     if not carta.is_permanente and carta.nome not in EFFETTI:
         return f"l'effetto di {carta.nome} non è ancora implementato"
+    if bersagli is not None:  # None = controlla solo se è lanciabile, senza ancora il bersaglio
+        tipo = tipo_bersaglio(carta)
+        if tipo and len(bersagli) != 1:
+            return f"{carta.nome} ha bisogno di un bersaglio ({NOMI_BERSAGLI[tipo]})"
+        if tipo and not bersaglio_legale(partita, tipo, bersagli[0]):
+            return f"bersaglio non valido per {carta.nome}: serve {NOMI_BERSAGLI[tipo]}"
+        if not tipo and bersagli:
+            return f"{carta.nome} non ha bersagli"
     costo = mana.analizza_costo(carta.costo)
     if mana.piano_pagamento(g.riserva, fonti_di_mana(partita, nome_giocatore), costo) is None:
         return f"non hai abbastanza mana per {carta.nome} ({carta.costo})"

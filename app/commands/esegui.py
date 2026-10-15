@@ -5,7 +5,30 @@ from app.engine.stato import Partita
 from app.engine.validazione import AzioneIllegale
 from app.engine.zone import Zona
 
-AIUTO = ("Comandi: gioca <carta> (terre e magie), lancia <carta>, tappa <carta>, passa, fine turno, "
+GIOCATORI_IO = {"me", "io", "me stesso", "tu"}
+GIOCATORI_AVVERSARIO = {"avversaria", "avversario", "lei", "faccia", "lui"}
+
+
+def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
+    """Da testo libero a riferimento: nome di un giocatore, «me»/«avversaria», nome o id di una creatura
+    in campo (con più omonime preferisce quelle dell'avversario)."""
+    t = testo.strip().lower()
+    if t in GIOCATORI_IO:
+        return f"giocatore:{giocatore}"
+    if t in GIOCATORI_AVVERSARIO:
+        return f"giocatore:{partita.avversario_di(giocatore).nome}"
+    for g in partita.giocatori:
+        if g.nome.lower() == t:
+            return f"giocatore:{g.nome}"
+    ordine = [partita.avversario_di(giocatore), partita.giocatore(giocatore)]
+    for g in ordine:
+        for c in g[Zona.CAMPO]:
+            if c.id == t or c.nome.lower() == t:
+                return f"carta:{c.id}"
+    return None
+
+
+AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta>, passa, fine turno, "
          "mano, mana, stato, pesca [n], vita <+/-n>, giudice <domanda>")
 
 
@@ -32,7 +55,13 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
                 if carta.is_terra:
                     azioni.gioca_terra(partita, giocatore, carta)
                     return f"Hai giocato {carta.nome}."
-                azioni.lancia(partita, giocatore, carta)
+                bersagli = []
+                if cmd.bersaglio:
+                    rif = trova_bersaglio(partita, giocatore, cmd.bersaglio)
+                    if rif is None:
+                        return f"Non trovo il bersaglio «{cmd.bersaglio}»."
+                    bersagli = [rif]
+                azioni.lancia(partita, giocatore, carta, bersagli)
                 return f"Hai lanciato {carta.nome}: è in pila. Scrivi «passa» per farla risolvere."
             case "tappa":
                 carta = azioni.trova_in_zona(partita, giocatore, Zona.CAMPO, cmd.argomento)

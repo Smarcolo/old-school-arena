@@ -1,8 +1,10 @@
 """Azioni che modificano lo stato. Validano, applicano e scrivono sempre nel registro eventi."""
+from app.engine import carte_implementate  # noqa: F401  registra gli effetti delle carte
 from app.engine import mana
 from app.engine.effetti import EFFETTI
 from app.engine.eventi import Evento
 from app.engine.stato import ORDINE_FASI, Carta, Fase, OggettoPila, Partita
+from app.engine.effetti import bersaglio_legale
 from app.engine.validazione import (AzioneIllegale, fonti_di_mana, puo_giocare_terra, puo_lanciare,
                                     puo_passare, puo_tappare)
 from app.engine.zone import Zona
@@ -71,19 +73,26 @@ def tappa(partita: Partita, giocatore: str, carta: Carta) -> None:
         _log(partita, giocatore, "tappa", f"{giocatore} tappa {carta.nome}", carta=carta.id)
 
 
-def lancia(partita: Partita, giocatore: str, carta: Carta) -> None:
+def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] | None = None) -> None:
     """Paga il costo (tappando da solo le fonti necessarie) e mette la magia in pila.
     Chi lancia mantiene la priorità."""
-    _verifica(puo_lanciare(partita, giocatore, carta))
+    bersagli = bersagli or []
+    _verifica(puo_lanciare(partita, giocatore, carta, bersagli))
     g = partita.giocatore(giocatore)
     costo = mana.analizza_costo(carta.costo)
     for fonte in mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore), costo):
         tappa(partita, giocatore, fonte)
     g.riserva = mana.paga(g.riserva, costo)
     g[Zona.MANO].remove(carta)
-    partita.pila.append(OggettoPila(carta, giocatore))
+    partita.pila.append(OggettoPila(carta, giocatore, bersagli))
     partita.passaggi = 0
-    _log(partita, giocatore, "lancia", f"{giocatore} lancia {carta.nome}", carta=carta.id)
+    su = f" su {descrivi_bersaglio(partita, bersagli[0])}" if bersagli else ""
+    _log(partita, giocatore, "lancia", f"{giocatore} lancia {carta.nome}{su}", carta=carta.id)
+
+
+def descrivi_bersaglio(partita: Partita, rif: str) -> str:
+    oggetto = partita.risolvi_bersaglio(rif)
+    return getattr(oggetto, "nome", "un bersaglio scomparso")
 
 
 def risolvi_pila(partita: Partita) -> None:
@@ -93,11 +102,45 @@ def risolvi_pila(partita: Partita) -> None:
         _entra_in_campo(partita, chi, carta)
         _log(partita, chi, "risolve", f"{carta.nome} si risolve ed entra in campo", carta=carta.id)
     else:
-        EFFETTI[carta.nome](partita, oggetto)
+        effetto = EFFETTI[carta.nome]
+        if effetto.bersaglio and not bersaglio_legale(partita, effetto.bersaglio, oggetto.bersagli[0]):
+            _log(partita, chi, "neutralizzata", f"{carta.nome} non ha più un bersaglio valido e non ha effetto")
+        else:
+            effetto.funzione(partita, oggetto)
+            _log(partita, chi, "risolve", f"{carta.nome} si risolve", carta=carta.id)
         partita.giocatore(carta.proprietario or chi)[Zona.CIMITERO].append(carta)
-        _log(partita, chi, "risolve", f"{carta.nome} si risolve", carta=carta.id)
+    azioni_di_stato(partita)
     partita.priorita = partita.attivo
     partita.passaggi = 0
+
+
+def infliggi_danno(partita: Partita, fonte: Carta, rif: str, quantita: int) -> None:
+    bersaglio = partita.risolvi_bersaglio(rif)
+    if isinstance(bersaglio, Carta):
+        bersaglio.danni += quantita
+        _log(partita, fonte.proprietario, "danno", f"{fonte.nome} infligge {quantita} danni a {bersaglio.nome}")
+    elif bersaglio is not None:
+        modifica_vita(partita, bersaglio.nome, -quantita, f"(danni da {fonte.nome})")
+
+
+def distruggi(partita: Partita, carta: Carta, motivo: str = "") -> None:
+    trovato = partita.trova_in_campo(carta.id)
+    if not trovato:
+        return
+    controllore, _ = trovato
+    controllore[Zona.CAMPO].remove(carta)
+    carta.azzera_stato_in_campo()
+    carta.tappata = False
+    partita.giocatore(carta.proprietario or controllore.nome)[Zona.CIMITERO].append(carta)
+    _log(partita, controllore.nome, "muore", f"{carta.nome} va al cimitero {motivo}".strip(), carta=carta.id)
+
+
+def azioni_di_stato(partita: Partita) -> None:
+    """Controlli automatici: creature con danni letali o costituzione 0 muoiono."""
+    for g in partita.giocatori:
+        for c in list(g[Zona.CAMPO]):
+            if c.is_creatura and (c.costituzione_attuale <= 0 or c.danni >= c.costituzione_attuale):
+                distruggi(partita, c, "(danni letali)")
 
 
 def passa_priorita(partita: Partita, giocatore: str) -> None:
@@ -148,6 +191,10 @@ def passa_fase(partita: Partita) -> None:
         _log(partita, partita.giocatore_attivo.nome, "fase", f"Fase: {partita.fase.value}")
         _automatismi_fase(partita)
         return
+    # Fine turno: danni e effetti "fino alla fine del turno" svaniscono.
+    for giocatore in partita.giocatori:
+        for c in giocatore[Zona.CAMPO]:
+            c.azzera_stato_in_campo()
     # Nuovo turno
     partita.attivo = 1 - partita.attivo
     partita.priorita = partita.attivo

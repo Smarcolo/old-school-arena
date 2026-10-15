@@ -15,6 +15,8 @@ python -m uvicorn app.api.main:app
 
 ## Comandi
 - `gioca <carta>`: gioca una terra o lancia una magia (paga il costo tappando le terre da solo).
+- `gioca <carta> su <bersaglio>`: per le magie con bersaglio, es. `gioca giant growth su grizzly bears`,
+  `gioca lightning bolt su avversaria`. Dall'interfaccia: clicchi la magia, poi il bersaglio.
 - `tappa <carta>`: tappa per mana; `mana` mostra la riserva. Il mana non usato a fine fase fa perdere vita (mana burn).
 - `passa`: passi la priorità. Se c'è qualcosa in pila si risolve, altrimenti si va alla fase dopo.
 - `fine turno`: chiudi il turno (risolvendo quello che hai in pila).
@@ -25,8 +27,9 @@ Puoi anche cliccare una carta in mano per giocarla o sul campo per tapparla, e u
 ## Cosa funziona oggi
 - Partita a due con mazzi di prova, turni e fasi, una terra per turno, stap e pescata automatici.
 - Mana, pila e priorità: si lanciano le creature, che entrano con debolezza da evocazione. C'è il mana burn.
+- Istantanei con bersaglio: Lightning Bolt e Giant Growth, anche in risposta l'uno all'altro.
 - Sconfitta a 0 vita o pescando da grimorio vuoto; registro eventi.
-- Avversaria base: gioca terre e lancia la creatura più cara che può pagare.
+- Avversaria base: gioca terre, lancia la creatura più cara che può pagare, usa Lightning Bolt sulle tue creature o su di te.
 - Giudice che cerca nei testi di `data/regole/`.
 
 ## Carte reali

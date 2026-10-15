@@ -8,6 +8,7 @@ class Comando:
     azione: str
     argomento: str = ""
     numero: int | None = None
+    bersaglio: str = ""
 
 
 SINONIMI = {
@@ -40,5 +41,8 @@ def analizza(testo: str) -> Comando:
             valore = m.group(1)
             if azione in ("pesca", "vita"):
                 return Comando(azione, numero=int(valore))
+            if azione in ("gioca", "lancia") and " su " in valore:
+                carta, bersaglio = valore.split(" su ", 1)
+                return Comando(azione, argomento=carta, bersaglio=bersaglio)
             return Comando(azione, argomento=valore)
     return Comando("sconosciuto", argomento=testo.strip())

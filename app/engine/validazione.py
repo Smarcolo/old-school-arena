@@ -77,6 +77,8 @@ def tipo_bersaglio(carta: Carta) -> str | None:
 
 def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta, bersagli: list[str] | None = None) -> str | None:
     g = partita.giocatore(nome_giocatore)
+    if partita.combattimento and partita.combattimento.attesa_bloccanti:
+        return "prima vanno dichiarati i bloccanti"
     if motivo := _priorita(partita, nome_giocatore):
         return motivo
     if carta not in g[Zona.MANO]:
@@ -103,4 +105,6 @@ def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta, bersagli: 
 
 
 def puo_passare(partita: Partita, nome_giocatore: str) -> str | None:
+    if partita.combattimento and partita.combattimento.attesa_bloccanti:
+        return "prima vanno dichiarati i bloccanti (anche «nessun blocco»)"
     return _priorita(partita, nome_giocatore)

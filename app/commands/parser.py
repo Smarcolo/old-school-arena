@@ -18,6 +18,8 @@ SINONIMI = {
     "stato": "stato", "campo": "stato",
     "mana": "mana", "riserva": "mana",
     "fine turno": "fineturno", "fine": "fineturno",
+    "non attacco": "nonattacco", "nessun attacco": "nonattacco", "niente attacco": "nonattacco",
+    "nessun blocco": "nonblocco", "non blocco": "nonblocco", "niente blocchi": "nonblocco",
     "aiuto": "aiuto", "help": "aiuto", "?": "aiuto",
 }
 
@@ -25,6 +27,8 @@ PATTERN = [
     (re.compile(r"^(?:gioca|metti)\s+(?:la\s+terra\s+|terra\s+)?(.+)$"), "gioca"),
     (re.compile(r"^(?:lancia|evoca)\s+(.+)$"), "lancia"),
     (re.compile(r"^tappa\s+(.+)$"), "tappa"),
+    (re.compile(r"^attacca(?:\s+con)?\s*(.*)$"), "attacca"),
+    (re.compile(r"^blocca\s+(.+)$"), "blocca"),
     (re.compile(r"^pesca\s+(\d+)$"), "pesca"),
     (re.compile(r"^(?:vita|punti vita)\s+([+-]?\d+)$"), "vita"),
     (re.compile(r"^(?:giudice|regola|domanda)[:\s]+(.+)$"), "giudice"),

@@ -89,6 +89,20 @@ class OggettoPila:
 
 
 @dataclass
+class Combattimento:
+    """Stato della fase di combattimento in corso."""
+    attaccanti: list[str] = field(default_factory=list)  # id delle creature attaccanti
+    blocchi: dict[str, list[str]] = field(default_factory=dict)  # id attaccante -> id bloccanti, in ordine
+    attaccanti_dichiarati: bool = False
+    attesa_bloccanti: bool = False  # il difensore deve dichiarare i bloccanti
+    bloccanti_dichiarati: bool = False
+    danni_inflitti: bool = False
+
+    def bloccanti(self) -> set[str]:
+        return {b for lista in self.blocchi.values() for b in lista}
+
+
+@dataclass
 class Partita:
     giocatori: list[Giocatore]
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
@@ -100,6 +114,7 @@ class Partita:
     passaggi: int = 0  # passaggi consecutivi di priorità: a 2 si risolve la pila o si cambia fase
     registro: RegistroEventi = field(default_factory=RegistroEventi)
     vincitore: str | None = None
+    combattimento: Combattimento | None = None
 
     @property
     def giocatore_attivo(self) -> Giocatore:

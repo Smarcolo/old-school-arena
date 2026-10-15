@@ -30,6 +30,12 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Bersagli: stringhe `"giocatore:<nome>"` o `"carta:<id>"`, risolte con `Partita.risolvi_bersaglio`. Se alla
   risoluzione il bersaglio non è più valido la magia non ha effetto. Dopo ogni risoluzione girano `azioni_di_stato`
   (creature con danni letali al cimitero). A fine turno danni e bonus "fino alla fine del turno" si azzerano.
+- Combattimento (`engine/combattimento.py`): l'attivo dichiara gli attaccanti con priorità e pila vuota; al doppio
+  passaggio il difensore dichiara i bloccanti (saltato se non può bloccare); al doppio passaggio successivo danni
+  simultanei; poi la fase finisce. Più bloccanti sullo stesso attaccante: danno letale a ciascuno in ordine, il resto
+  all'ultimo. Un attaccante bloccato non colpisce il giocatore. Niente ancora attacco improvviso, travolgere, volare.
+- Regia: l'umano si ferma anche per dichiarare attaccanti/bloccanti e, dopo i blocchi, se ha un istantaneo lanciabile.
+  `regia.suggerimento` aggiunge al messaggio cosa può fare adesso.
 - Terminologia 93/94: "rimosse dal gioco" (non esilio), mana burn e interrupt esistono, niente fase di cleanup separata.
 - Il motore è deterministico dato un `seed`: i test devono passare il seed.
 
@@ -48,7 +54,7 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 ## Prossimi passi
 1. Fatto: mana, pila, priorità, lancio creature, mana burn, debolezza da evocazione.
 2. Fatto: istantanei con bersaglio (Lightning Bolt, Giant Growth), risposte in pila, AI che usa Bolt anche in risposta.
-3. Combattimento: attaccanti, bloccanti, danno.
+3. Fatto: combattimento con attaccanti, bloccanti (anche multipli), danni; AI che attacca e blocca.
 4. Editor mazzi con `valida_mazzo` e mazzi salvati.
-5. AI che attacca e sceglie i bersagli.
+5. Abilità chiave del 93/94: volare, attacco improvviso, travolgere, prima dei danni (first strike), banding (!).
 6. Immagini delle carte in cache in `data/immagini/`.

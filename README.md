@@ -20,6 +20,9 @@ python -m uvicorn app.api.main:app
 - `tappa <carta>`: tappa per mana; `mana` mostra la riserva. Il mana non usato a fine fase fa perdere vita (mana burn).
 - `passa`: passi la priorità. Se c'è qualcosa in pila si risolve, altrimenti si va alla fase dopo.
 - `fine turno`: chiudi il turno (risolvendo quello che hai in pila).
+- `attacca con <carte>` (separate da virgola o «e»), `attacca con tutto`, `non attacco`.
+- `blocca <attaccante> con <tua creatura>; <altro attaccante> con <altra creatura>`, `nessun blocco`.
+  Dall'interfaccia: clicchi una tua creatura e poi l'attaccante, poi «Conferma blocchi».
 - `mano`, `stato`, `pesca [n]`, `vita <+/-n>`, `giudice <domanda>`, `aiuto`.
 
 Puoi anche cliccare una carta in mano per giocarla o sul campo per tapparla, e usare i pulsanti Passa e Fine turno.
@@ -28,8 +31,9 @@ Puoi anche cliccare una carta in mano per giocarla o sul campo per tapparla, e u
 - Partita a due con mazzi di prova, turni e fasi, una terra per turno, stap e pescata automatici.
 - Mana, pila e priorità: si lanciano le creature, che entrano con debolezza da evocazione. C'è il mana burn.
 - Istantanei con bersaglio: Lightning Bolt e Giant Growth, anche in risposta l'uno all'altro.
+- Combattimento: attacchi, blocchi (anche più creature sullo stesso attaccante), danni, Giant Growth dopo i blocchi.
 - Sconfitta a 0 vita o pescando da grimorio vuoto; registro eventi.
-- Avversaria base: gioca terre, lancia la creatura più cara che può pagare, usa Lightning Bolt sulle tue creature o su di te.
+- Avversaria base: gioca terre, lancia la creatura più cara che può pagare, usa Lightning Bolt sulle tue creature o su di te, attacca quando non rischia e blocca con giudizio.
 - Giudice che cerca nei testi di `data/regole/`.
 
 ## Carte reali

@@ -152,7 +152,9 @@ def passa_priorita(partita: Partita, giocatore: str) -> None:
         return
     if partita.pila:
         risolvi_pila(partita)
-    else:
+        return
+    from app.engine import combattimento
+    if not combattimento.dopo_doppio_passaggio(partita):
         passa_fase(partita)
 
 
@@ -185,6 +187,7 @@ def passa_fase(partita: Partita) -> None:
         return
     partita.priorita = partita.attivo
     partita.passaggi = 0
+    partita.combattimento = None
     i = ORDINE_FASI.index(partita.fase)
     if i + 1 < len(ORDINE_FASI):
         partita.fase = ORDINE_FASI[i + 1]
@@ -214,3 +217,6 @@ def _automatismi_fase(partita: Partita) -> None:
         _log(partita, g.nome, "stap", f"{g.nome} stappa i suoi permanenti")
     elif partita.fase == Fase.PESCATA:
         pesca(partita, g.nome)
+    elif partita.fase == Fase.COMBATTIMENTO:
+        from app.engine import combattimento
+        combattimento.inizia(partita)

@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.cards import database
-from app.engine import mana
+from app.engine import combattimento, mana
 from app.engine.azioni import descrivi_bersaglio
 from app.engine.stato import Partita, nuova_partita
 from app.engine.validazione import tipo_bersaglio
@@ -54,8 +54,19 @@ def vista(p: Partita) -> dict:
         "pila": [{"nome": o.carta.nome, "controllore": o.controllore,
                   "bersaglio": descrivi_bersaglio(p, o.bersagli[0]) if o.bersagli else None} for o in p.pila],
         "vincitore": p.vincitore, "giocatori": giocatori,
+        "combattimento": _vista_combattimento(p),
+        "richiesta": ("attaccanti" if combattimento.deve_dichiarare_attaccanti(p, UMANO)
+                      else "bloccanti" if combattimento.deve_dichiarare_bloccanti(p, UMANO) else None),
         "eventi": [e.descrizione for e in p.registro.ultimi(30)],
     }
+
+
+def _vista_combattimento(p: Partita) -> dict | None:
+    comb = p.combattimento
+    if comb is None:
+        return None
+    return {"attaccanti": comb.attaccanti, "bloccanti": sorted(comb.bloccanti()), "blocchi": comb.blocchi,
+            "attesa_bloccanti": comb.attesa_bloccanti}
 
 
 @app.get("/api/salute")

@@ -1,6 +1,8 @@
 """Esegue un Comando sulla partita e ritorna un messaggio in italiano per l'interfaccia."""
 from app.commands.parser import Comando
-from app.engine import azioni, mana
+import re
+
+from app.engine import azioni, combattimento, mana
 from app.engine.stato import Partita
 from app.engine.validazione import AzioneIllegale
 from app.engine.zone import Zona
@@ -29,7 +31,55 @@ def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
 
 
 AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta>, passa, fine turno, "
+         "attacca con <carte>|tutto, non attacco, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
          "mano, mana, stato, pesca [n], vita <+/-n>, giudice <domanda>")
+TUTTO = {"", "tutto", "tutte", "tutti", "con tutto", "con tutte"}
+
+
+def _scegli(candidate, testo: str, gia_usate: set[str]):
+    """Prima carta tra le candidate con quel nome o id, non ancora usata."""
+    t = testo.strip().lower()
+    return next((c for c in candidate if c.id not in gia_usate and (c.id == t or c.nome.lower() == t)), None)
+
+
+def _attacca(partita: Partita, giocatore: str, argomento: str) -> str:
+    possibili = combattimento.possibili_attaccanti(partita, giocatore)
+    if argomento.strip() in TUTTO:
+        scelti = possibili
+    else:
+        scelti, usati = [], set()
+        for nome in re.split(r",|\s+e\s+", argomento):
+            if not nome.strip():
+                continue
+            c = _scegli(possibili, nome, usati)
+            if c is None:
+                return f"«{nome.strip()}» non può attaccare."
+            scelti.append(c)
+            usati.add(c.id)
+    combattimento.dichiara_attaccanti(partita, giocatore, scelti)
+    return "Attacchi con " + (", ".join(c.nome for c in scelti) or "nessuna creatura") + "."
+
+
+def _blocca(partita: Partita, giocatore: str, argomento: str) -> str:
+    attaccanti = combattimento.attaccanti_in_campo(partita)
+    possibili = combattimento.possibili_bloccanti(partita, giocatore)
+    coppie, usati = [], set()
+    for parte in re.split(r";|\s+poi\s+", argomento):
+        if not parte.strip():
+            continue
+        if " con " not in parte:
+            return "Scrivi «blocca <attaccante> con <tua creatura>»."
+        nome_att, nome_blocc = parte.split(" con ", 1)
+        attaccante = _scegli(attaccanti, nome_att, set())
+        if attaccante is None:
+            return f"«{nome_att.strip()}» non sta attaccando."
+        bloccante = _scegli(possibili, nome_blocc, usati)
+        if bloccante is None:
+            return f"«{nome_blocc.strip()}» non può bloccare."
+        coppie.append((bloccante, attaccante))
+        usati.add(bloccante.id)
+    combattimento.dichiara_bloccanti(partita, giocatore, coppie)
+    return "Blocchi: " + "; ".join(f"{b.nome} blocca {a.nome}" for b, a in coppie) + "."
 
 
 def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
@@ -72,7 +122,20 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
             case "vita":
                 azioni.modifica_vita(partita, giocatore, cmd.numero, "(manuale)")
                 return f"Vita: {partita.giocatore(giocatore).vita}"
+            case "attacca":
+                return _attacca(partita, giocatore, cmd.argomento)
+            case "nonattacco":
+                combattimento.dichiara_attaccanti(partita, giocatore, [])
+                return "Non attacchi."
+            case "blocca":
+                return _blocca(partita, giocatore, cmd.argomento)
+            case "nonblocco":
+                combattimento.dichiara_bloccanti(partita, giocatore, [])
+                return "Non blocchi."
             case "passa":
+                if combattimento.deve_dichiarare_bloccanti(partita, giocatore):
+                    combattimento.dichiara_bloccanti(partita, giocatore, [])
+                    return "Non blocchi."
                 azioni.passa_priorita(partita, giocatore)
                 return "Passi."
             case "giudice":

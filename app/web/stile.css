@@ -4,7 +4,7 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 header { display: flex; gap: 1rem; align-items: center; padding: .75rem 1rem; border-bottom: 1px solid #0004; }
 header h1 { font-size: 1.3rem; margin: 0; color: var(--accento); }
 #info { flex: 1; opacity: .85; }
-main { align-items: start; display: grid; grid-template-columns: 1fr 280px; grid-template-rows: auto auto auto; gap: 1rem; padding: 1rem; }
+main { align-items: start; display: grid; grid-template-columns: 1fr 280px; grid-template-rows: min-content min-content 1fr; gap: 1rem; padding: 1rem; }
 aside { grid-column: 2; grid-row: 1 / 4; background: var(--tavolo); border-radius: 8px; padding: .5rem 1rem; max-height: 70vh; overflow: auto; font-size: .85rem; }
 .giocatore { background: var(--tavolo); border-radius: 8px; padding: .75rem 1rem; }
 .giocatore h2 { margin: 0 0 .5rem; font-size: 1rem; }
@@ -25,3 +25,9 @@ button:disabled { opacity: .5; }
 .carta.ferita .pt { color: #a3241b; }
 .mirino .carta, .mirino .nome-giocatore { cursor: crosshair; }
 .mirino .giocatore .fila .carta:hover, .mirino .nome-giocatore:hover { outline: 2px solid #a3241b; }
+.carta.attaccante { box-shadow: 0 0 0 2px #a3241b; }
+.carta.bloccante { box-shadow: 0 0 0 2px #2f5f9e; }
+.carta.selezionata { box-shadow: 0 0 0 3px var(--accento); }
+#barra-combattimento { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 0 1rem .75rem; padding: .6rem 1rem; border-radius: 8px; background: #3b2a1e; }
+#barra-combattimento[hidden] { display: none; }
+#barra-combattimento span { flex: 1; min-width: 12rem; }

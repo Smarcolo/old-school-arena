@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from app.cards import database
 from app.engine import combattimento, mana
 from app.engine.azioni import descrivi_bersaglio
-from app.engine.stato import Partita, nuova_partita
+from app.engine.stato import PAROLE_CHIAVE, Partita, nuova_partita, parole_chiave_da_testo
 from app.engine.validazione import tipo_bersaglio
 from app.engine.zone import Zona
 from app.judge.giudice import Giudice
@@ -18,8 +18,10 @@ UMANO = "Tu"
 AI = "Avversaria"
 
 # Mazzi di prova finché non c'è l'editor dei mazzi (non rispettano il limite di 4 copie).
-MAZZO_VERDE = {"Forest": 18, "Llanowar Elves": 8, "Grizzly Bears": 10, "Giant Growth": 4}
-MAZZO_ROSSO = {"Mountain": 20, "Gray Ogre": 8, "Hill Giant": 6, "Lightning Bolt": 6}
+MAZZO_VERDE = {"Forest": 17, "Llanowar Elves": 4, "Elvish Archers": 4, "Grizzly Bears": 4, "War Mammoth": 4,
+               "Giant Spider": 3, "Giant Growth": 4}
+MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 4, "Hurloon Minotaur": 4, "Gray Ogre": 4, "Hill Giant": 3,
+               "Roc of Kher Ridges": 4, "Lightning Bolt": 4}
 
 app = FastAPI(title="Old School Arena")
 partite: dict[str, Partita] = {}
@@ -32,13 +34,17 @@ class RichiestaComando(BaseModel):
     testo: str
 
 
+def _abilita(c) -> list[str]:
+    return sorted(PAROLE_CHIAVE.get(k, f"passa-{k[:-4]}") for k in parole_chiave_da_testo(c.testo))
+
+
 def vista(p: Partita) -> dict:
     """Stato visibile al giocatore umano: la mano dell'avversaria resta nascosta."""
     def zona(g, z):
         return [{"id": c.id, "nome": c.nome, "tipo": c.tipo, "costo": c.costo, "tappata": c.tappata,
                  "forza": c.forza_attuale if c.is_creatura else None,
                  "costituzione": c.costituzione_attuale if c.is_creatura else None,
-                 "danni": c.danni, "bersaglio": tipo_bersaglio(c),
+                 "danni": c.danni, "bersaglio": tipo_bersaglio(c), "abilita": _abilita(c),
                  "appena_entrata": p.ha_debolezza_da_evocazione(c)} for c in g[z]]
 
     giocatori = []

@@ -6,5 +6,18 @@
   {"nome": "Lightning Bolt", "tipo": "Instant", "costo": "{R}", "testo": "Lightning Bolt deals 3 damage to any target."},
   {"nome": "Gray Ogre", "tipo": "Creature — Ogre", "costo": "{2}{R}", "forza": 2, "costituzione": 2, "testo": ""},
   {"nome": "Hill Giant", "tipo": "Creature — Giant", "costo": "{3}{R}", "forza": 3, "costituzione": 3, "testo": ""},
-  {"nome": "Giant Growth", "tipo": "Instant", "costo": "{G}", "testo": "Target creature gets +3/+3 until end of turn."}
+  {"nome": "Giant Growth", "tipo": "Instant", "costo": "{G}", "testo": "Target creature gets +3/+3 until end of turn."},
+  {"nome": "Plains", "tipo": "Basic Land — Plains", "testo": "({T}: Add {W}.)"},
+  {"nome": "Island", "tipo": "Basic Land — Island", "testo": "({T}: Add {U}.)"},
+  {"nome": "Swamp", "tipo": "Basic Land — Swamp", "testo": "({T}: Add {B}.)"},
+  {"nome": "Elvish Archers", "tipo": "Creature — Elf Archer", "costo": "{1}{G}", "forza": 2, "costituzione": 1, "testo": "First strike"},
+  {"nome": "War Mammoth", "tipo": "Creature — Elephant", "costo": "{3}{G}", "forza": 3, "costituzione": 3, "testo": "Trample"},
+  {"nome": "Giant Spider", "tipo": "Creature — Spider", "costo": "{3}{G}", "forza": 2, "costituzione": 4, "testo": "Reach"},
+  {"nome": "Shanodin Dryads", "tipo": "Creature — Nymph Dryad", "costo": "{G}", "forza": 1, "costituzione": 1, "testo": "Forestwalk"},
+  {"nome": "Craw Wurm", "tipo": "Creature — Wurm", "costo": "{4}{G}{G}", "forza": 6, "costituzione": 4, "testo": ""},
+  {"nome": "Mons's Goblin Raiders", "tipo": "Creature — Goblin", "costo": "{R}", "forza": 1, "costituzione": 1, "testo": ""},
+  {"nome": "Hurloon Minotaur", "tipo": "Creature — Minotaur", "costo": "{1}{R}{R}", "forza": 2, "costituzione": 3, "testo": ""},
+  {"nome": "Roc of Kher Ridges", "tipo": "Creature — Bird", "costo": "{3}{R}", "forza": 3, "costituzione": 3, "testo": "Flying"},
+  {"nome": "Wall of Stone", "tipo": "Creature — Wall", "costo": "{1}{R}{R}", "forza": 0, "costituzione": 8, "testo": "Defender"},
+  {"nome": "Serra Angel", "tipo": "Creature — Angel", "costo": "{3}{W}{W}", "forza": 4, "costituzione": 4, "testo": "Flying, vigilance"}
 ]

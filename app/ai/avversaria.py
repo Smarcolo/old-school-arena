@@ -35,11 +35,13 @@ def bersaglio_bolt(partita: Partita, nome: str) -> str | None:
 
 def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
     """Attacca con ogni creatura che nessun bloccante possibile ucciderebbe senza morire a sua volta."""
-    difensori = combattimento.possibili_bloccanti(partita, partita.avversario_di(nome).nome)
+    avversario = partita.avversario_di(nome).nome
+    difensori = combattimento.possibili_bloccanti(partita, avversario)
     scelti = []
     for a in combattimento.possibili_attaccanti(partita, nome):
+        possibili = [b for b in difensori if combattimento.puo_bloccare_contro(partita, avversario, b, a) is None]
         cattivo_scambio = any(b.forza_attuale >= a.costituzione_attuale - a.danni
-                              and a.forza_attuale < b.costituzione_attuale - b.danni for b in difensori)
+                              and a.forza_attuale < b.costituzione_attuale - b.danni for b in possibili)
         if not cattivo_scambio:
             scelti.append(a)
     return scelti
@@ -56,9 +58,12 @@ def scegli_bloccanti(partita: Partita, nome: str) -> list[tuple[Carta, Carta]]:
     def vita(c):
         return c.costituzione_attuale - c.danni
 
+    def legali(a):
+        return [b for b in disponibili if combattimento.puo_bloccare_contro(partita, nome, b, a) is None]
+
     for a in attaccanti:
-        uccide = [b for b in disponibili if b.forza_attuale >= vita(a)]
-        sopravvive = [b for b in disponibili if vita(b) > a.forza_attuale]
+        uccide = [b for b in legali(a) if b.forza_attuale >= vita(a)]
+        sopravvive = [b for b in legali(a) if vita(b) > a.forza_attuale]
         scelta = (next((b for b in uccide if b in sopravvive), None)
                   or (min(sopravvive, key=lambda b: b.forza_attuale) if sopravvive else None)
                   or next((b for b in uccide if b.forza_attuale <= a.forza_attuale), None))
@@ -69,9 +74,9 @@ def scegli_bloccanti(partita: Partita, nome: str) -> list[tuple[Carta, Carta]]:
     liberi = [a for a in attaccanti if a.id not in bloccati]
     if sum(a.forza_attuale for a in liberi) >= partita.giocatore(nome).vita:
         for a in liberi:
-            if not disponibili:
-                break
-            piccola = min(disponibili, key=lambda b: b.forza_attuale)
+            if not legali(a):
+                continue
+            piccola = min(legali(a), key=lambda b: b.forza_attuale)
             blocchi.append((piccola, a))
             disponibili.remove(piccola)
     return blocchi

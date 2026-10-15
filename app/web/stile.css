@@ -31,3 +31,4 @@ button:disabled { opacity: .5; }
 #barra-combattimento { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 0 1rem .75rem; padding: .6rem 1rem; border-radius: 8px; background: #3b2a1e; }
 #barra-combattimento[hidden] { display: none; }
 #barra-combattimento span { flex: 1; min-width: 12rem; }
+.carta .abilita { display: block; font-size: .7rem; font-style: italic; opacity: .8; }

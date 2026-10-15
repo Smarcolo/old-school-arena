@@ -37,6 +37,7 @@ Puoi anche cliccare una carta in mano per giocarla o sul campo per tapparla, e u
 - Giudice che cerca nei testi di `data/regole/`.
 
 ## Carte reali
+Le carte in `app/cards/carte_base.json` sono dati di prova scritti a mano: l'import da Scryfall le sovrascrive con i dati ufficiali.
 `python -m app.cards.scryfall` importa le carte dei set ammessi da Scryfall nel database locale.
 
 ## Test

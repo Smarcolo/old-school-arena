@@ -2,12 +2,31 @@
 from __future__ import annotations
 
 import random
+import re
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 
 from app.engine.eventi import RegistroEventi
 from app.engine.zone import Zona
+
+
+# Parole chiave riconosciute nel testo Oracle (inglese, minuscolo) e come si dicono in italiano.
+PAROLE_CHIAVE = {
+    "flying": "volare", "reach": "raggiungere", "first strike": "attacca per primo", "trample": "travolgere",
+    "vigilance": "cautela", "haste": "rapidità", "defender": "difensore",
+}
+_PASSATERRE = re.compile(r"^(plains|island|swamp|mountain|forest)walk$")
+
+
+def parole_chiave_da_testo(testo: str) -> set[str]:
+    """Una riga del testo Oracle fatta solo di parole chiave (es. "Flying, vigilance") le attiva tutte."""
+    trovate: set[str] = set()
+    for riga in testo.lower().splitlines():
+        parti = [p.strip() for p in riga.split(",")]
+        if parti and all(p in PAROLE_CHIAVE or _PASSATERRE.match(p) for p in parti):
+            trovate.update(parti)
+    return trovate
 
 
 class Fase(str, Enum):
@@ -47,6 +66,14 @@ class Carta:
     @property
     def costituzione_attuale(self) -> int:
         return (self.costituzione or 0) + self.bonus_costituzione
+
+    def ha(self, parola_chiave: str) -> bool:
+        return parola_chiave in parole_chiave_da_testo(self.testo)
+
+    @property
+    def passaterre(self) -> list[str]:
+        """Tipi di terra della passaterre ("Forest" per forestwalk)."""
+        return [p[:-4].capitalize() for p in parole_chiave_da_testo(self.testo) if _PASSATERRE.match(p)]
 
     def azzera_stato_in_campo(self) -> None:
         """Quando lascia il campo o a fine turno: niente danni né bonus."""
@@ -125,8 +152,8 @@ class Partita:
         return self.giocatori[self.priorita]
 
     def ha_debolezza_da_evocazione(self, carta: Carta) -> bool:
-        """Una creatura entrata in questo turno non può attaccare né usare abilità con {T}."""
-        return carta.is_creatura and carta.entrata_nel_turno == self.turno
+        """Una creatura entrata in questo turno non può attaccare né usare abilità con {T} (salvo rapidità)."""
+        return carta.is_creatura and carta.entrata_nel_turno == self.turno and not carta.ha("haste")
 
     def giocatore(self, nome: str) -> Giocatore:
         for g in self.giocatori:

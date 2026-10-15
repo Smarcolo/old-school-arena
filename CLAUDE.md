@@ -9,7 +9,7 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 
 ## Struttura
 - `app/engine/` — stato della partita (`stato.py`), zone, azioni, validazione, event log. Nessuna dipendenza da API, AI o web.
-- `app/cards/` — database SQLite delle carte, import Scryfall, regole di costruzione mazzo Swedish (`regole_swedish.json`).
+- `app/cards/` — `carte_base.json` (dati di prova scritti a mano, sovrascritti dall'import Scryfall), database SQLite delle carte, import Scryfall, regole di costruzione mazzo Swedish (`regole_swedish.json`).
 - `app/judge/` — indice FTS5 dei testi in `data/regole/*.md` e risposte del giudice.
 - `app/ai/` — avversaria. Usa solo le funzioni pubbliche di `engine`.
 - `app/commands/` — `parser.py` (testo → Comando) ed `esegui.py` (Comando → azione + messaggio).
@@ -33,7 +33,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Combattimento (`engine/combattimento.py`): l'attivo dichiara gli attaccanti con priorità e pila vuota; al doppio
   passaggio il difensore dichiara i bloccanti (saltato se non può bloccare); al doppio passaggio successivo danni
   simultanei; poi la fase finisce. Più bloccanti sullo stesso attaccante: danno letale a ciascuno in ordine, il resto
-  all'ultimo. Un attaccante bloccato non colpisce il giocatore. Niente ancora attacco improvviso, travolgere, volare.
+  all'ultimo. Un attaccante bloccato non colpisce il giocatore (salvo travolgere).
+- Parole chiave lette dal testo Oracle (`stato.parole_chiave_da_testo`, `Carta.ha("flying")`): volare, raggiungere,
+  passaterre, difensore, cautela, rapidità, travolgere, attacca per primo (due passi di danno senza priorità in mezzo).
+  Mancano: banding, protezione, abilità attivate e innescate.
 - Regia: l'umano si ferma anche per dichiarare attaccanti/bloccanti e, dopo i blocchi, se ha un istantaneo lanciabile.
   `regia.suggerimento` aggiunge al messaggio cosa può fare adesso.
 - Terminologia 93/94: "rimosse dal gioco" (non esilio), mana burn e interrupt esistono, niente fase di cleanup separata.
@@ -56,5 +59,6 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 2. Fatto: istantanei con bersaglio (Lightning Bolt, Giant Growth), risposte in pila, AI che usa Bolt anche in risposta.
 3. Fatto: combattimento con attaccanti, bloccanti (anche multipli), danni; AI che attacca e blocca.
 4. Editor mazzi con `valida_mazzo` e mazzi salvati.
-5. Abilità chiave del 93/94: volare, attacco improvviso, travolgere, prima dei danni (first strike), banding (!).
+5. Fatto: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
+   Da fare: banding, protezione, abilità attivate (es. firebreathing) e innescate.
 6. Immagini delle carte in cache in `data/immagini/`.

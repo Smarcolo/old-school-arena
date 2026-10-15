@@ -5,6 +5,9 @@ Flusso dentro la fase di combattimento:
    passano senza attaccanti dichiarati, la fase finisce.
 2. Quando entrambi passano dopo la dichiarazione, il difensore deve dichiarare i bloccanti (anche nessuno).
 3. Quando entrambi passano dopo i blocchi, si infliggono i danni; dopo un altro doppio passaggio la fase finisce.
+
+Abilità gestite: volare / raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
+Con «attacca per primo» ci sono due passi di danno di fila, senza priorità in mezzo (semplificazione).
 """
 from app.engine.stato import Carta, Combattimento, Fase, Partita
 from app.engine.validazione import AzioneIllegale
@@ -21,6 +24,8 @@ def puo_attaccare(partita: Partita, giocatore: str, carta: Carta) -> str | None:
         return f"{carta.nome} non è una tua creatura in campo"
     if carta.tappata:
         return f"{carta.nome} è tappata"
+    if carta.ha("defender"):
+        return f"{carta.nome} non può attaccare (difensore)"
     if partita.ha_debolezza_da_evocazione(carta):
         return f"{carta.nome} è entrata in questo turno e non può attaccare"
     return None
@@ -31,6 +36,18 @@ def puo_bloccare(partita: Partita, giocatore: str, carta: Carta) -> str | None:
         return f"{carta.nome} non è una tua creatura in campo"
     if carta.tappata:
         return f"{carta.nome} è tappata e non può bloccare"
+    return None
+
+
+def puo_bloccare_contro(partita: Partita, giocatore: str, bloccante: Carta, attaccante: Carta) -> str | None:
+    if motivo := puo_bloccare(partita, giocatore, bloccante):
+        return motivo
+    if attaccante.ha("flying") and not (bloccante.ha("flying") or bloccante.ha("reach")):
+        return f"{attaccante.nome} vola: la blocca solo una creatura con volare o raggiungere"
+    terre = {t for c in partita.giocatore(giocatore)[Zona.CAMPO] if c.is_terra for t in c.tipo.split()}
+    for tipo in attaccante.passaterre:
+        if tipo in terre:
+            return f"{attaccante.nome} non si può bloccare: controlli una {tipo} e lei ha passa-{tipo.lower()}"
     return None
 
 
@@ -74,7 +91,8 @@ def dichiara_attaccanti(partita: Partita, giocatore: str, attaccanti: list[Carta
         if motivo := puo_attaccare(partita, giocatore, c):
             raise AzioneIllegale(motivo)
     for c in attaccanti:
-        c.tappata = True
+        if not c.ha("vigilance"):
+            c.tappata = True
     comb.attaccanti = [c.id for c in attaccanti]
     comb.attaccanti_dichiarati = True
     partita.passaggi = 0
@@ -91,7 +109,7 @@ def dichiara_bloccanti(partita: Partita, giocatore: str, blocchi: list[tuple[Car
         raise AzioneIllegale("blocca il giocatore che difende")
     usati = set()
     for bloccante, attaccante in blocchi:
-        if motivo := puo_bloccare(partita, giocatore, bloccante):
+        if motivo := puo_bloccare_contro(partita, giocatore, bloccante, attaccante):
             raise AzioneIllegale(motivo)
         if bloccante.id in usati:
             raise AzioneIllegale(f"{bloccante.nome} può bloccare una sola creatura")
@@ -116,31 +134,43 @@ def inizia_blocchi(partita: Partita) -> None:
     comb.attesa_bloccanti = True
     partita.priorita = partita.giocatori.index(partita.giocatore(difensore))
     partita.passaggi = 0
-    if not attaccanti_in_campo(partita) or not possibili_bloccanti(partita, difensore):
+    blocco_possibile = any(puo_bloccare_contro(partita, difensore, b, a) is None
+                           for a in attaccanti_in_campo(partita) for b in possibili_bloccanti(partita, difensore))
+    if not blocco_possibile:
         dichiara_bloccanti(partita, difensore, [])
 
 
-def infliggi_danni(partita: Partita) -> None:
-    """Danni simultanei. L'attaccante bloccato divide i danni tra i bloccanti nell'ordine dato, dando a ognuno
-    il danno letale prima di passare al successivo. Un attaccante bloccato non colpisce il giocatore,
-    anche se i bloccanti sono già morti."""
+def _colpisce_in(carta: Carta, passo: str | None) -> bool:
+    """passo None = unico passo di danno; "primo"/"normale" quando qualcuno attacca per primo."""
+    return passo is None or carta.ha("first strike") == (passo == "primo")
+
+
+def _passo_di_danno(partita: Partita, passo: str | None) -> None:
     from app.engine.azioni import azioni_di_stato, modifica_vita
     comb = partita.combattimento
-    attivo = partita.giocatore_attivo.nome
-    difensore = partita.avversario_di(attivo).nome
+    difensore = partita.avversario_di(partita.giocatore_attivo.nome).nome
     danni_creature: list[tuple[Carta, Carta, int]] = []  # (fonte, bersaglio, danni)
     danni_giocatore: list[tuple[Carta, int]] = []
     for attaccante in attaccanti_in_campo(partita):
-        if attaccante.id in comb.blocchi:
-            bloccanti = [t[1] for i in comb.blocchi[attaccante.id] if (t := partita.trova_in_campo(i))]
+        bloccato = attaccante.id in comb.blocchi
+        bloccanti = [t[1] for i in comb.blocchi.get(attaccante.id, []) if (t := partita.trova_in_campo(i))]
+        if _colpisce_in(attaccante, passo):
             restante = attaccante.forza_attuale
-            for n, b in enumerate(bloccanti):
-                quota = restante if n == len(bloccanti) - 1 else min(restante, max(0, b.costituzione_attuale - b.danni))
-                danni_creature.append((attaccante, b, quota))
-                restante -= quota
+            if not bloccato:
+                danni_giocatore.append((attaccante, restante))
+            else:
+                travolge = attaccante.ha("trample")
+                for n, b in enumerate(bloccanti):
+                    letale = max(0, b.costituzione_attuale - b.danni)
+                    ultimo = n == len(bloccanti) - 1
+                    quota = min(restante, letale) if (travolge or not ultimo) else restante
+                    danni_creature.append((attaccante, b, quota))
+                    restante -= quota
+                if travolge and restante > 0:
+                    danni_giocatore.append((attaccante, restante))
+        for b in bloccanti:
+            if _colpisce_in(b, passo):
                 danni_creature.append((b, attaccante, b.forza_attuale))
-        else:
-            danni_giocatore.append((attaccante, attaccante.forza_attuale))
     for fonte, bersaglio, n in danni_creature:
         if n > 0:
             bersaglio.danni += n
@@ -148,8 +178,21 @@ def infliggi_danni(partita: Partita) -> None:
     for fonte, n in danni_giocatore:
         if n > 0:
             modifica_vita(partita, difensore, -n, f"(attacco di {fonte.nome})")
-    comb.danni_inflitti = True
     azioni_di_stato(partita)
+
+
+def infliggi_danni(partita: Partita) -> None:
+    """Danni simultanei. L'attaccante bloccato dà a ogni bloccante, in ordine, il danno letale prima di passare
+    al successivo; l'ultimo prende il resto, salvo travolgere (il resto va al giocatore). Un attaccante bloccato
+    senza travolgere non colpisce il giocatore, anche se i bloccanti sono già morti."""
+    comb = partita.combattimento
+    coinvolte = attaccanti_in_campo(partita) + [t[1] for i in comb.bloccanti() if (t := partita.trova_in_campo(i))]
+    passi = ["primo", "normale"] if any(c.ha("first strike") for c in coinvolte) else [None]
+    for passo in passi:
+        _passo_di_danno(partita, passo)
+        if partita.vincitore:
+            break
+    comb.danni_inflitti = True
     partita.priorita = partita.attivo
     partita.passaggi = 0
 

@@ -32,3 +32,21 @@ button:disabled { opacity: .5; }
 #barra-combattimento[hidden] { display: none; }
 #barra-combattimento span { flex: 1; min-width: 12rem; }
 .carta .abilita { display: block; font-size: .7rem; font-style: italic; opacity: .8; }
+a.link, button.link { background: none; color: var(--accento); padding: 0; border: 0; font: inherit; cursor: pointer; text-decoration: underline; }
+.editor { grid-template-columns: 220px 1fr 300px; grid-template-rows: auto; }
+.pannello { background: var(--tavolo); border-radius: 8px; padding: .75rem 1rem; display: flex; flex-direction: column; gap: .5rem; }
+.pannello h2 { margin: 0; font-size: 1rem; }
+.pannello ul { list-style: none; padding: 0; margin: 0; max-height: 60vh; overflow: auto; }
+.pannello li { padding: .15rem 0; }
+.pannello label { display: flex; flex-direction: column; gap: .25rem; font-size: .85rem; }
+textarea { font: .95rem/1.4 ui-monospace, Consolas, monospace; padding: .5rem; border-radius: 6px; border: 0; resize: vertical; }
+.riga-bottoni { display: flex; gap: .5rem; }
+#analisi h3 { margin: .5rem 0 .2rem; font-size: .9rem; }
+#analisi ul { list-style: disc; padding-left: 1.2rem; max-height: none; }
+.ok { color: #9fd18b; }
+.ko { color: #f0a59d; }
+.avviso { color: #f2d48a; }
+.dettaglio { opacity: .7; font-size: .8rem; }
+.scelta-mazzi { display: flex; gap: .5rem; align-items: center; font-size: .85rem; }
+.scelta-mazzi select { font: inherit; padding: .3rem; border-radius: 6px; }
+@media (max-width: 900px) { .editor { grid-template-columns: 1fr; } }

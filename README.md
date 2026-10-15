@@ -27,11 +27,19 @@ python -m uvicorn app.api.main:app
 
 Puoi anche cliccare una carta in mano per giocarla o sul campo per tapparla, e usare i pulsanti Passa e Fine turno.
 
+## Mazzi
+Dal tavolo, «Mazzi» apre l'editor: incolli o scrivi la lista («4 Lightning Bolt», una riga «Sideboard» per la
+sideboard), cerchi le carte e le aggiungi con un clic. L'analisi dice se il mazzo è legale per le regole Swedish
+caricate, quali carte il motore non sa ancora giocare e se mancano fonti di mana per qualche colore.
+Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
+
 ## Cosa funziona oggi
 - Partita a due con mazzi di prova, turni e fasi, una terra per turno, stap e pescata automatici.
 - Mana, pila e priorità: si lanciano le creature, che entrano con debolezza da evocazione. C'è il mana burn.
 - Istantanei con bersaglio: Lightning Bolt e Giant Growth, anche in risposta l'uno all'altro.
 - Combattimento: attacchi, blocchi (anche più creature sullo stesso attaccante), danni, Giant Growth dopo i blocchi.
+- Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
+- Editor dei mazzi con analisi e mazzi salvati.
 - Sconfitta a 0 vita o pescando da grimorio vuoto; registro eventi.
 - Avversaria base: gioca terre, lancia la creatura più cara che può pagare, usa Lightning Bolt sulle tue creature o su di te, attacca quando non rischia e blocca con giudizio.
 - Giudice che cerca nei testi di `data/regole/`.

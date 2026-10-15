@@ -10,6 +10,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 ## Struttura
 - `app/engine/` — stato della partita (`stato.py`), zone, azioni, validazione, event log. Nessuna dipendenza da API, AI o web.
 - `app/cards/` — `carte_base.json` (dati di prova scritti a mano, sovrascritti dall'import Scryfall), database SQLite delle carte, import Scryfall, regole di costruzione mazzo Swedish (`regole_swedish.json`).
+- `app/cards/mazzi.py` — mazzi salvati (tabella `mazzi`), formato testo «4 Nome carta» con riga «Sideboard»,
+  analisi: regole Swedish, carte sconosciute, cosa il motore non sa ancora giocare, colori senza fonti, curva.
 - `app/judge/` — indice FTS5 dei testi in `data/regole/*.md` e risposte del giudice.
 - `app/ai/` — avversaria. Usa solo le funzioni pubbliche di `engine`.
 - `app/commands/` — `parser.py` (testo → Comando) ed `esegui.py` (Comando → azione + messaggio).
@@ -50,7 +52,7 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   dalla fonte ufficiale**. Non riempirle a memoria. I set ammessi sono da verificare sul regolamento in vigore.
 
 ## Lavoro
-- Test: `python -m pytest -q`. Ogni nuova regola del motore arriva con il suo test.
+- Test: `python -m pytest -q`. I test usano un database temporaneo (variabile `OSA_DATI`, impostata in `tests/conftest.py`). Ogni nuova regola del motore arriva con il suo test.
 - Avvio sviluppo: `python -m uvicorn app.api.main:app --reload`.
 - Import carte reali: `python -m app.cards.scryfall` (scarica il bulk Scryfall, pesante).
 
@@ -58,7 +60,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 1. Fatto: mana, pila, priorità, lancio creature, mana burn, debolezza da evocazione.
 2. Fatto: istantanei con bersaglio (Lightning Bolt, Giant Growth), risposte in pila, AI che usa Bolt anche in risposta.
 3. Fatto: combattimento con attaccanti, bloccanti (anche multipli), danni; AI che attacca e blocca.
-4. Editor mazzi con `valida_mazzo` e mazzi salvati.
+4. Fatto: editor mazzi (`/mazzi.html`), mazzi salvati, scelta dei mazzi a inizio partita.
+   Serve che Marco compili bandite/ristrette in `regole_swedish.json` per il controllo completo.
 5. Fatto: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
    Da fare: banding, protezione, abilità attivate (es. firebreathing) e innescate.
 6. Immagini delle carte in cache in `data/immagini/`.

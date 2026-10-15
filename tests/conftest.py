@@ -1,3 +1,9 @@
+import os
+import tempfile
+
+# Prima di importare l'app: database in una cartella temporanea, non in data/.
+os.environ.setdefault("OSA_DATI", tempfile.mkdtemp(prefix="osa-test-"))
+
 import pytest
 
 from app.cards import database

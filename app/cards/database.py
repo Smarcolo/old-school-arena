@@ -17,6 +17,12 @@ CREATE TABLE IF NOT EXISTS carte (
     set_codici TEXT DEFAULT '',     -- set 93/94 in cui è stata stampata, separati da virgola
     immagine_url TEXT DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS mazzi (
+    nome TEXT PRIMARY KEY,
+    mazzo TEXT NOT NULL,            -- JSON {nome carta: copie}
+    sideboard TEXT NOT NULL DEFAULT '{}',
+    aggiornato TEXT DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 CARTE_BASE = Path(__file__).with_name("carte_base.json")
@@ -66,3 +72,12 @@ def mazzo_da_lista(conn: sqlite3.Connection, lista: dict[str, int]) -> list[Cart
             raise KeyError(f"carta sconosciuta: {nome}")
         mazzo.extend(cerca(conn, nome) for _ in range(copie))
     return mazzo
+
+
+def cerca_per_testo(conn: sqlite3.Connection, testo: str, limite: int = 30) -> list[dict]:
+    righe = conn.execute(
+        "SELECT nome, tipo, costo, forza, costituzione, testo FROM carte WHERE nome LIKE ? "
+        "ORDER BY nome LIKE ? DESC, nome LIMIT ?",
+        (f"%{testo.strip()}%", f"{testo.strip()}%", limite),
+    ).fetchall()
+    return [dict(r) for r in righe]

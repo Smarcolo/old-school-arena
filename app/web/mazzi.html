@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mazzi · Old School Arena</title>
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+<header>
+  <h1>Mazzi</h1>
+  <span id="info"></span>
+  <a class="link" href="index.html">← Torna al tavolo</a>
+</header>
+<main class="editor">
+  <section class="pannello">
+    <h2>I tuoi mazzi</h2>
+    <ul id="elenco"></ul>
+    <button id="nuovo" type="button">Nuovo mazzo</button>
+  </section>
+  <section class="pannello">
+    <label>Nome <input id="nome" autocomplete="off"></label>
+    <label>Lista (una carta per riga, es. «4 Lightning Bolt»; poi una riga «Sideboard»)
+      <textarea id="lista" rows="22" spellcheck="false"></textarea>
+    </label>
+    <div class="riga-bottoni">
+      <button id="salva" type="button">Salva</button>
+      <button id="elimina" type="button">Elimina</button>
+    </div>
+    <div id="analisi"></div>
+  </section>
+  <section class="pannello">
+    <h2>Cerca carte</h2>
+    <input id="cerca" placeholder="Nome della carta…" autocomplete="off">
+    <ul id="risultati"></ul>
+  </section>
+</main>
+<p id="messaggio" role="status"></p>
+<script src="mazzi.js"></script>
+</body>
+</html>

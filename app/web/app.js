@@ -149,8 +149,21 @@ async function invia(testo) {
   }
 }
 
+async function caricaMazzi() {
+  const mazzi = await api("/api/mazzi");
+  for (const [id, predefinito] of [["mazzo", "Verde (prova)"], ["mazzo-avversaria", "Rosso (prova)"]]) {
+    $(id).replaceChildren(...mazzi.map((m) => el("option", { value: m.nome, textContent: `${m.nome} (${m.totale})`, selected: m.nome === predefinito })));
+  }
+}
+caricaMazzi();
+
 $("nuova").onclick = async () => {
-  partita = await api("/api/partite", { method: "POST" });
+  try {
+    partita = await api("/api/partite", { method: "POST",
+      body: JSON.stringify({ mazzo: $("mazzo").value, mazzo_avversaria: $("mazzo-avversaria").value }) });
+  } catch (e) {
+    return avvisa("Errore: " + e.message);
+  }
   $("testo").disabled = false;
   $("comando").querySelectorAll("button").forEach((b) => (b.disabled = false));
   avvisa("Partita iniziata. Scrivi «aiuto» per i comandi.");

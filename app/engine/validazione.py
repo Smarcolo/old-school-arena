@@ -78,8 +78,8 @@ def _motivo_bersaglio(partita: Partita, rif: str, fonte: Carta, altrimenti: str)
     from app.engine.stato import NOMI_COLORI
     oggetto = partita.risolvi_bersaglio(rif)
     if isinstance(oggetto, Carta) and oggetto.protetta_da(fonte):
-        colori = ", ".join(NOMI_COLORI[c] for c in sorted(oggetto.protezioni & fonte.colori))
-        return f"{oggetto.nome} ha protezione dal {colori}"
+        colori = ", ".join(NOMI_COLORI[c] for c in sorted(oggetto.protezioni & fonte.caratteristiche_protezione))
+        return f"{oggetto.nome} ha protezione {'dagli' if colori == 'artefatti' else 'dal'} {colori}"
     return altrimenti
 
 

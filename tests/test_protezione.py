@@ -139,3 +139,15 @@ def test_ai_blocca_con_il_cavaliere(p):
 def test_analisi_mazzo_capisce_la_protezione(conn):
     a = mazzi.analizza(conn, {"White Knight": 4, "Black Knight": 4, "Plains": 26, "Swamp": 26}, {})
     assert not any("Knight" in x for x in a["avvisi"])
+
+
+def test_protezione_dagli_artefatti(p):
+    tetra = Carta("Guardiano", "Creature — Test", "{2}{G}", 2, 2, "Protection from artifacts")
+    p.giocatore("B")[Zona.CAMPO].append(tetra)
+    golem = Carta("Golem", "Artifact Creature — Golem", "{4}", 3, 3)
+    assert tetra.protetta_da(golem) and not tetra.protetta_da(cr("Orco", 2, 2, "{R}"))
+    azioni.infliggi_danno(p, golem, f"carta:{tetra.id}", 3)
+    assert tetra.danni == 0
+    assert _abilita(tetra) == ["protezione dagli artefatti"]
+    p.giocatore("A")[Zona.CAMPO].append(golem)
+    assert "protezione" in combattimento.puo_bloccare_contro(p, "A", golem, tetra)

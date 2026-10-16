@@ -10,7 +10,7 @@ from app.cards import database, immagini, mazzi
 from app.engine import combattimento, mana
 from app.engine.abilita import analizza_abilita
 from app.engine.azioni import descrivi_bersaglio
-from app.engine.stato import COLORI_INGLESE, NOMI_COLORI, PAROLE_CHIAVE, Partita, nuova_partita, parole_chiave_da_testo
+from app.engine.stato import NOMI_COLORI, PAROLE_CHIAVE, PROTEZIONI_INGLESE, Partita, nuova_partita, parole_chiave_da_testo
 from app.engine.validazione import tipo_bersaglio
 from app.engine.zone import Zona
 from app.judge.giudice import Giudice
@@ -53,8 +53,10 @@ class TestoMazzo(BaseModel):
 def _nome_abilita(k: str) -> str:
     if k in PAROLE_CHIAVE:
         return PAROLE_CHIAVE[k]
+    if k == "protection from artifacts":
+        return "protezione dagli artefatti"
     if k.startswith("protection from "):
-        return f"protezione dal {NOMI_COLORI[COLORI_INGLESE[k.removeprefix('protection from ')]]}"
+        return f"protezione dal {NOMI_COLORI[PROTEZIONI_INGLESE[k.removeprefix('protection from ')]]}"
     return f"passa-{k[:-4]}"
 
 

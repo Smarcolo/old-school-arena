@@ -48,7 +48,7 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
 - Incantesimi: aure sulle creature (Holy Strength, Unholy Strength, Giant Strength, Firebreathing, Flight) e
   globali (Crusade, Bad Moon). Si lanciano come le magie con bersaglio: clic sull'aura, poi sulla creatura.
 - Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo,
-  protezione da un colore (White Knight, Black Knight).
+  protezione da un colore (White Knight, Black Knight) e dagli artefatti.
 - Editor dei mazzi con analisi e mazzi salvati.
 - Immagini delle carte: passando il mouse su una carta compare l'immagine (scaricata da Scryfall la prima volta,
   poi tenuta in `data/immagini/`; senza internet si gioca lo stesso, solo senza immagini).

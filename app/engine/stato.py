@@ -17,9 +17,10 @@ PAROLE_CHIAVE = {
     "vigilance": "cautela", "haste": "rapidità", "defender": "difensore",
 }
 _PASSATERRE = re.compile(r"^(plains|island|swamp|mountain|forest)walk$")
-_PROTEZIONE = re.compile(r"^protection from (white|blue|black|red|green)$")
+_PROTEZIONE = re.compile(r"^protection from (white|blue|black|red|green|artifacts)$")
 COLORI_INGLESE = {"white": "W", "blue": "U", "black": "B", "red": "R", "green": "G"}
-NOMI_COLORI = {"W": "bianco", "U": "blu", "B": "nero", "R": "rosso", "G": "verde"}
+NOMI_COLORI = {"W": "bianco", "U": "blu", "B": "nero", "R": "rosso", "G": "verde", "A": "artefatti"}
+PROTEZIONI_INGLESE = {**COLORI_INGLESE, "artifacts": "A"}  # "A" = protezione dagli artefatti
 
 
 def parole_chiave_da_testo(testo: str) -> set[str]:
@@ -93,10 +94,15 @@ class Carta:
 
     @property
     def protezioni(self) -> set[str]:
-        return {COLORI_INGLESE[m.group(1)] for p in self.parole() if (m := _PROTEZIONE.match(p))}
+        return {PROTEZIONI_INGLESE[m.group(1)] for p in self.parole() if (m := _PROTEZIONE.match(p))}
+
+    @property
+    def caratteristiche_protezione(self) -> set[str]:
+        """Ciò da cui una protezione può proteggere contro questa carta: i suoi colori, più "A" se è un artefatto."""
+        return self.colori | ({"A"} if "Artifact" in self.tipo else set())
 
     def protetta_da(self, fonte: "Carta | None") -> bool:
-        return fonte is not None and bool(self.protezioni & fonte.colori)
+        return fonte is not None and bool(self.protezioni & fonte.caratteristiche_protezione)
 
     @property
     def passaterre(self) -> list[str]:

@@ -305,6 +305,9 @@ def _rigenera(partita: Partita, controllore: str, carta: Carta) -> None:
         if carta.id in comb.attaccanti:
             comb.attaccanti.remove(carta.id)
             comb.blocchi.pop(carta.id, None)
+            for banda in comb.bande:
+                if carta.id in banda:
+                    banda.remove(carta.id)
         for bloccanti in comb.blocchi.values():
             if carta.id in bloccanti:
                 bloccanti.remove(carta.id)

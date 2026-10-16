@@ -23,7 +23,8 @@ python -m uvicorn app.api.main:app
 - `tappa <carta>`: tappa per mana; `mana` mostra la riserva. Il mana non usato a fine fase fa perdere vita (mana burn).
 - `passa`: passi la priorità. Se c'è qualcosa in pila si risolve, altrimenti si va alla fase dopo.
 - `fine turno`: chiudi il turno (risolvendo quello che hai in pila).
-- `attacca con <carte>` (separate da virgola o «e»), `attacca con tutto`, `non attacco`.
+- `attacca con <carte>` (separate da virgola o «e»), `attacca con tutto`, `non attacco`. Con «+» le creature
+  attaccano in banda: `attacca con benalish hero + grizzly bears`.
 - `blocca <attaccante> con <tua creatura>; <altro attaccante> con <altra creatura>`, `nessun blocco`.
   Dall'interfaccia: clicchi una tua creatura e poi l'attaccante, poi «Conferma blocchi».
 - `mano`, `stato`, `pesca [n]`, `vita <+/-n>`, `giudice <domanda>`, `aiuto`.
@@ -48,7 +49,8 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
 - Incantesimi: aure sulle creature (Holy Strength, Unholy Strength, Giant Strength, Firebreathing, Flight) e
   globali (Crusade, Bad Moon). Si lanciano come le magie con bersaglio: clic sull'aura, poi sulla creatura.
 - Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo,
-  protezione da un colore (White Knight, Black Knight) e dagli artefatti.
+  protezione da un colore (White Knight, Black Knight) e dagli artefatti, banding (Benalish Hero, Timber Wolves:
+  la divisione dei danni è automatica e sceglie sempre l'opzione migliore per chi ha il banding).
 - Editor dei mazzi con analisi e mazzi salvati.
 - Immagini delle carte: passando il mouse su una carta compare l'immagine (scaricata da Scryfall la prima volta,
   poi tenuta in `data/immagini/`; senza internet si gioca lo stesso, solo senza immagini).

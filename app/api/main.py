@@ -20,7 +20,7 @@ UMANO = "Tu"
 AI = "Avversaria"
 
 # Mazzi di prova finché non c'è l'editor dei mazzi (non rispettano il limite di 4 copie).
-MAZZO_VERDE = {"Forest": 17, "Llanowar Elves": 4, "Elvish Archers": 4, "Grizzly Bears": 4, "War Mammoth": 4,
+MAZZO_VERDE = {"Forest": 17, "Llanowar Elves": 4, "Elvish Archers": 4, "Grizzly Bears": 2, "Timber Wolves": 2, "War Mammoth": 4,
                "Giant Spider": 3, "Giant Growth": 4}
 MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 2, "Uthden Troll": 2, "Hurloon Minotaur": 4, "Gray Ogre": 4, "Ball Lightning": 2,
                "Shivan Dragon": 1,
@@ -108,6 +108,7 @@ def _vista_combattimento(p: Partita) -> dict | None:
     if comb is None:
         return None
     return {"attaccanti": comb.attaccanti, "bloccanti": sorted(comb.bloccanti()), "blocchi": comb.blocchi,
+            "bande": comb.bande,
             "attesa_bloccanti": comb.attesa_bloccanti}
 
 

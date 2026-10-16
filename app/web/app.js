@@ -43,7 +43,8 @@ function nomeCarta(id) {
 
 function cartaEl(c, azione) {
   const comb = partita.combattimento;
-  const classi = ["carta", c.tappata && "tappata", c.appena_entrata && "appena-entrata", c.danni && "ferita",
+  const inBanda = comb && comb.bande && comb.bande.some((b) => b.includes(c.id));
+  const classi = ["carta", inBanda && "in-banda", c.tappata && "tappata", c.appena_entrata && "appena-entrata", c.danni && "ferita",
     comb && comb.attaccanti.includes(c.id) && "attaccante", comb && comb.bloccanti.includes(c.id) && "bloccante",
     (attaccantiScelti.has(c.id) || bloccanteScelto === c.id || blocchiScelti.some(([, b]) => b === c.id)) && "selezionata"];
   const e = el("span", { className: classi.filter(Boolean).join(" ") }, c.nome);
@@ -104,6 +105,7 @@ function disegnaBarraCombattimento() {
     barra.replaceChildren(
       el("span", { textContent: "Combattimento: clicca le creature che attaccano." }),
       bottone(`Attacca con le scelte (${attaccantiScelti.size})`, () => invia(`attacca con ${[...attaccantiScelti].join(", ")}`)),
+      ...(attaccantiScelti.size > 1 ? [bottone("Attacca in banda", () => invia(`attacca con ${[...attaccantiScelti].join(" + ")}`))] : []),
       bottone("Attacca con tutto", () => invia("attacca con tutto")),
       bottone("Nessun attacco", () => invia("non attacco")));
   } else if (partita.richiesta === "bloccanti") {

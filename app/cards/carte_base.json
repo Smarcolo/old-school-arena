@@ -41,5 +41,7 @@
   {"nome": "Firebreathing", "tipo": "Enchantment — Aura", "costo": "{R}", "testo": "Enchant creature\n{R}: Enchanted creature gets +1/+0 until end of turn."},
   {"nome": "Flight", "tipo": "Enchantment — Aura", "costo": "{U}", "testo": "Enchant creature\nEnchanted creature has flying."},
   {"nome": "Crusade", "tipo": "Enchantment", "costo": "{W}{W}", "testo": "White creatures get +1/+1."},
-  {"nome": "Bad Moon", "tipo": "Enchantment", "costo": "{1}{B}", "testo": "Black creatures get +1/+1."}
+  {"nome": "Bad Moon", "tipo": "Enchantment", "costo": "{1}{B}", "testo": "Black creatures get +1/+1."},
+  {"nome": "Benalish Hero", "tipo": "Creature — Human Soldier", "costo": "{W}", "forza": 1, "costituzione": 1, "testo": "Banding"},
+  {"nome": "Timber Wolves", "tipo": "Creature — Wolf", "costo": "{G}", "forza": 1, "costituzione": 1, "testo": "Banding"}
 ]

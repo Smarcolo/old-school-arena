@@ -155,6 +155,17 @@ def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
     return scelti
 
 
+def scegli_bande(attaccanti: list[Carta]) -> list[list[Carta]]:
+    """Tutte le creature con banding che attaccano vanno in banda con l'attaccante più forte senza banding,
+    così proteggono lui dai blocchi (i danni dei bloccanti li divide l'AI)."""
+    con_banding = [c for c in attaccanti if c.ha("banding")]
+    senza = [c for c in attaccanti if not c.ha("banding")]
+    if not con_banding or len(attaccanti) < 2:
+        return []
+    banda = con_banding + ([max(senza, key=lambda c: c.forza_attuale)] if senza else [])
+    return [banda] if len(banda) > 1 else []
+
+
 def scegli_bloccanti(partita: Partita, nome: str) -> list[tuple[Carta, Carta]]:
     """Per ogni attaccante (dal più forte): blocca uccidendolo e sopravvivendo, altrimenti sopravvivendo,
     altrimenti scambiando alla pari o in meglio. Se i danni in arrivo la ucciderebbero, blocca comunque
@@ -212,7 +223,8 @@ def agisci(partita: Partita, nome: str) -> None:
         combattimento.dichiara_bloccanti(partita, nome, scegli_bloccanti(partita, nome))
         return
     if combattimento.deve_dichiarare_attaccanti(partita, nome):
-        combattimento.dichiara_attaccanti(partita, nome, scegli_attaccanti(partita, nome))
+        attaccanti = scegli_attaccanti(partita, nome)
+        combattimento.dichiara_attaccanti(partita, nome, attaccanti, scegli_bande(attaccanti))
         return
 
     if salvabile := da_rigenerare(partita, nome):

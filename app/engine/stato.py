@@ -14,7 +14,7 @@ from app.engine.zone import Zona
 # Parole chiave riconosciute nel testo Oracle (inglese, minuscolo) e come si dicono in italiano.
 PAROLE_CHIAVE = {
     "flying": "volare", "reach": "raggiungere", "first strike": "attacca per primo", "trample": "travolgere",
-    "vigilance": "cautela", "haste": "rapidità", "defender": "difensore",
+    "vigilance": "cautela", "haste": "rapidità", "defender": "difensore", "banding": "banda",
 }
 _PASSATERRE = re.compile(r"^(plains|island|swamp|mountain|forest)walk$")
 _PROTEZIONE = re.compile(r"^protection from (white|blue|black|red|green|artifacts)$")
@@ -172,6 +172,7 @@ class Combattimento:
     """Stato della fase di combattimento in corso."""
     attaccanti: list[str] = field(default_factory=list)  # id delle creature attaccanti
     blocchi: dict[str, list[str]] = field(default_factory=dict)  # id attaccante -> id bloccanti, in ordine
+    bande: list[list[str]] = field(default_factory=list)  # gruppi di attaccanti che attaccano in banda
     attaccanti_dichiarati: bool = False
     attesa_bloccanti: bool = False  # il difensore deve dichiarare i bloccanti
     bloccanti_dichiarati: bool = False
@@ -179,6 +180,9 @@ class Combattimento:
 
     def bloccanti(self) -> set[str]:
         return {b for lista in self.blocchi.values() for b in lista}
+
+    def banda_di(self, id_attaccante: str) -> list[str]:
+        return next((b for b in self.bande if id_attaccante in b), [id_attaccante])
 
 
 @dataclass

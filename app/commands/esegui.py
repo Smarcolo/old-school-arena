@@ -33,7 +33,7 @@ def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
 
 AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta>, "
          "attiva <carta> [su <bersaglio>], passa, fine turno, "
-         "attacca con <carte>|tutto, non attacco, paga / non pago, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
+         "attacca con <carte>|tutto (con «+» in banda), non attacco, paga / non pago, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
          "mano, mana, stato, pesca [n], vita <+/-n>, giudice <domanda>")
 TUTTO = {"", "tutto", "tutte", "tutti", "con tutto", "con tutte"}
 
@@ -45,21 +45,31 @@ def _scegli(candidate, testo: str, gia_usate: set[str]):
 
 
 def _attacca(partita: Partita, giocatore: str, argomento: str) -> str:
+    """«attacca con a, b e c»; con «+» si forma una banda: «attacca con benalish hero + grizzly bears, hill giant»."""
     possibili = combattimento.possibili_attaccanti(partita, giocatore)
+    bande = []
     if argomento.strip() in TUTTO:
         scelti = possibili
     else:
         scelti, usati = [], set()
-        for nome in re.split(r",|\s+e\s+", argomento):
-            if not nome.strip():
-                continue
-            c = _scegli(possibili, nome, usati)
-            if c is None:
-                return f"«{nome.strip()}» non può attaccare."
-            scelti.append(c)
-            usati.add(c.id)
-    combattimento.dichiara_attaccanti(partita, giocatore, scelti)
-    return "Attacchi con " + (", ".join(c.nome for c in scelti) or "nessuna creatura") + "."
+        for gruppo in re.split(r",|\s+e\s+", argomento):
+            membri = []
+            for nome in gruppo.split("+"):
+                if not nome.strip():
+                    continue
+                c = _scegli(possibili, nome, usati)
+                if c is None:
+                    return f"«{nome.strip()}» non può attaccare."
+                membri.append(c)
+                usati.add(c.id)
+            scelti += membri
+            if len(membri) > 1:
+                bande.append(membri)
+    combattimento.dichiara_attaccanti(partita, giocatore, scelti, bande)
+    testo = "Attacchi con " + (", ".join(c.nome for c in scelti) or "nessuna creatura") + "."
+    for banda in bande:
+        testo += " In banda: " + " + ".join(c.nome for c in banda) + "."
+    return testo
 
 
 def _blocca(partita: Partita, giocatore: str, argomento: str) -> str:

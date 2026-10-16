@@ -48,6 +48,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   e «{costo}: <nome> deals N damage to any target / target creature / target player.». Vanno in pila
   (`OggettoPila.abilita`); la carta resta in campo. Una riga con frasi in più (es. Dragon Whelp) NON è riconosciuta:
   meglio non attivarla che attivarla male.
+- Banding: `Combattimento.bande`; chi blocca un membro blocca tutta la banda (`dichiara_bloccanti` espande i blocchi).
+  Nel passo di danno i danni dei bloccanti si calcolano una volta per bloccante. Con banding coinvolto la divisione
+  la fa chi controlla la creatura con banding, in automatico (`combattimento._assorbitore`: prima una protetta, poi
+  una che sopravvive, altrimenti tutto su quella che vale meno); in difesa niente travolgere oltre i bloccanti.
 - Rigenerazione («{B}: Regenerate X.»): l'abilità dà uno scudo (`Carta.scudi_rigenerazione`) fino a fine turno.
   `azioni.distruggi` lo consuma: niente danni, tappata, fuori dal combattimento (un attaccante resta bloccato).
   Sacrificio e costituzione 0 usano `rigenerabile=False`.
@@ -87,6 +91,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
    Serve che Marco compili bandite/ristrette in `regole_swedish.json` per il controllo completo.
 5. Fatto: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
    Fatto anche: abilità attivate semplici (pompaggio, danno) e innescate comuni.
-   Fatto anche: rigenerazione, protezione da un colore e dagli artefatti. Da fare: banding.
+   Fatto anche: rigenerazione, protezione da un colore e dagli artefatti, banding.
 6. Fatto: immagini delle carte con anteprima al passaggio del mouse.
-7. Fatto: aure e incantesimi globali. Da fare: banding; testi ufficiali per il giudice.
+7. Fatto: aure e incantesimi globali.
+8. Serve Marco: liste Swedish bandite/ristrette, testi ufficiali delle regole in `data/regole/`, repo GitHub.
+9. Idee: divisione dei danni del banding scelta dal giocatore (oggi automatica), altre famiglie di effetti
+   (distruggi bersaglio, contromagie, pescate), mulligan, salvataggio della partita.

@@ -74,6 +74,15 @@ def fonti_di_mana(partita: Partita, nome_giocatore: str) -> list[tuple[Carta, st
     return fonti
 
 
+def _motivo_bersaglio(partita: Partita, rif: str, fonte: Carta, altrimenti: str) -> str:
+    from app.engine.stato import NOMI_COLORI
+    oggetto = partita.risolvi_bersaglio(rif)
+    if isinstance(oggetto, Carta) and oggetto.protetta_da(fonte):
+        colori = ", ".join(NOMI_COLORI[c] for c in sorted(oggetto.protezioni & fonte.colori))
+        return f"{oggetto.nome} ha protezione dal {colori}"
+    return altrimenti
+
+
 def tipo_bersaglio(carta: Carta) -> str | None:
     effetto = EFFETTI.get(carta.nome)
     return effetto.bersaglio if effetto else None
@@ -98,8 +107,8 @@ def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta, bersagli: 
         tipo = tipo_bersaglio(carta)
         if tipo and len(bersagli) != 1:
             return f"{carta.nome} ha bisogno di un bersaglio ({NOMI_BERSAGLI[tipo]})"
-        if tipo and not bersaglio_legale(partita, tipo, bersagli[0]):
-            return f"bersaglio non valido per {carta.nome}: serve {NOMI_BERSAGLI[tipo]}"
+        if tipo and not bersaglio_legale(partita, tipo, bersagli[0], carta):
+            return _motivo_bersaglio(partita, bersagli[0], carta, f"bersaglio non valido per {carta.nome}: serve {NOMI_BERSAGLI[tipo]}")
         if not tipo and bersagli:
             return f"{carta.nome} non ha bersagli"
     costo = mana.analizza_costo(carta.costo)
@@ -130,6 +139,6 @@ def puo_attivare(partita: Partita, nome_giocatore: str, carta: Carta, abilita, b
     if bersagli is not None:
         if abilita.bersaglio and len(bersagli) != 1:
             return f"l'abilità di {carta.nome} ha bisogno di un bersaglio ({NOMI_BERSAGLI[abilita.bersaglio]})"
-        if abilita.bersaglio and not bersaglio_legale(partita, abilita.bersaglio, bersagli[0]):
-            return f"bersaglio non valido: serve {NOMI_BERSAGLI[abilita.bersaglio]}"
+        if abilita.bersaglio and not bersaglio_legale(partita, abilita.bersaglio, bersagli[0], carta):
+            return _motivo_bersaglio(partita, bersagli[0], carta, f"bersaglio non valido: serve {NOMI_BERSAGLI[abilita.bersaglio]}")
     return None

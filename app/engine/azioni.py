@@ -215,7 +215,7 @@ def attiva(partita: Partita, giocatore: str, carta: Carta, abilita, bersagli: li
 
 def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
     ab, fonte, chi = oggetto.abilita, oggetto.carta, oggetto.controllore
-    if ab.bersaglio and not bersaglio_legale(partita, ab.bersaglio, oggetto.bersagli[0]):
+    if ab.bersaglio and not bersaglio_legale(partita, ab.bersaglio, oggetto.bersagli[0], fonte):
         _log(partita, chi, "neutralizzata", f"L'abilità di {fonte.nome} non ha più un bersaglio valido")
         return
     if ab.tipo == "pompa":
@@ -252,7 +252,7 @@ def risolvi_pila(partita: Partita) -> None:
         _entra_in_campo(partita, chi, carta)
     else:
         effetto = EFFETTI[carta.nome]
-        if effetto.bersaglio and not bersaglio_legale(partita, effetto.bersaglio, oggetto.bersagli[0]):
+        if effetto.bersaglio and not bersaglio_legale(partita, effetto.bersaglio, oggetto.bersagli[0], carta):
             _log(partita, chi, "neutralizzata", f"{carta.nome} non ha più un bersaglio valido e non ha effetto")
         else:
             effetto.funzione(partita, oggetto)
@@ -265,7 +265,9 @@ def risolvi_pila(partita: Partita) -> None:
 
 def infliggi_danno(partita: Partita, fonte: Carta, rif: str, quantita: int) -> None:
     bersaglio = partita.risolvi_bersaglio(rif)
-    if isinstance(bersaglio, Carta):
+    if isinstance(bersaglio, Carta) and bersaglio.protetta_da(fonte):
+        _log(partita, fonte.proprietario, "prevenuto", f"{bersaglio.nome} ha protezione: niente danni da {fonte.nome}")
+    elif isinstance(bersaglio, Carta):
         bersaglio.danni += quantita
         _log(partita, fonte.proprietario, "danno", f"{fonte.nome} infligge {quantita} danni a {bersaglio.nome}")
     elif bersaglio is not None:

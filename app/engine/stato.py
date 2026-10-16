@@ -17,6 +17,9 @@ PAROLE_CHIAVE = {
     "vigilance": "cautela", "haste": "rapidità", "defender": "difensore",
 }
 _PASSATERRE = re.compile(r"^(plains|island|swamp|mountain|forest)walk$")
+_PROTEZIONE = re.compile(r"^protection from (white|blue|black|red|green)$")
+COLORI_INGLESE = {"white": "W", "blue": "U", "black": "B", "red": "R", "green": "G"}
+NOMI_COLORI = {"W": "bianco", "U": "blu", "B": "nero", "R": "rosso", "G": "verde"}
 
 
 def parole_chiave_da_testo(testo: str) -> set[str]:
@@ -24,7 +27,7 @@ def parole_chiave_da_testo(testo: str) -> set[str]:
     trovate: set[str] = set()
     for riga in testo.lower().splitlines():
         parti = [p.strip() for p in riga.split(",")]
-        if parti and all(p in PAROLE_CHIAVE or _PASSATERRE.match(p) for p in parti):
+        if parti and all(p in PAROLE_CHIAVE or _PASSATERRE.match(p) or _PROTEZIONE.match(p) for p in parti):
             trovate.update(parti)
     return trovate
 
@@ -70,6 +73,18 @@ class Carta:
 
     def ha(self, parola_chiave: str) -> bool:
         return parola_chiave in parole_chiave_da_testo(self.testo)
+
+    @property
+    def colori(self) -> set[str]:
+        """Colori della carta, dai simboli colorati del costo (le terre e gli artefatti sono incolori)."""
+        return {c for c in "WUBRG" if f"{{{c}}}" in self.costo}
+
+    @property
+    def protezioni(self) -> set[str]:
+        return {COLORI_INGLESE[m.group(1)] for p in parole_chiave_da_testo(self.testo) if (m := _PROTEZIONE.match(p))}
+
+    def protetta_da(self, fonte: "Carta | None") -> bool:
+        return fonte is not None and bool(self.protezioni & fonte.colori)
 
     @property
     def passaterre(self) -> list[str]:

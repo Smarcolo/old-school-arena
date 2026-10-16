@@ -42,9 +42,10 @@ def _danni_in_combattimento(partita: Partita, c: Carta) -> int:
     """Stima dei danni che c subirà in combattimento."""
     comb = partita.combattimento
     if c.id in comb.blocchi:
-        return sum(t[1].forza_attuale for i in comb.blocchi[c.id] if (t := partita.trova_in_campo(i)))
+        return sum(t[1].forza_attuale for i in comb.blocchi[c.id]
+                   if (t := partita.trova_in_campo(i)) and not c.protetta_da(t[1]))
     for attaccante, bloccanti in comb.blocchi.items():
-        if c.id in bloccanti and (t := partita.trova_in_campo(attaccante)):
+        if c.id in bloccanti and (t := partita.trova_in_campo(attaccante)) and not c.protetta_da(t[1]):
             return t[1].forza_attuale
     return 0
 
@@ -88,9 +89,9 @@ def da_rigenerare(partita: Partita, nome: str) -> tuple[Carta, object] | None:
     return None
 
 
-def bersaglio_growth(partita: Partita, nome: str) -> Carta | None:
+def bersaglio_growth(partita: Partita, nome: str, growth: Carta | None = None) -> Carta | None:
     """Creatura dell'AI da salvare (o con cui chiudere la partita) con +3/+3, se c'è."""
-    mie = [c for c in partita.giocatore(nome)[Zona.CAMPO] if c.is_creatura]
+    mie = [c for c in partita.giocatore(nome)[Zona.CAMPO] if c.is_creatura and not c.protetta_da(growth)]
     if partita.pila:
         cima = partita.pila[-1]
         if cima.controllore != nome and cima.bersagli:
@@ -114,9 +115,9 @@ def bersaglio_growth(partita: Partita, nome: str) -> Carta | None:
     return None
 
 
-def bersaglio_bolt(partita: Partita, nome: str) -> str | None:
+def bersaglio_bolt(partita: Partita, nome: str, bolt: Carta | None = None) -> str | None:
     avversario = partita.avversario_di(nome)
-    if migliore := _creatura_uccidibile(partita, nome, DANNI_BOLT):
+    if migliore := _creatura_uccidibile(partita, nome, DANNI_BOLT, bolt):
         return f"carta:{migliore.id}"
     if not partita.pila and partita.giocatore_attivo.nome == nome and partita.fase in FASI_PRINCIPALI:
         return f"giocatore:{avversario.nome}"
@@ -140,8 +141,9 @@ def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
     scelti = []
     for a in combattimento.possibili_attaccanti(partita, nome):
         possibili = [b for b in difensori if combattimento.puo_bloccare_contro(partita, avversario, b, a) is None]
-        cattivo_scambio = any(b.forza_attuale >= a.costituzione_attuale - a.danni
-                              and a.forza_attuale < b.costituzione_attuale - b.danni for b in possibili)
+        cattivo_scambio = any(b.forza_attuale >= a.costituzione_attuale - a.danni and not a.protetta_da(b)
+                              and (a.forza_attuale < b.costituzione_attuale - b.danni or b.protetta_da(a))
+                              for b in possibili)
         if not cattivo_scambio or _muore_a_fine_turno(a):
             scelti.append(a)
     return scelti
@@ -162,8 +164,9 @@ def scegli_bloccanti(partita: Partita, nome: str) -> list[tuple[Carta, Carta]]:
         return [b for b in disponibili if combattimento.puo_bloccare_contro(partita, nome, b, a) is None]
 
     for a in attaccanti:
-        uccide = [b for b in legali(a) if b.forza_attuale >= vita(a)]
-        sopravvive = [b for b in legali(a) if vita(b) > a.forza_attuale or _potra_rigenerare(partita, nome, b)]
+        uccide = [b for b in legali(a) if b.forza_attuale >= vita(a) and not a.protetta_da(b)]
+        sopravvive = [b for b in legali(a)
+                      if vita(b) > a.forza_attuale or b.protetta_da(a) or _potra_rigenerare(partita, nome, b)]
         scelta = (next((b for b in uccide if b in sopravvive), None)
                   or (min(sopravvive, key=lambda b: b.forza_attuale) if sopravvive else None)
                   or next((b for b in uccide if b.forza_attuale <= a.forza_attuale), None))
@@ -187,9 +190,9 @@ def _abilita_pronte(partita: Partita, nome: str, tipo: str) -> list[tuple[Carta,
             if ab.tipo == tipo and puo_attivare(partita, nome, c, ab) is None]
 
 
-def _creatura_uccidibile(partita: Partita, nome: str, danni: int) -> Carta | None:
+def _creatura_uccidibile(partita: Partita, nome: str, danni: int, fonte: Carta | None = None) -> Carta | None:
     avversario = partita.avversario_di(nome)
-    uccidibili = [c for c in avversario[Zona.CAMPO] if c.is_creatura
+    uccidibili = [c for c in avversario[Zona.CAMPO] if c.is_creatura and not c.protetta_da(fonte)
                   and 0 < _vita(c) - _danni_in_arrivo(partita, nome, c) <= danni]
     return max(uccidibili, key=lambda c: (c.forza_attuale, c.costituzione_attuale)) if uccidibili else None
 
@@ -211,18 +214,18 @@ def agisci(partita: Partita, nome: str) -> None:
         return
 
     growth = next((c for c in mano if c.nome == "Giant Growth" and puo_lanciare(partita, nome, c) is None), None)
-    if growth and (da_salvare := bersaglio_growth(partita, nome)):
+    if growth and (da_salvare := bersaglio_growth(partita, nome, growth)):
         azioni.lancia(partita, nome, growth, [f"carta:{da_salvare.id}"])
         return
 
     for fonte, ab in _abilita_pronte(partita, nome, "danno"):
-        if ab.bersaglio in ("qualsiasi", "creatura") and (vittima := _creatura_uccidibile(partita, nome, ab.danni)):
+        if ab.bersaglio in ("qualsiasi", "creatura") and (vittima := _creatura_uccidibile(partita, nome, ab.danni, fonte)):
             azioni.attiva(partita, nome, fonte, ab, [f"carta:{vittima.id}"])
             return
 
     bolt = next((c for c in mano if c.nome == "Lightning Bolt" and puo_lanciare(partita, nome, c) is None), None)
     if bolt:
-        rif = bersaglio_bolt(partita, nome)
+        rif = bersaglio_bolt(partita, nome, bolt)
         if rif and rif.startswith("carta:"):
             azioni.lancia(partita, nome, bolt, [rif])
             return
@@ -239,7 +242,7 @@ def agisci(partita: Partita, nome: str) -> None:
             piu_cara = max(lanciabili, key=lambda c: sum(mana.analizza_costo(c.costo).values()))
             azioni.lancia(partita, nome, piu_cara)
             return
-        if bolt and (rif := bersaglio_bolt(partita, nome)):
+        if bolt and (rif := bersaglio_bolt(partita, nome, bolt)):
             azioni.lancia(partita, nome, bolt, [rif])
             return
 

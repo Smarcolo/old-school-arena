@@ -40,7 +40,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   simultanei; poi la fase finisce. Più bloccanti sullo stesso attaccante: danno letale a ciascuno in ordine, il resto
   all'ultimo. Un attaccante bloccato non colpisce il giocatore (salvo travolgere).
 - Parole chiave lette dal testo Oracle (`stato.parole_chiave_da_testo`, `Carta.ha("flying")`): volare, raggiungere,
-  passaterre, difensore, cautela, rapidità, travolgere, attacca per primo (due passi di danno senza priorità in mezzo).
+  passaterre, difensore, cautela, rapidità, travolgere, attacca per primo (due passi di danno senza priorità in mezzo),
+  protezione da un colore. Colori di una carta = simboli colorati del costo (`Carta.colori`); `Carta.protetta_da(fonte)`
+  vale per bersagli (`bersaglio_legale(..., fonte)`), danni (prevenuti in `infliggi_danno` e in combattimento) e blocchi.
   Mancano: banding, protezione, abilità innescate.
 - Abilità attivate (`engine/abilita.py`): riconosce dal testo Oracle «{costo}: <nome> gets +X/+Y until end of turn.»
   e «{costo}: <nome> deals N damage to any target / target creature / target player.». Vanno in pila
@@ -80,6 +82,6 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
    Serve che Marco compili bandite/ristrette in `regole_swedish.json` per il controllo completo.
 5. Fatto: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
    Fatto anche: abilità attivate semplici (pompaggio, danno) e innescate comuni.
-   Fatto anche: rigenerazione. Da fare: protezione, banding.
+   Fatto anche: rigenerazione, protezione da un colore. Da fare: banding, protezione da artefatti/altro.
 6. Fatto: immagini delle carte con anteprima al passaggio del mouse.
-7. Da fare: protezione, banding; testi ufficiali per il giudice.
+7. Da fare: banding; incantesimi aura; testi ufficiali per il giudice.

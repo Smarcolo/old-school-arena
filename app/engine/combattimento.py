@@ -6,7 +6,8 @@ Flusso dentro la fase di combattimento:
 2. Quando entrambi passano dopo la dichiarazione, il difensore deve dichiarare i bloccanti (anche nessuno).
 3. Quando entrambi passano dopo i blocchi, si infliggono i danni; dopo un altro doppio passaggio la fase finisce.
 
-Abilità gestite: volare / raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
+Abilità gestite: volare / raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo,
+protezione da un colore (non bloccabile da quel colore, danni da quel colore prevenuti).
 Con «attacca per primo» ci sono due passi di danno di fila, senza priorità in mezzo (semplificazione).
 """
 from app.engine.stato import Carta, Combattimento, Fase, Partita
@@ -42,6 +43,8 @@ def puo_bloccare(partita: Partita, giocatore: str, carta: Carta) -> str | None:
 def puo_bloccare_contro(partita: Partita, giocatore: str, bloccante: Carta, attaccante: Carta) -> str | None:
     if motivo := puo_bloccare(partita, giocatore, bloccante):
         return motivo
+    if attaccante.protetta_da(bloccante):
+        return f"{attaccante.nome} ha protezione dal colore di {bloccante.nome}: non può bloccarla"
     if attaccante.ha("flying") and not (bloccante.ha("flying") or bloccante.ha("reach")):
         return f"{attaccante.nome} vola: la blocca solo una creatura con volare o raggiungere"
     terre = {t for c in partita.giocatore(giocatore)[Zona.CAMPO] if c.is_terra for t in c.tipo.split()}
@@ -172,7 +175,9 @@ def _passo_di_danno(partita: Partita, passo: str | None) -> None:
             if _colpisce_in(b, passo):
                 danni_creature.append((b, attaccante, b.forza_attuale))
     for fonte, bersaglio, n in danni_creature:
-        if n > 0:
+        if n > 0 and bersaglio.protetta_da(fonte):
+            _log(partita, fonte.proprietario, "prevenuto", f"{bersaglio.nome} ha protezione: niente danni da {fonte.nome}")
+        elif n > 0:
             bersaglio.danni += n
             _log(partita, fonte.proprietario, "danno", f"{fonte.nome} infligge {n} danni a {bersaglio.nome}")
     for fonte, n in danni_giocatore:

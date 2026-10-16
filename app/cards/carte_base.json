@@ -32,5 +32,7 @@
   {"nome": "Force of Nature", "tipo": "Creature — Elemental", "costo": "{2}{G}{G}{G}{G}", "forza": 8, "costituzione": 8, "testo": "Trample\nAt the beginning of your upkeep, Force of Nature deals 8 damage to you unless you pay {G}{G}{G}{G}."},
   {"nome": "Drudge Skeletons", "tipo": "Creature — Skeleton", "costo": "{1}{B}", "forza": 1, "costituzione": 1, "testo": "{B}: Regenerate Drudge Skeletons."},
   {"nome": "Uthden Troll", "tipo": "Creature — Troll", "costo": "{2}{R}", "forza": 2, "costituzione": 2, "testo": "{R}: Regenerate Uthden Troll."},
-  {"nome": "Will-o'-the-Wisp", "tipo": "Creature — Spirit", "costo": "{B}", "forza": 0, "costituzione": 1, "testo": "Flying\n{B}: Regenerate Will-o'-the-Wisp."}
+  {"nome": "Will-o'-the-Wisp", "tipo": "Creature — Spirit", "costo": "{B}", "forza": 0, "costituzione": 1, "testo": "Flying\n{B}: Regenerate Will-o'-the-Wisp."},
+  {"nome": "White Knight", "tipo": "Creature — Human Knight", "costo": "{W}{W}", "forza": 2, "costituzione": 2, "testo": "First strike, protection from black"},
+  {"nome": "Black Knight", "tipo": "Creature — Human Knight", "costo": "{B}{B}", "forza": 2, "costituzione": 2, "testo": "First strike, protection from white"}
 ]

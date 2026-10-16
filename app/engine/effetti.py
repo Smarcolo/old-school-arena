@@ -24,10 +24,13 @@ def effetto(nome: str, bersaglio: str | None = None):
     return registra
 
 
-def bersaglio_legale(partita, tipo: str | None, rif: str) -> bool:
+def bersaglio_legale(partita, tipo: str | None, rif: str, fonte=None) -> bool:
+    """fonte: la carta che bersaglia; una creatura con protezione dal suo colore non è un bersaglio legale."""
     from app.engine.stato import Carta, Giocatore  # evita import circolari
     oggetto = partita.risolvi_bersaglio(rif)
     if oggetto is None or tipo is None:
+        return False
+    if isinstance(oggetto, Carta) and oggetto.protetta_da(fonte):
         return False
     if tipo == "giocatore":
         return isinstance(oggetto, Giocatore)

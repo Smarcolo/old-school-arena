@@ -93,6 +93,8 @@ def analizza(conn: sqlite3.Connection, mazzo: dict[str, int], sideboard: dict[st
     avvisi = []
     if not regole.bandite and not regole.ristrette:
         avvisi.append("Liste Swedish di carte bandite e ristrette non ancora compilate: il controllo è incompleto.")
+    elif not regole.verificato:
+        avvisi.append("Liste Swedish in bozza, non ancora verificate sul regolamento ufficiale.")
     curva: Counter = Counter()
     colori: Counter = Counter()
     prodotti: set[str] = set()

@@ -11,7 +11,10 @@ class Giudice:
         if not risultati:
             return {"risposta": "Non trovo regole pertinenti nei testi indicizzati in data/regole.", "fonti": []}
         migliore = risultati[0]
-        return {
-            "risposta": f"Vedi «{migliore['titolo']}» ({migliore['fonte']}): {migliore['estratto']}",
-            "fonti": risultati,
-        }
+        testo = self.conn.execute("SELECT testo FROM regole WHERE titolo = ? AND fonte = ?",
+                                  (migliore["titolo"], migliore["fonte"])).fetchone()[0]
+        altre = ", ".join(f"«{r['titolo']}»" for r in risultati[1:3])
+        risposta = f"{migliore['titolo']}: {' '.join(testo.split())}"
+        if altre:
+            risposta += f" (Vedi anche {altre}.)"
+        return {"risposta": risposta, "fonti": risultati}

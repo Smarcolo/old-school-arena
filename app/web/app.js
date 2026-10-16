@@ -206,3 +206,15 @@ document.addEventListener("keydown", (e) => {
     avvisa("Annullato.");
   }
 });
+
+$("giudice").onsubmit = async (e) => {
+  e.preventDefault();
+  const q = $("domanda").value.trim();
+  if (!q) return;
+  try {
+    const r = await api(`/api/giudice?q=${encodeURIComponent(q)}`);
+    $("risposta-giudice").textContent = r.risposta;
+  } catch (err) {
+    $("risposta-giudice").textContent = "Errore: " + err.message;
+  }
+};

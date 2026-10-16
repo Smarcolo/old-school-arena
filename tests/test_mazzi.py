@@ -18,7 +18,7 @@ def test_analisi_normalizza_e_segnala(conn):
     assert a["mazzo"]["Lightning Bolt"] == 4
     assert "carta sconosciuta: Black Lotus" in a["problemi"]
     assert not a["giocabile"] and not a["legale"]
-    assert any("bandite e ristrette" in x for x in a["avvisi"])
+    assert any("bozza" in x for x in a["avvisi"])
 
 
 def test_analisi_limiti_del_motore(conn):
@@ -77,3 +77,11 @@ def test_pagina_mazzi():
 def test_avviso_colore_mancante(conn):
     a = mazzi.analizza(conn, {"Serra Angel": 4, "Lightning Bolt": 4, "Mountain": 52}, {})
     assert any("{W}" in x for x in a["avvisi"]) and not any("{R}" in x for x in a["avvisi"])
+
+
+def test_lista_swedish_in_bozza(conn):
+    conn.execute("INSERT INTO carte (nome, tipo, costo) VALUES ('Black Lotus', 'Artifact', '{0}')")
+    conn.execute("INSERT INTO carte (nome, tipo, costo) VALUES ('Darkpact', 'Sorcery', '{B}{B}{B}')")
+    a = mazzi.analizza(conn, {"Black Lotus": 2, "Darkpact": 1, "Swamp": 57}, {})
+    assert any("Black Lotus è ristretta" in p for p in a["problemi"])
+    assert any("Darkpact è bandita" in p for p in a["problemi"])

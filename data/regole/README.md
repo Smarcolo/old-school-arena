@@ -1,14 +1,9 @@
 # Regole per il giudice
 
-Metti qui i testi delle regole in Markdown (regolamento Swedish 93/94, regole del motore, FAQ).
-Ogni sezione che inizia con `## ` diventa una voce cercabile dal giudice.
-Il giudice risponde solo con quello che trova qui, quindi usa testi da fonti ufficiali.
+Ogni sezione che inizia con «## » nei file .md di questa cartella diventa una voce cercabile dal giudice.
+Il giudice risponde solo con quello che trova qui.
 
-## Convenzioni del motore: zone
-Il motore usa queste zone: grimorio, mano, campo di battaglia, cimitero, rimosse dal gioco (l'esilio del 93/94) e la pila.
-
-## Convenzioni del motore: struttura del turno
-Il turno ha le fasi stap, mantenimento, pescata, principale 1, combattimento, principale 2, finale. Il primo giocatore salta la pescata del primo turno. Si può giocare una sola terra per turno, in una fase principale, con la pila vuota.
-
-## Convenzioni del motore: fine partita
-Un giocatore perde quando arriva a 0 punti vita o quando deve pescare da un grimorio vuoto.
+I file 01-09 sono una BOZZA scritta da Claude il 2026-10-16 a partire dalle regole attuali di Magic e da riepiloghi
+online (MTG Wiki / mtg.wiki per banding, rigenerazione e protezione; mtgoldframe.com, oldschoolmagic.nl e
+MTG Salvation per il formato Swedish). Vanno verificati sul regolamento ufficiale: se trovi un errore, correggi
+direttamente il testo qui. Puoi aggiungere altri file (per esempio il regolamento ufficiale diviso in sezioni).

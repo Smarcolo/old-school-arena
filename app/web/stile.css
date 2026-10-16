@@ -54,3 +54,5 @@ textarea { font: .95rem/1.4 ui-monospace, Consolas, monospace; padding: .5rem; b
 #anteprima.visibile { display: block; }
 .carta .scudo { color: #2f5f9e; font-weight: bold; font-style: normal; }
 .carta.in-banda { outline: 2px dashed #a3241b; outline-offset: 2px; }
+#giudice input { width: 100%; padding: .4rem; font-size: .85rem; }
+#risposta-giudice { font-size: .85rem; line-height: 1.4; }

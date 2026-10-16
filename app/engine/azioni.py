@@ -387,11 +387,12 @@ def modifica_vita(partita: Partita, giocatore: str, delta: int, motivo: str = ""
 
 
 def svuota_riserve(partita: Partita) -> None:
-    """93/94: a fine fase le riserve si svuotano e ogni mana inutilizzato fa perdere 1 vita (mana burn)."""
+    """A fine fase le riserve si svuotano; con il mana burn (regola 93/94, opzione del formato) ogni mana
+    inutilizzato fa perdere 1 vita."""
     for g in partita.giocatori:
         avanzato = sum(g.riserva.values())
         g.riserva = dict.fromkeys(g.riserva, 0)
-        if avanzato:
+        if avanzato and partita.mana_burn:
             modifica_vita(partita, g.nome, -avanzato, "(mana burn)")
 
 

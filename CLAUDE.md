@@ -73,10 +73,15 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 
 ## Giudice
 - Risponde **solo** citando i testi indicizzati in `data/regole/`. Non inventare regole: se non c'è, lo dice.
+- I file `data/regole/01-09` sono una bozza scritta da Claude (regole attuali + chiarimenti da MTG Wiki), da far
+  verificare a Marco. Ricerca FTS5 con parole vuote italiane, sinonimi e ricerca per prefisso (`judge/indice.py`).
+- Nell'interfaccia: riquadro «Giudice» accanto al registro, oppure il comando «giudice <domanda>».
 
 ## Regole Swedish
-- `app/cards/regole_swedish.json` ha set ammessi e limiti; **liste bandite/ristrette vuote finché non le compila Marco
-  dalla fonte ufficiale**. Non riempirle a memoria. I set ammessi sono da verificare sul regolamento in vigore.
+- `app/cards/regole_swedish.json` è una BOZZA (`"verificato": false`) compilata il 2026-10-16 da riepiloghi online:
+  set Alpha, Beta, Unlimited, Summer Magic, Arabian Nights, Antiquities, Legends, The Dark; 7 bandite, 22 ristrette.
+  Marco la confronta con il regolamento ufficiale e mette `"verificato": true`. Punti incerti: Shahrazad, mana burn.
+- `"mana_burn"` nel JSON accende/spegne il mana burn (`Partita.mana_burn`).
 
 ## Lavoro
 - Test: `python -m pytest -q`. I test usano un database temporaneo (variabile `OSA_DATI`, impostata in `tests/conftest.py`). Ogni nuova regola del motore arriva con il suo test.
@@ -94,6 +99,6 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
    Fatto anche: rigenerazione, protezione da un colore e dagli artefatti, banding.
 6. Fatto: immagini delle carte con anteprima al passaggio del mouse.
 7. Fatto: aure e incantesimi globali.
-8. Serve Marco: liste Swedish bandite/ristrette, testi ufficiali delle regole in `data/regole/`, repo GitHub.
+8. Serve Marco: verificare `regole_swedish.json` e i testi in `data/regole/`; creare la repo GitHub.
 9. Idee: divisione dei danni del banding scelta dal giocatore (oggi automatica), altre famiglie di effetti
    (distruggi bersaglio, contromagie, pescate), mulligan, salvataggio della partita.

@@ -12,3 +12,11 @@ def test_giudice_trova_regola(tmp_path):
 def test_giudice_senza_risultati(tmp_path):
     g = Giudice(indice.costruisci(tmp_path, tmp_path / "r.sqlite"))
     assert g.rispondi("ornitottero")["fonti"] == []
+
+
+def test_giudice_con_i_testi_del_progetto():
+    g = Giudice()
+    assert g.rispondi("il banding funziona con travolgere?")["fonti"][0]["titolo"] == "Banding contro travolgere"
+    assert "sacrificio" in g.rispondi("la rigenerazione salva dal sacrificio?")["risposta"]
+    assert "Volare" in g.rispondi("posso bloccare un volante?")["fonti"][0]["titolo"]
+    assert g.rispondi("che cosa")["fonti"] == []  # solo parole vuote

@@ -56,7 +56,10 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
   poi tenuta in `data/immagini/`; senza internet si gioca lo stesso, solo senza immagini).
 - Sconfitta a 0 vita o pescando da grimorio vuoto; registro eventi.
 - Avversaria base: gioca terre, lancia la creatura più cara che può pagare, usa Lightning Bolt sulle tue creature o su di te, attacca quando non rischia, blocca con giudizio, usa Giant Growth e le abilità delle sue creature.
-- Giudice che cerca nei testi di `data/regole/`.
+- Giudice (riquadro accanto al registro): risponde con le regole scritte in `data/regole/` (formato Swedish, turno,
+  pila, combattimento, abilità, chiarimenti sui casi difficili). Sono una bozza da verificare.
+- Regole Swedish in `app/cards/regole_swedish.json`: set ammessi, carte bandite e ristrette (bozza da verificare),
+  mana burn attivabile o disattivabile.
 
 ## Carte reali
 Le carte in `app/cards/carte_base.json` sono dati di prova scritti a mano: l'import da Scryfall le sovrascrive con i dati ufficiali.

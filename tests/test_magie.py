@@ -108,3 +108,11 @@ def test_fase_non_cambia_con_pila_piena(p):
     azioni.lancia(p, "A", carta(p, "grizzly bears"))
     with pytest.raises(AzioneIllegale, match="pila"):
         azioni.passa_fase(p)
+
+
+def test_senza_mana_burn(p):
+    p.mana_burn = False
+    azioni.tappa(p, "A", carta(p, "forest", Zona.CAMPO))
+    azioni.passa_priorita(p, "A")
+    azioni.passa_priorita(p, "B")
+    assert p.giocatore("A").vita == 20 and p.giocatore("A").riserva["G"] == 0

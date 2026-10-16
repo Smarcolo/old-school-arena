@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.cards import database, immagini, mazzi
+from app.cards.regole_swedish import carica_regole
 from app.engine import combattimento, mana
 from app.engine.abilita import analizza_abilita
 from app.engine.azioni import descrivi_bersaglio
@@ -132,7 +133,8 @@ def _carica_mazzo(nome: str) -> list:
 @app.post("/api/partite")
 def crea_partita(richiesta: RichiestaPartita | None = None) -> dict:
     richiesta = richiesta or RichiestaPartita()
-    p = nuova_partita({UMANO: _carica_mazzo(richiesta.mazzo), AI: _carica_mazzo(richiesta.mazzo_avversaria)})
+    p = nuova_partita({UMANO: _carica_mazzo(richiesta.mazzo), AI: _carica_mazzo(richiesta.mazzo_avversaria)},
+                      mana_burn=carica_regole().mana_burn)
     partite[p.id] = p
     avanza(p, UMANO, AI)
     return vista(p)

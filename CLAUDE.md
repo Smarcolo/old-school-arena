@@ -12,6 +12,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/cards/` — `carte_base.json` (dati di prova scritti a mano, sovrascritti dall'import Scryfall), database SQLite delle carte, import Scryfall, regole di costruzione mazzo Swedish (`regole_swedish.json`).
 - `app/cards/mazzi.py` — mazzi salvati (tabella `mazzi`), formato testo «4 Nome carta» con riga «Sideboard»,
   analisi: regole Swedish, carte sconosciute, cosa il motore non sa ancora giocare, colori senza fonti, curva.
+- `app/cards/immagini.py` — immagini scaricate da Scryfall alla prima richiesta (`/api/immagini/{nome}`), cache in
+  `data/immagini/`. Senza rete l'app resta testuale; i fallimenti si ricordano fino al riavvio.
+- `app/web/comune.js` — codice condiviso dalle pagine (anteprima immagine su elementi con `data-carta`).
 - `app/judge/` — indice FTS5 dei testi in `data/regole/*.md` e risposte del giudice.
 - `app/ai/` — avversaria. Usa solo le funzioni pubbliche di `engine`.
 - `app/commands/` — `parser.py` (testo → Comando) ed `esegui.py` (Comando → azione + messaggio).
@@ -69,4 +72,5 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 5. Fatto: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
    Fatto anche: abilità attivate semplici (pompaggio, danno). Da fare: banding, protezione, abilità innescate,
    rigenerazione.
-6. Immagini delle carte in cache in `data/immagini/`.
+6. Fatto: immagini delle carte con anteprima al passaggio del mouse.
+7. Da fare: banding, protezione, abilità innescate, rigenerazione; testi ufficiali per il giudice.

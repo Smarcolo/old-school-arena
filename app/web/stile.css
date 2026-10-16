@@ -50,3 +50,5 @@ textarea { font: .95rem/1.4 ui-monospace, Consolas, monospace; padding: .5rem; b
 .scelta-mazzi { display: flex; gap: .5rem; align-items: center; font-size: .85rem; }
 .scelta-mazzi select { font: inherit; padding: .3rem; border-radius: 6px; }
 @media (max-width: 900px) { .editor { grid-template-columns: 1fr; } }
+#anteprima { position: fixed; width: 244px; border-radius: 12px; box-shadow: 0 8px 24px #000a; pointer-events: none; z-index: 10; display: none; }
+#anteprima.visibile { display: block; }

@@ -2,10 +2,11 @@
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.cards import database, mazzi
+from app.cards import database, immagini, mazzi
 from app.engine import combattimento, mana
 from app.engine.abilita import analizza_abilita
 from app.engine.azioni import descrivi_bersaglio
@@ -176,6 +177,14 @@ def elimina_mazzo(nome: str) -> dict:
     if not mazzi.elimina(conn_carte, nome):
         raise HTTPException(404, "mazzo non trovato")
     return {"ok": True}
+
+
+@app.get("/api/immagini/{nome}")
+def immagine_carta(nome: str) -> FileResponse:
+    file = immagini.ottieni(conn_carte, nome)
+    if file is None:
+        raise HTTPException(404, "immagine non disponibile")
+    return FileResponse(file, media_type="image/jpeg", headers={"Cache-Control": "max-age=604800"})
 
 
 @app.get("/api/giudice")

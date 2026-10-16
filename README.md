@@ -43,6 +43,8 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
 - Abilità attivate semplici: pompaggio (Shivan Dragon, Frozen Shade) e danno (Prodigal Sorcerer).
 - Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
 - Editor dei mazzi con analisi e mazzi salvati.
+- Immagini delle carte: passando il mouse su una carta compare l'immagine (scaricata da Scryfall la prima volta,
+  poi tenuta in `data/immagini/`; senza internet si gioca lo stesso, solo senza immagini).
 - Sconfitta a 0 vita o pescando da grimorio vuoto; registro eventi.
 - Avversaria base: gioca terre, lancia la creatura più cara che può pagare, usa Lightning Bolt sulle tue creature o su di te, attacca quando non rischia, blocca con giudizio, usa Giant Growth e le abilità delle sue creature.
 - Giudice che cerca nei testi di `data/regole/`.

@@ -5,6 +5,7 @@ const el = (tag, props = {}, ...figli) => {
   return e;
 };
 let ritardoAnalisi = null;
+const conCarta = (e, nome) => { e.dataset.carta = nome; return e; };
 
 async function api(percorso, opzioni = {}) {
   const r = await fetch(percorso, { headers: { "Content-Type": "application/json" }, ...opzioni });
@@ -75,10 +76,10 @@ $("lista").addEventListener("input", () => {
 
 $("cerca").addEventListener("input", async () => {
   const carte = await api(`/api/carte?q=${encodeURIComponent($("cerca").value)}`);
-  $("risultati").replaceChildren(...carte.map((c) => el("li", {},
-    el("button", { type: "button", className: "link", textContent: `+ ${c.nome}`, title: `${c.tipo} ${c.costo || ""}\n${c.testo || ""}`,
-      onclick: () => aggiungi(c.nome) }),
-    el("span", { className: "dettaglio", textContent: ` ${c.costo || ""} ${c.forza != null ? c.forza + "/" + c.costituzione : ""}` }))));
+  $("risultati").replaceChildren(...carte.map((c) => conCarta(el("li", {},
+    el("button", { type: "button", className: "link", textContent: `+ ${c.nome}`,
+      title: `${c.tipo} ${c.costo || ""}\n${c.testo || ""}`, onclick: () => aggiungi(c.nome) }),
+    el("span", { className: "dettaglio", textContent: ` ${c.costo || ""} ${c.forza != null ? c.forza + "/" + c.costituzione : ""}` })), c.nome)));
 });
 
 $("salva").onclick = async () => {

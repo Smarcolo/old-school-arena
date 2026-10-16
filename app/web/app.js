@@ -95,8 +95,29 @@ function bottone(testo, azione) {
   return el("button", { type: "button", textContent: testo, onclick: azione });
 }
 
+async function prossimaPartita() {
+  try {
+    partita = await api(`/api/partite/${partita.id}/prossima`, { method: "POST" });
+    azzeraScelteCombattimento();
+    avvisa(partita.richiesta === "mulligan" ? "Nuova partita: tieni la mano o fai mulligan." : "Nuova partita.");
+    disegna();
+  } catch (e) {
+    avvisa("Errore: " + e.message);
+  }
+}
+
 function disegnaBarraCombattimento() {
   const barra = $("barra-combattimento");
+  const inc = partita.incontro;
+  if (inc && partita.vincitore) {
+    barra.hidden = false;
+    const fine = inc.vincitore
+      ? `Incontro finito: vince ${inc.vincitore} (${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}).`
+      : `Partita ${inc.numero} vinta da ${partita.vincitore}. Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}.`;
+    barra.replaceChildren(el("span", { textContent: fine }),
+      ...(inc.prossima_possibile ? [bottone(`Partita ${inc.numero + 1}`, prossimaPartita)] : []));
+    return;
+  }
   barra.hidden = !partita.richiesta;
   if (partita.richiesta === "mulligan") {
     const m = partita.mulligan;
@@ -106,6 +127,11 @@ function disegnaBarraCombattimento() {
       : [el("span", { textContent: m.fatti ? `Mano iniziale (mulligan fatti: ${m.fatti}).` : "Mano iniziale: la tieni?" }),
          bottone("Tengo", () => invia("tengo")),
          bottone("Mulligan", () => invia("mulligan"))]));
+  } else if (partita.richiesta === "scelta" && partita.scelta.tipo === "danni") {
+    const sc = partita.scelta;
+    barra.replaceChildren(
+      el("span", { textContent: `Banding: dividi i ${sc.danni} danni di ${sc.fonte}. Tutti su una creatura, oppure scrivi «danni 2 su …, 1 su …».` }),
+      ...sc.candidate.map((c) => bottone(`Tutti su ${c.nome}`, () => invia(`danni su ${c.id}`))));
   } else if (partita.richiesta === "scelta") {
     barra.replaceChildren(
       el("span", { textContent: `${partita.scelta.carta}: ${partita.scelta.testo}` }),
@@ -158,9 +184,11 @@ function disegnaGiocatore(sezione, g, umano) {
 }
 
 function disegna() {
-  $("info").textContent = partita.vincitore
+  const inc = partita.incontro;
+  const punteggio = inc ? `Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]} · partita ${inc.numero} · ` : "";
+  $("info").textContent = punteggio + (partita.vincitore
     ? `Partita finita: vince ${partita.vincitore}`
-    : `Turno ${partita.turno} · ${partita.fase} · tocca a ${partita.attivo}`;
+    : `Turno ${partita.turno} · ${partita.fase} · tocca a ${partita.attivo}`);
   disegnaGiocatore($("avversaria"), partita.giocatori[1], false);
   disegnaGiocatore($("tu"), partita.giocatori[0], true);
   $("pila").replaceChildren(...(partita.pila.length

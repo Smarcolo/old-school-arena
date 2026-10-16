@@ -20,6 +20,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/commands/` — `parser.py` (testo → Comando) ed `esegui.py` (Comando → azione + messaggio).
 - `app/regia.py` — flusso umano contro AI: esegue i comandi, fa agire l'AI quando ha la priorità e salta le
   priorità dell'umano a pila vuota fuori dalle sue fasi principali.
+- `app/incontro.py` — incontro al meglio di tre: prima partita a moneta, poi inizia chi ha perso; mazzi nuovi
+  a ogni partita. L'API tiene gli incontri (`partite: dict[id, Incontro]`), `/api/partite/{id}/prossima`.
 - `app/api/main.py` — FastAPI; serve anche il frontend statico in `app/web/`.
 - `data/` — database, cache immagini, bulk Scryfall: generati, non versionati (vedi `.gitignore`).
 
@@ -50,8 +52,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   meglio non attivarla che attivarla male.
 - Banding: `Combattimento.bande`; chi blocca un membro blocca tutta la banda (`dichiara_bloccanti` espande i blocchi).
   Nel passo di danno i danni dei bloccanti si calcolano una volta per bloccante. Con banding coinvolto la divisione
-  la fa chi controlla la creatura con banding, in automatico (`combattimento._assorbitore`: prima una protetta, poi
-  una che sopravvive, altrimenti tutto su quella che vale meno); in difesa niente travolgere oltre i bloccanti.
+  la fa chi controlla la creatura con banding: per chi è in `Partita.scelte_manuali` (l'umano, impostato dall'API)
+  con una Scelta di tipo "danni" (`combattimento.assegna_danni`, comando «danni [n] su <creatura>»); per l'AI in
+  automatico (`_assorbitore`). `Combattimento.assegnazioni` e `passi_fatti` permettono di riprendere il passo di
+  danno dopo la scelta. In difesa niente travolgere oltre i bloccanti.
 - Rigenerazione («{B}: Regenerate X.»): l'abilità dà uno scudo (`Carta.scudi_rigenerazione`) fino a fine turno.
   `azioni.distruggi` lo consuma: niente danni, tappata, fuori dal combattimento (un attaccante resta bloccato).
   Sacrificio e costituzione 0 usano `rigenerabile=False`.
@@ -81,8 +85,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/cards/regole_swedish.json` compilato il 2026-10-16 da riepiloghi online e confermato da Marco:
   set Alpha, Beta, Unlimited, Summer Magic, Arabian Nights, Antiquities, Legends, The Dark; 7 bandite, 23 ristrette.
 - Niente mana burn nel Swedish (confermato da Marco): `"mana_burn": false`; resta come opzione (`Partita.mana_burn`).
-- Confermato da Marco il 2026-10-16: liste B&R (23 ristrette con Shahrazad, 7 bandite), mulligan London, chi inizia
-  salta la prima pescata. `"verificato": true`.
+- Confermato da Marco il 2026-10-16: liste B&R (23 ristrette con Shahrazad, 7 bandite), set (con Summer Magic,
+  senza Revised e Fallen Empires), mulligan London, chi inizia salta la prima pescata, incontri al meglio di tre
+  (moneta, poi inizia chi perde), divisione del banding scelta dal giocatore, mano dell'avversaria nascosta.
 - Mulligan (`engine/mulligan.py`): `Partita.mulligan` = nome -> StatoMulligan finché tutti non hanno tenuto e messo
   in fondo le carte; fino ad allora `_priorita` blocca ogni azione. Comandi «tengo», «mulligan», «in fondo <carte>».
   L'AI tiene con 2-5 terre (`avversaria.decidi_mulligan`).
@@ -104,5 +109,5 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 6. Fatto: immagini delle carte con anteprima al passaggio del mouse.
 7. Fatto: aure e incantesimi globali.
 8. Serve Marco: verificare i testi in `data/regole/`; creare la repo GitHub.
-9. Idee: divisione dei danni del banding scelta dal giocatore (oggi automatica), altre famiglie di effetti
-   (distruggi bersaglio, contromagie, pescate), salvataggio della partita.
+9. Idee: sideboard tra una partita e l'altra dell'incontro, altre famiglie di effetti (distruggi bersaglio,
+   contromagie, pescate), salvataggio della partita.

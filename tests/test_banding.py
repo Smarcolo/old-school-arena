@@ -125,3 +125,55 @@ def test_ai_forma_la_banda_con_il_piu_forte():
 def test_analisi_mazzo_capisce_il_banding(conn):
     a = mazzi.analizza(conn, {"Benalish Hero": 4, "Timber Wolves": 4, "Plains": 26, "Forest": 26}, {})
     assert not any("Hero" in x or "Wolves" in x for x in a["avvisi"])
+
+
+def test_divisione_manuale_in_attacco(p):
+    p.scelte_manuali = {"A"}
+    e, gigante = eroe(), cr("Gigante", 3, 3)
+    p.giocatore("A")[Zona.CAMPO].extend([e, gigante])
+    orco = cr("Orco", 2, 2)
+    p.giocatore("B")[Zona.CAMPO].append(orco)
+    al_combattimento(p)
+    combattimento.dichiara_attaccanti(p, "A", [e, gigante], [[e, gigante]])
+    passano(p)
+    combattimento.dichiara_bloccanti(p, "B", [(orco, gigante)])
+    passano(p)
+    assert p.scelta and p.scelta.tipo == "danni" and p.scelta.giocatore == "A"
+    assert set(p.scelta.dati["candidate"]) == {e.id, gigante.id} and p.scelta.dati["danni"] == 2
+    with pytest.raises(AzioneIllegale, match="esattamente 2"):
+        combattimento.assegna_danni(p, "A", {e.id: 1})
+    assert esegui(p, "A", analizza("danni 1 su eroe, 1 su gigante")) == "Danni divisi."
+    assert azioni.trova_in_zona(p, "A", Zona.CIMITERO, "eroe") and gigante.danni == 1
+    assert p.combattimento.danni_inflitti and p.scelta is None
+
+
+def test_divisione_manuale_in_difesa_con_attacca_per_primo(p):
+    p.scelte_manuali = {"B"}
+    arcieri = cr("Arcieri", 2, 1, "First strike")
+    p.giocatore("A")[Zona.CAMPO].append(arcieri)
+    e, muro = eroe(), cr("Muro", 0, 5)
+    p.giocatore("B")[Zona.CAMPO].extend([e, muro])
+    al_combattimento(p)
+    combattimento.dichiara_attaccanti(p, "A", [arcieri])
+    passano(p)
+    combattimento.dichiara_bloccanti(p, "B", [(e, arcieri), (muro, arcieri)])
+    passano(p)
+    assert p.scelta.giocatore == "B" and p.scelta.dati["nome_fonte"] == "Arcieri"
+    esegui(p, "B", analizza("danni su muro"))
+    # primo passo: 2 danni sul muro; secondo passo: l'eroe (1/1) infligge 1 danno agli arcieri, che muoiono
+    assert muro.danni == 2 and e in p.giocatore("B")[Zona.CAMPO]
+    assert azioni.trova_in_zona(p, "A", Zona.CIMITERO, "arcieri")
+
+
+def test_una_sola_candidata_niente_domanda(p):
+    p.scelte_manuali = {"A", "B"}
+    e = eroe()
+    p.giocatore("A")[Zona.CAMPO].append(e)
+    orco = cr("Orco", 2, 2)
+    p.giocatore("B")[Zona.CAMPO].append(orco)
+    al_combattimento(p)
+    combattimento.dichiara_attaccanti(p, "A", [e])
+    passano(p)
+    combattimento.dichiara_bloccanti(p, "B", [(orco, e)])
+    passano(p)
+    assert p.scelta is None and p.combattimento.danni_inflitti

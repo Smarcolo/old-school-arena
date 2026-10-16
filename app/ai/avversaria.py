@@ -155,7 +155,14 @@ def decidi_mulligan(partita: Partita, nome: str) -> None:
 
 
 def decidi_scelta(partita: Partita, nome: str) -> None:
-    """«Paga o subisci»: paga se può."""
+    """«Paga o subisci»: paga se può. (Le divisioni del banding l'AI le fa in automatico, senza Scelta.)"""
+    if partita.scelta.tipo == "danni":
+        from app.engine.combattimento import _assorbitore
+        dati = partita.scelta.dati
+        candidate = [t[1] for i in dati["candidate"] if (t := partita.trova_in_campo(i))]
+        fonte = partita.trova_in_campo(dati["fonte"])[1]
+        combattimento.assegna_danni(partita, nome, {_assorbitore(fonte, candidate).id: dati["danni"]})
+        return
     azioni.rispondi_scelta(partita, nome, azioni.puo_pagare_scelta(partita))
 
 

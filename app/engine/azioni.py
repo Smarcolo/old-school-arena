@@ -377,6 +377,12 @@ def passa_priorita(partita: Partita, giocatore: str) -> None:
         passa_fase(partita)
 
 
+def concedi(partita: Partita, giocatore: str) -> None:
+    partita.vincitore = partita.avversario_di(giocatore).nome
+    partita.scelta = None
+    _log(partita, giocatore, "sconfitta", f"{giocatore} concede la partita")
+
+
 def modifica_vita(partita: Partita, giocatore: str, delta: int, motivo: str = "") -> None:
     g = partita.giocatore(giocatore)
     g.vita += delta

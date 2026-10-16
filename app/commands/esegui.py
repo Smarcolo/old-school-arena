@@ -33,7 +33,7 @@ def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
 
 AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta>, "
          "attiva <carta> [su <bersaglio>], passa, fine turno, "
-         "tengo / mulligan / in fondo <carte>, attacca con <carte>|tutto (con «+» in banda), non attacco, paga / non pago, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
+         "tengo / mulligan / in fondo <carte>, concedo, danni [n] su <creatura> (banding), attacca con <carte>|tutto (con «+» in banda), non attacco, paga / non pago, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
          "mano, mana, stato, pesca [n], vita <+/-n>, giudice <domanda>")
 TUTTO = {"", "tutto", "tutte", "tutti", "con tutto", "con tutte"}
 
@@ -42,6 +42,28 @@ def _scegli(candidate, testo: str, gia_usate: set[str]):
     """Prima carta tra le candidate con quel nome o id, non ancora usata."""
     t = testo.strip().lower()
     return next((c for c in candidate if c.id not in gia_usate and (c.id == t or c.nome.lower() == t)), None)
+
+
+def _dividi_danni(partita: Partita, giocatore: str, argomento: str) -> str:
+    """«danni su orso» (tutti) oppure «danni 2 su orso, 1 su gigante»."""
+    scelta = partita.scelta
+    if scelta is None or scelta.tipo != "danni":
+        return "Ora non c'è da dividere danni."
+    candidate = scelta.dati["candidate"]
+    ripartizione: dict[str, int] = {}
+    for parte in re.split(r",|\s+e\s+", argomento):
+        if not parte.strip():
+            continue
+        m = re.match(r"^\s*(?:(\d+)\s+)?su\s+(.+?)\s*$", parte)
+        if not m:
+            return "Scrivi «danni su <creatura>» oppure «danni 2 su <creatura>, 1 su <altra>»."
+        nome = m.group(2).lower()
+        id_ = next((i for i, n in candidate.items() if i == nome or n.lower() == nome and i not in ripartizione), None)
+        if id_ is None:
+            return f"«{m.group(2)}» non è tra le creature coinvolte ({', '.join(candidate.values())})."
+        ripartizione[id_] = int(m.group(1)) if m.group(1) else scelta.dati["danni"] - sum(ripartizione.values())
+    combattimento.assegna_danni(partita, giocatore, ripartizione)
+    return "Danni divisi."
 
 
 def _attacca(partita: Partita, giocatore: str, argomento: str) -> str:
@@ -164,6 +186,11 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
             case "nonblocco":
                 combattimento.dichiara_bloccanti(partita, giocatore, [])
                 return "Non blocchi."
+            case "concedo":
+                if partita.vincitore:
+                    return "La partita è già finita."
+                azioni.concedi(partita, giocatore)
+                return "Hai concesso la partita."
             case "tengo":
                 mulligan.tieni(partita, giocatore)
                 da_mettere = partita.mulligan[giocatore].da_mettere_in_fondo
@@ -185,6 +212,8 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
                     usate.add(c.id)
                 mulligan.metti_in_fondo(partita, giocatore, scelte)
                 return "Carte messe in fondo al mazzo."
+            case "danni":
+                return _dividi_danni(partita, giocatore, cmd.argomento)
             case "paga" | "nonpago":
                 azioni.rispondi_scelta(partita, giocatore, cmd.azione == "paga")
                 return "Hai pagato." if cmd.azione == "paga" else "Non hai pagato."

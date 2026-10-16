@@ -160,11 +160,15 @@ class OggettoPila:
 
 @dataclass
 class Scelta:
-    """Una decisione che blocca la partita finché il giocatore non risponde (es. «paga o subisci»)."""
+    """Una decisione che blocca la partita finché il giocatore non risponde.
+    tipo "paga": «paga o subisci» (oggetto = l'innesco, costo); tipo "danni": divisione dei danni con il banding
+    (dati: chiave, fonte, nome_fonte, danni, candidate {id: nome})."""
     giocatore: str
-    oggetto: OggettoPila
-    costo: str
-    testo: str
+    oggetto: OggettoPila | None = None
+    costo: str = ""
+    testo: str = ""
+    tipo: str = "paga"
+    dati: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -173,6 +177,8 @@ class Combattimento:
     attaccanti: list[str] = field(default_factory=list)  # id delle creature attaccanti
     blocchi: dict[str, list[str]] = field(default_factory=dict)  # id attaccante -> id bloccanti, in ordine
     bande: list[list[str]] = field(default_factory=list)  # gruppi di attaccanti che attaccano in banda
+    assegnazioni: dict[str, dict[str, int]] = field(default_factory=dict)  # divisioni del banding già decise
+    passi_fatti: set[str] = field(default_factory=set)  # passi di danno già eseguiti
     attaccanti_dichiarati: bool = False
     attesa_bloccanti: bool = False  # il difensore deve dichiarare i bloccanti
     bloccanti_dichiarati: bool = False
@@ -200,6 +206,7 @@ class Partita:
     combattimento: Combattimento | None = None
     scelta: Scelta | None = None
     mana_burn: bool = False  # il Swedish non lo usa; si può accendere da regole_swedish.json
+    scelte_manuali: set[str] = field(default_factory=set)  # chi decide a mano le divisioni del banding
     mulligan: dict | None = None  # nome -> StatoMulligan durante i mulligan iniziali (engine/mulligan.py)
     rng: random.Random = field(default_factory=random.Random, repr=False)
 
@@ -241,8 +248,9 @@ class Partita:
 
 
 def nuova_partita(mazzi: dict[str, list[Carta]], mano_iniziale: int = 7, seed: int | None = None,
-                  mana_burn: bool = False, mulligan: bool = False) -> Partita:
-    """Crea la partita, mescola i mazzi e pesca la mano iniziale. Il primo giocatore salta la pescata."""
+                  mana_burn: bool = False, mulligan: bool = False, primo: str | None = None) -> Partita:
+    """Crea la partita, mescola i mazzi e pesca la mano iniziale. Chi inizia (`primo`, di default il primo dei mazzi)
+    salta la pescata del primo turno."""
     rng = random.Random(seed)
     giocatori = []
     for nome, mazzo in mazzi.items():
@@ -256,6 +264,8 @@ def nuova_partita(mazzi: dict[str, list[Carta]], mano_iniziale: int = 7, seed: i
             g[Zona.MANO].append(g[Zona.GRIMORIO].pop())
         giocatori.append(g)
     partita = Partita(giocatori=giocatori, mana_burn=mana_burn, rng=rng)
+    if primo is not None:
+        partita.attivo = partita.priorita = [g.nome for g in giocatori].index(primo)
     if mulligan:
         from app.engine import mulligan as mod_mulligan
         mod_mulligan.avvia(partita)

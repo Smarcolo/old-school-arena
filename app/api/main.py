@@ -15,6 +15,7 @@ from app.engine.stato import NOMI_COLORI, PAROLE_CHIAVE, PROTEZIONI_INGLESE, Par
 from app.engine.validazione import tipo_bersaglio
 from app.engine.zone import Zona
 from app.judge.giudice import Giudice
+from app.incontro import Incontro
 from app.regia import avanza, esegui_comando
 
 UMANO = "Tu"
@@ -28,7 +29,7 @@ MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 2, "Uthden Troll": 2, "H
                "Roc of Kher Ridges": 4, "Lightning Bolt": 4}
 
 app = FastAPI(title="Old School Arena")
-partite: dict[str, Partita] = {}
+partite: dict[str, Incontro] = {}  # incontri al meglio di tre, per id
 conn_carte = database.connetti()
 database.carica_carte_base(conn_carte)  # idempotente: aggiorna le carte di prova se il JSON cambia
 MAZZO_UMANO_PREDEFINITO = "Verde (prova)"
@@ -95,8 +96,7 @@ def vista(p: Partita) -> dict:
                   "bersaglio": descrivi_bersaglio(p, o.bersagli[0]) if o.bersagli else None} for o in p.pila],
         "vincitore": p.vincitore, "giocatori": giocatori,
         "combattimento": _vista_combattimento(p),
-        "scelta": ({"testo": p.scelta.testo, "costo": p.scelta.costo, "carta": p.scelta.oggetto.carta.nome}
-                   if p.scelta and p.scelta.giocatore == UMANO else None),
+        "scelta": _vista_scelta(p),
         "mulligan": _vista_mulligan(p),
         "richiesta": ("mulligan" if p.mulligan and not p.mulligan[UMANO].finito
                       else "scelta" if p.scelta and p.scelta.giocatore == UMANO
@@ -104,6 +104,16 @@ def vista(p: Partita) -> dict:
                       else "bloccanti" if combattimento.deve_dichiarare_bloccanti(p, UMANO) else None),
         "eventi": [e.descrizione for e in p.registro.ultimi(30)],
     }
+
+
+def _vista_scelta(p: Partita) -> dict | None:
+    s = p.scelta
+    if s is None or s.giocatore != UMANO:
+        return None
+    if s.tipo == "danni":
+        return {"tipo": "danni", "testo": s.testo, "danni": s.dati["danni"], "fonte": s.dati["nome_fonte"],
+                "candidate": [{"id": i, "nome": n} for i, n in s.dati["candidate"].items()]}
+    return {"tipo": "paga", "testo": s.testo, "costo": s.costo, "carta": s.oggetto.carta.nome}
 
 
 def _vista_mulligan(p: Partita) -> dict | None:
@@ -139,18 +149,29 @@ def _carica_mazzo(nome: str) -> list:
     return database.mazzo_da_lista(conn_carte, analisi["mazzo"])
 
 
+def vista_incontro(inc: Incontro) -> dict:
+    return {**vista(inc.partita), "id": inc.id, "incontro": {
+        "numero": inc.numero, "vittorie": inc.vittorie, "esiti": inc.esiti, "lancio_moneta": inc.lancio_moneta,
+        "vincitore": inc.vincitore, "prossima_possibile": bool(inc.partita.vincitore and not inc.vincitore)}}
+
+
 @app.post("/api/partite")
 def crea_partita(richiesta: RichiestaPartita | None = None) -> dict:
+    """Crea un incontro al meglio di tre e ne avvia la prima partita."""
     richiesta = richiesta or RichiestaPartita()
     regole = carica_regole()
-    p = nuova_partita({UMANO: _carica_mazzo(richiesta.mazzo), AI: _carica_mazzo(richiesta.mazzo_avversaria)},
-                      mana_burn=regole.mana_burn, mulligan=regole.mulligan == "london")
-    partite[p.id] = p
-    avanza(p, UMANO, AI)
-    return vista(p)
+    _carica_mazzo(richiesta.mazzo), _carica_mazzo(richiesta.mazzo_avversaria)  # errori subito, prima di iniziare
+    inc = Incontro(
+        [UMANO, AI],
+        lambda: {UMANO: _carica_mazzo(richiesta.mazzo), AI: _carica_mazzo(richiesta.mazzo_avversaria)},
+        opzioni={"mana_burn": regole.mana_burn, "mulligan": regole.mulligan == "london"},
+        scelte_manuali={UMANO})
+    partite[inc.id] = inc
+    avanza(inc.partita, UMANO, AI)
+    return vista_incontro(inc)
 
 
-def _partita(id_partita: str) -> Partita:
+def _incontro(id_partita: str) -> Incontro:
     if id_partita not in partite:
         raise HTTPException(404, "partita non trovata")
     return partite[id_partita]
@@ -158,14 +179,26 @@ def _partita(id_partita: str) -> Partita:
 
 @app.get("/api/partite/{id_partita}")
 def leggi_partita(id_partita: str) -> dict:
-    return vista(_partita(id_partita))
+    return vista_incontro(_incontro(id_partita))
 
 
 @app.post("/api/partite/{id_partita}/comando")
 def comando(id_partita: str, richiesta: RichiestaComando) -> dict:
-    p = _partita(id_partita)
-    messaggio = esegui_comando(p, UMANO, AI, richiesta.testo, giudice)
-    return {"messaggio": messaggio, "partita": vista(p)}
+    inc = _incontro(id_partita)
+    messaggio = esegui_comando(inc.partita, UMANO, AI, richiesta.testo, giudice)
+    inc.registra_esito()
+    return {"messaggio": messaggio, "partita": vista_incontro(inc)}
+
+
+@app.post("/api/partite/{id_partita}/prossima")
+def prossima_partita(id_partita: str) -> dict:
+    inc = _incontro(id_partita)
+    try:
+        inc.prossima()
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    avanza(inc.partita, UMANO, AI)
+    return vista_incontro(inc)
 
 
 @app.get("/api/carte")

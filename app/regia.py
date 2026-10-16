@@ -83,6 +83,8 @@ def suggerimento(partita: Partita, umano: str) -> str:
             return f"Scegli {n} {'carta' if n == 1 else 'carte'} da mettere in fondo al mazzo: «in fondo <carta>, <carta>»."
         return "Mano iniziale: «tengo» oppure «mulligan»."
     if partita.scelta and partita.scelta.giocatore == umano:
+        if partita.scelta.tipo == "danni":
+            return f"Banding: {partita.scelta.testo}. «danni su <creatura>» o «danni 2 su <creatura>, 1 su <altra>»."
         return f"Scegli: {partita.scelta.testo} «paga» o «non pago»."
     if combattimento.deve_dichiarare_bloccanti(partita, umano):
         nomi = ", ".join(c.nome for c in combattimento.attaccanti_in_campo(partita))

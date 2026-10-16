@@ -11,10 +11,11 @@ protezione da un colore (non bloccabile da quel colore, danni da quel colore pre
 
 Banding: si attacca in banda (creature con banding più al massimo una senza); chi blocca un membro blocca tutta la
 banda. Se in un blocco c'è una creatura con banding, i danni della creatura avversaria li divide chi controlla quella
-con banding, non chi controlla la creatura che li infligge. La divisione è automatica (vedi `_assorbitore`).
+con banding, non chi controlla la creatura che li infligge. Per i giocatori in `Partita.scelte_manuali` la partita si
+ferma con una Scelta di tipo "danni" (`assegna_danni`); per gli altri la divisione è automatica (`_assorbitore`).
 Con «attacca per primo» ci sono due passi di danno di fila, senza priorità in mezzo (semplificazione).
 """
-from app.engine.stato import Carta, Combattimento, Fase, Partita
+from app.engine.stato import Carta, Combattimento, Fase, Partita, Scelta
 from app.engine.validazione import AzioneIllegale
 from app.engine.zone import Zona
 
@@ -196,6 +197,69 @@ def _assorbitore(fonte: Carta, candidate: list[Carta]) -> Carta:
     return min(candidate, key=lambda c: (c.forza_attuale, c.costituzione_attuale))
 
 
+def _chiave(passo: str | None, fonte: Carta) -> str:
+    return f"{passo or 'unico'}:{fonte.id}"
+
+
+def _divisioni_banding(partita: Partita, passo: str | None) -> list[tuple[str, Carta, list[Carta], str]]:
+    """Le divisioni di danni che in questo passo spettano a chi controlla una creatura con banding:
+    (chiave, fonte dei danni, creature tra cui dividerli, chi sceglie)."""
+    comb = partita.combattimento
+    attivo = partita.giocatore_attivo.nome
+    difensore = partita.avversario_di(attivo).nome
+    in_campo = attaccanti_in_campo(partita)
+    divisioni = []
+    for a in in_campo:
+        bloccanti = [t[1] for i in comb.blocchi.get(a.id, []) if (t := partita.trova_in_campo(i))]
+        if _colpisce_in(a, passo) and bloccanti and a.forza_attuale > 0 and any(b.ha("banding") for b in bloccanti):
+            divisioni.append((_chiave(passo, a), a, bloccanti, difensore))
+    for id_bloccante in sorted(comb.bloccanti()):
+        trovato = partita.trova_in_campo(id_bloccante)
+        if not trovato or not _colpisce_in(trovato[1], passo) or trovato[1].forza_attuale <= 0:
+            continue
+        bloccati = [a for a in in_campo if id_bloccante in comb.blocchi.get(a.id, [])]
+        if bloccati and any(a.ha("banding") for a in bloccati):
+            divisioni.append((_chiave(passo, trovato[1]), trovato[1], bloccati, attivo))
+    return divisioni
+
+
+def _chiedi_o_decidi(partita: Partita, passo: str | None) -> bool:
+    """Prepara le divisioni del banding per il passo. Ritorna False se serve aspettare una scelta del giocatore."""
+    comb = partita.combattimento
+    for chiave, fonte, candidate, chi in _divisioni_banding(partita, passo):
+        if chiave in comb.assegnazioni:
+            continue
+        if chi in partita.scelte_manuali and len(candidate) > 1:
+            nomi = ", ".join(c.nome for c in candidate)
+            partita.scelta = Scelta(
+                chi, testo=f"dividi i {fonte.forza_attuale} danni di {fonte.nome} tra {nomi}", tipo="danni",
+                dati={"chiave": chiave, "fonte": fonte.id, "nome_fonte": fonte.nome, "danni": fonte.forza_attuale,
+                      "candidate": {c.id: c.nome for c in candidate}})
+            _log(partita, chi, "scelta", f"{chi} deve dividere i danni di {fonte.nome} (banding)")
+            return False
+        comb.assegnazioni[chiave] = {_assorbitore(fonte, candidate).id: fonte.forza_attuale}
+    return True
+
+
+def assegna_danni(partita: Partita, giocatore: str, ripartizione: dict[str, int]) -> None:
+    """Risposta alla Scelta "danni": {id creatura: danni}. Poi il combattimento riprende."""
+    scelta = partita.scelta
+    if scelta is None or scelta.tipo != "danni":
+        raise AzioneIllegale("ora non c'è da dividere danni")
+    if scelta.giocatore != giocatore:
+        raise AzioneIllegale(f"tocca a {scelta.giocatore} dividere i danni")
+    candidate, totale = scelta.dati["candidate"], scelta.dati["danni"]
+    if any(i not in candidate for i in ripartizione) or any(n < 0 for n in ripartizione.values()):
+        raise AzioneIllegale("puoi dare danni solo alle creature coinvolte, in quantità non negative")
+    if sum(ripartizione.values()) != totale:
+        raise AzioneIllegale(f"devi dividere esattamente {totale} danni (ne hai assegnati {sum(ripartizione.values())})")
+    partita.combattimento.assegnazioni[scelta.dati["chiave"]] = {i: n for i, n in ripartizione.items() if n}
+    divisione = ", ".join(f"{n} a {candidate[i]}" for i, n in ripartizione.items() if n)
+    _log(partita, giocatore, "banding", f"{giocatore} divide i danni di {scelta.dati['nome_fonte']}: {divisione}")
+    partita.scelta = None
+    infliggi_danni(partita)
+
+
 def _passo_di_danno(partita: Partita, passo: str | None) -> None:
     from app.engine.azioni import azioni_di_stato, modifica_vita
     comb = partita.combattimento
@@ -214,7 +278,9 @@ def _passo_di_danno(partita: Partita, passo: str | None) -> None:
         if not bloccato:
             danni_giocatore.append((attaccante, restante))
         elif any(b.ha("banding") for b in bloccanti):
-            danni_creature.append((attaccante, _assorbitore(attaccante, bloccanti), restante))
+            for id_bersaglio, n in comb.assegnazioni.get(_chiave(passo, attaccante), {}).items():
+                if (t := partita.trova_in_campo(id_bersaglio)):
+                    danni_creature.append((attaccante, t[1], n))
         else:
             travolge = attaccante.ha("trample")
             for n, b in enumerate(bloccanti):
@@ -235,8 +301,12 @@ def _passo_di_danno(partita: Partita, passo: str | None) -> None:
         bloccati = [a for a in in_campo if id_bloccante in comb.blocchi.get(a.id, [])]
         if not bloccati:
             continue
-        bersaglio = _assorbitore(b, bloccati) if any(a.ha("banding") for a in bloccati) else bloccati[0]
-        danni_creature.append((b, bersaglio, b.forza_attuale))
+        if any(a.ha("banding") for a in bloccati):
+            for id_bersaglio, n in comb.assegnazioni.get(_chiave(passo, b), {}).items():
+                if (t := partita.trova_in_campo(id_bersaglio)):
+                    danni_creature.append((b, t[1], n))
+        else:
+            danni_creature.append((b, bloccati[0], b.forza_attuale))
 
     for fonte, bersaglio, n in danni_creature:
         if n > 0 and bersaglio.protetta_da(fonte):
@@ -258,7 +328,12 @@ def infliggi_danni(partita: Partita) -> None:
     coinvolte = attaccanti_in_campo(partita) + [t[1] for i in comb.bloccanti() if (t := partita.trova_in_campo(i))]
     passi = ["primo", "normale"] if any(c.ha("first strike") for c in coinvolte) else [None]
     for passo in passi:
+        if (passo or "unico") in comb.passi_fatti:
+            continue
+        if not _chiedi_o_decidi(partita, passo):
+            return  # si riprende da assegna_danni
         _passo_di_danno(partita, passo)
+        comb.passi_fatti.add(passo or "unico")
         if partita.vincitore:
             break
     comb.danni_inflitti = True

@@ -21,6 +21,8 @@ python -m uvicorn app.api.main:app
   `gioca lightning bolt su avversaria`. Dall'interfaccia: clicchi la magia, poi il bersaglio.
 - `attiva <carta> [su <bersaglio>]`: usa un'abilità della carta, es. `attiva shivan dragon`,
   `attiva prodigal sorcerer su avversaria`. Dall'interfaccia: clic sulla carta in campo.
+- `danni su <creatura>` o `danni 2 su <creatura>, 1 su <altra>`: quando con il banding tocca a te dividere i danni.
+- `concedo`: abbandoni la partita in corso.
 - `paga` / `non pago`: quando una carta chiede di pagare o subire (es. Force of Nature nel tuo mantenimento).
 - `tappa <carta>`: tappa per mana; `mana` mostra la riserva. Il mana non usato a fine fase si perde (niente mana burn nel Swedish).
 - `passa`: passi la priorità. Se c'è qualcosa in pila si risolve, altrimenti si va alla fase dopo.
@@ -37,7 +39,11 @@ Puoi anche cliccare una carta in mano per giocarla o sul campo per tapparla, e u
 Dal tavolo, «Mazzi» apre l'editor: incolli o scrivi la lista («4 Lightning Bolt», una riga «Sideboard» per la
 sideboard), cerchi le carte e le aggiungi con un clic. L'analisi dice se il mazzo è legale per le regole Swedish
 caricate, quali carte il motore non sa ancora giocare e se mancano fonti di mana per qualche colore.
-Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
+Prima di «Nuovo incontro» scegli il tuo mazzo e quello dell'avversaria.
+
+## Incontri
+Si gioca al meglio di tre: nella prima partita chi inizia si decide con il lancio della moneta, nelle successive
+inizia chi ha perso. A fine partita il pulsante «Partita 2» (o 3) avvia la successiva; `concedo` abbandona la partita.
 
 ## Cosa funziona oggi
 - Partita a due con mazzi di prova, turni e fasi, una terra per turno, stap e pescata automatici.
@@ -52,7 +58,7 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
   globali (Crusade, Bad Moon). Si lanciano come le magie con bersaglio: clic sull'aura, poi sulla creatura.
 - Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo,
   protezione da un colore (White Knight, Black Knight) e dagli artefatti, banding (Benalish Hero, Timber Wolves:
-  la divisione dei danni è automatica e sceglie sempre l'opzione migliore per chi ha il banding).
+  quando tocca a te dividere i danni la partita si ferma e scegli tu; l'avversaria sceglie da sola).
 - Editor dei mazzi con analisi e mazzi salvati.
 - Immagini delle carte: passando il mouse su una carta compare l'immagine (scaricata da Scryfall la prima volta,
   poi tenuta in `data/immagini/`; senza internet si gioca lo stesso, solo senza immagini).

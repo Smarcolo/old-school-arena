@@ -46,6 +46,8 @@ Prima di «Nuovo incontro» scegli il tuo mazzo e quello dell'avversaria.
 ## Incontri
 Si gioca al meglio di tre: nella prima partita chi inizia si decide con il lancio della moneta, nelle successive
 inizia chi ha perso. A fine partita il pulsante «Partita 2» (o 3) avvia la successiva; `concedo` abbandona la partita.
+Prima della partita successiva, «Sideboard» apre il pannello per scambiare carte tra mazzo e sideboard (una per una).
+Anche l'avversaria fa la sua sideboard, in base alle carte che le hai fatto vedere.
 
 ## Cosa funziona oggi
 - Partita a due con mazzi di prova, turni e fasi, una terra per turno, stap e pescata automatici.

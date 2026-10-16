@@ -21,7 +21,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/regia.py` — flusso umano contro AI: esegue i comandi, fa agire l'AI quando ha la priorità e salta le
   priorità dell'umano a pila vuota fuori dalle sue fasi principali.
 - `app/incontro.py` — incontro al meglio di tre: prima partita a moneta, poi inizia chi ha perso; mazzi nuovi
-  a ogni partita. L'API tiene gli incontri (`partite: dict[id, Incontro]`), `/api/partite/{id}/prossima`.
+  a ogni partita dalle `Lista` (mazzo + sideboard) dell'incontro; `cambia_sideboard` (scambi uno per uno, solo tra
+  le partite); `viste` = carte giocate da ciascuno. L'AI fa la sua sideboard in `ai/sideboard.py`. L'API tiene gli incontri (`partite: dict[id, Incontro]`), `/api/partite/{id}/prossima`.
 - `app/api/main.py` — FastAPI; serve anche il frontend statico in `app/web/`.
 - `data/` — database, cache immagini, bulk Scryfall: generati, non versionati (vedi `.gitignore`).
 

@@ -95,7 +95,56 @@ function bottone(testo, azione) {
   return el("button", { type: "button", textContent: testo, onclick: azione });
 }
 
+let cambi = { entra: {}, esce: {} };
+const conCarta = (e, nome) => { e.dataset.carta = nome; return e; };
+
+function apriSideboard() {
+  cambi = { entra: {}, esce: {} };
+  disegnaSideboard();
+}
+
+function sposta(dove, nome, delta, massimo) {
+  const attuale = (cambi[dove][nome] || 0) + delta;
+  cambi[dove][nome] = Math.max(0, Math.min(massimo, attuale));
+  disegnaSideboard();
+}
+
+function disegnaSideboard() {
+  const pannello = $("pannello-sideboard");
+  const liste = partita.incontro && partita.incontro.liste;
+  if (!liste) { pannello.hidden = true; return; }
+  pannello.hidden = false;
+  const tot = (d) => Object.values(d).reduce((a, b) => a + b, 0);
+  const colonna = (titolo, lista, dove, testo) => el("div", { className: "colonna" },
+    el("h3", { textContent: titolo }),
+    ...Object.entries(lista).sort().map(([nome, q]) => el("div", { className: "riga-side" },
+      conCarta(el("span", { textContent: `${q} ${nome}` }), nome),
+      el("span", { className: "cambio", textContent: cambi[dove][nome] ? `${testo} ${cambi[dove][nome]}` : "" }),
+      bottone("−", () => sposta(dove, nome, -1, q)), bottone("+", () => sposta(dove, nome, 1, q)))));
+  const pari = tot(cambi.entra) === tot(cambi.esce);
+  pannello.replaceChildren(
+    el("h2", { textContent: `Sideboard prima della partita ${partita.incontro.numero + 1}` }),
+    el("div", { className: "colonne" },
+      colonna("Mazzo (togli)", liste.mazzo, "esce", "esce"),
+      colonna("Sideboard (metti)", liste.sideboard, "entra", "entra")),
+    el("p", { textContent: pari ? `Scambi: ${tot(cambi.entra)}` : `Togli ${tot(cambi.entra)} carte dal mazzo per metterne ${tot(cambi.entra)} dalla sideboard (ora: ${tot(cambi.esce)}).` }),
+    bottone("Conferma", confermaSideboard), bottone("Chiudi", () => { $("pannello-sideboard").hidden = true; }));
+}
+
+async function confermaSideboard() {
+  try {
+    partita = await api(`/api/partite/${partita.id}/sideboard`, { method: "POST", body: JSON.stringify(cambi) });
+    cambi = { entra: {}, esce: {} };
+    avvisa("Sideboard aggiornata.");
+    disegna();
+    disegnaSideboard();
+  } catch (e) {
+    avvisa("Errore: " + e.message);
+  }
+}
+
 async function prossimaPartita() {
+  $("pannello-sideboard").hidden = true;
   try {
     partita = await api(`/api/partite/${partita.id}/prossima`, { method: "POST" });
     azzeraScelteCombattimento();
@@ -115,7 +164,7 @@ function disegnaBarraCombattimento() {
       ? `Incontro finito: vince ${inc.vincitore} (${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}).`
       : `Partita ${inc.numero} vinta da ${partita.vincitore}. Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}.`;
     barra.replaceChildren(el("span", { textContent: fine }),
-      ...(inc.prossima_possibile ? [bottone(`Partita ${inc.numero + 1}`, prossimaPartita)] : []));
+      ...(inc.prossima_possibile ? [bottone("Sideboard", apriSideboard), bottone(`Partita ${inc.numero + 1}`, prossimaPartita)] : []));
     return;
   }
   barra.hidden = !partita.richiesta;

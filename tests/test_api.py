@@ -71,3 +71,17 @@ def test_giudice_api():
 
 def test_frontend():
     assert "Old School Arena" in client.get("/").text
+
+
+def test_sideboard_via_api():
+    client.put("/api/mazzi/Con sideboard", json={"testo": "20 Forest\n20 Grizzly Bears\nSideboard\n2 Giant Growth"})
+    p = client.post("/api/partite", json={"mazzo": "Con sideboard"}).json()
+    id_ = p["id"]
+    comando(id_, "tengo")
+    r = comando(id_, "concedo")["partita"]
+    assert r["incontro"]["liste"]["sideboard"] == {"Giant Growth": 2}
+    assert client.post(f"/api/partite/{id_}/sideboard", json={"entra": {"Giant Growth": 2}, "esce": {"Forest": 1}}).status_code == 400
+    r = client.post(f"/api/partite/{id_}/sideboard", json={"entra": {"Giant Growth": 2}, "esce": {"Grizzly Bears": 2}}).json()
+    assert r["incontro"]["liste"]["mazzo"]["Giant Growth"] == 2
+    p2 = client.post(f"/api/partite/{id_}/prossima").json()
+    assert p2["incontro"]["numero"] == 2 and p2["incontro"]["liste"] is None

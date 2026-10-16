@@ -57,3 +57,13 @@ textarea { font: .95rem/1.4 ui-monospace, Consolas, monospace; padding: .5rem; b
 #giudice input { width: 100%; padding: .4rem; font-size: .85rem; }
 #risposta-giudice { font-size: .85rem; line-height: 1.4; }
 .fila.cimitero .carta { font-size: .75rem; opacity: .75; padding: .2rem .4rem; }
+#pannello-sideboard { margin: 0 1rem 1rem; padding: .75rem 1rem; border-radius: 8px; background: var(--tavolo); }
+#pannello-sideboard[hidden] { display: none; }
+#pannello-sideboard h2 { margin: 0 0 .5rem; font-size: 1rem; }
+.colonne { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.colonna h3 { font-size: .9rem; margin: 0 0 .3rem; }
+.riga-side { display: flex; gap: .4rem; align-items: center; font-size: .85rem; padding: .1rem 0; }
+.riga-side span:first-child { flex: 1; }
+.riga-side button { padding: .1rem .5rem; }
+.cambio { color: var(--accento); font-size: .8rem; }
+@media (max-width: 700px) { .colonne { grid-template-columns: 1fr; } }

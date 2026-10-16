@@ -9,13 +9,15 @@ from pydantic import BaseModel
 from app.cards import database, immagini, mazzi
 from app.cards.regole_swedish import carica_regole
 from app.engine import combattimento, mana
+from app.engine.eventi import Evento
 from app.engine.abilita import analizza_abilita
 from app.engine.azioni import descrivi_bersaglio
 from app.engine.stato import NOMI_COLORI, PAROLE_CHIAVE, PROTEZIONI_INGLESE, Partita, nuova_partita, parole_chiave_da_testo
 from app.engine.validazione import tipo_bersaglio
 from app.engine.zone import Zona
 from app.judge.giudice import Giudice
-from app.incontro import Incontro
+from app.ai.sideboard import scegli_cambi
+from app.incontro import Incontro, Lista
 from app.regia import avanza, esegui_comando
 
 UMANO = "Tu"
@@ -30,6 +32,7 @@ MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 2, "Uthden Troll": 2, "H
 
 app = FastAPI(title="Old School Arena")
 partite: dict[str, Incontro] = {}  # incontri al meglio di tre, per id
+richieste_mazzo: dict[str, str] = {}  # id incontro -> nome del mazzo dell'avversaria
 conn_carte = database.connetti()
 database.carica_carte_base(conn_carte)  # idempotente: aggiorna le carte di prova se il JSON cambia
 MAZZO_UMANO_PREDEFINITO = "Verde (prova)"
@@ -50,6 +53,11 @@ class RichiestaPartita(BaseModel):
 
 class TestoMazzo(BaseModel):
     testo: str
+
+
+class CambiSideboard(BaseModel):
+    entra: dict[str, int] = {}
+    esce: dict[str, int] = {}
 
 
 def _nome_abilita(k: str) -> str:
@@ -141,7 +149,7 @@ def salute() -> dict:
     return {"ok": True, "partite": len(partite)}
 
 
-def _carica_mazzo(nome: str) -> list:
+def _carica_lista(nome: str) -> Lista:
     salvato = mazzi.leggi(conn_carte, nome)
     if salvato is None:
         raise HTTPException(404, f"mazzo non trovato: {nome}")
@@ -150,13 +158,21 @@ def _carica_mazzo(nome: str) -> list:
         motivi = [p for p in analisi["problemi"] if p.startswith("carta sconosciuta")]
         motivi = motivi or [f"servono almeno {mazzi.MINIMO_PER_GIOCARE} carte"]
         raise HTTPException(400, f"il mazzo «{nome}» non si può usare: " + "; ".join(motivi))
-    return database.mazzo_da_lista(conn_carte, analisi["mazzo"])
+    sideboard = {n: q for n, q in analisi["sideboard"].items() if database.cerca(conn_carte, n)}
+    return Lista(analisi["mazzo"], sideboard)
+
+
+def _carica_mazzo(nome: str) -> list:
+    return database.mazzo_da_lista(conn_carte, _carica_lista(nome).mazzo)
 
 
 def vista_incontro(inc: Incontro) -> dict:
     return {**vista(inc.partita), "id": inc.id, "incontro": {
         "numero": inc.numero, "vittorie": inc.vittorie, "esiti": inc.esiti, "lancio_moneta": inc.lancio_moneta,
-        "vincitore": inc.vincitore, "prossima_possibile": bool(inc.partita.vincitore and not inc.vincitore)}}
+        "vincitore": inc.vincitore, "prossima_possibile": bool(inc.partita.vincitore and not inc.vincitore),
+        "mazzo_avversaria": richieste_mazzo.get(inc.id, ""),
+        "liste": ({"mazzo": inc.liste[UMANO].mazzo, "sideboard": inc.liste[UMANO].sideboard}
+                  if inc.partita.vincitore and not inc.vincitore else None)}}
 
 
 @app.post("/api/partite")
@@ -164,13 +180,14 @@ def crea_partita(richiesta: RichiestaPartita | None = None) -> dict:
     """Crea un incontro al meglio di tre e ne avvia la prima partita."""
     richiesta = richiesta or RichiestaPartita()
     regole = carica_regole()
-    _carica_mazzo(richiesta.mazzo), _carica_mazzo(richiesta.mazzo_avversaria)  # errori subito, prima di iniziare
     inc = Incontro(
         [UMANO, AI],
-        lambda: {UMANO: _carica_mazzo(richiesta.mazzo), AI: _carica_mazzo(richiesta.mazzo_avversaria)},
+        {UMANO: _carica_lista(richiesta.mazzo), AI: _carica_lista(richiesta.mazzo_avversaria)},
+        lambda lista: database.mazzo_da_lista(conn_carte, lista),
         opzioni={"mana_burn": regole.mana_burn, "mulligan": regole.mulligan == "london"},
         scelte_manuali={UMANO})
     partite[inc.id] = inc
+    richieste_mazzo[inc.id] = richiesta.mazzo_avversaria
     avanza(inc.partita, UMANO, AI)
     return vista_incontro(inc)
 
@@ -194,10 +211,33 @@ def comando(id_partita: str, richiesta: RichiestaComando) -> dict:
     return {"messaggio": messaggio, "partita": vista_incontro(inc)}
 
 
+@app.post("/api/partite/{id_partita}/sideboard")
+def cambia_sideboard(id_partita: str, cambi: CambiSideboard) -> dict:
+    inc = _incontro(id_partita)
+    try:
+        inc.cambia_sideboard(UMANO, cambi.entra, cambi.esce)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return vista_incontro(inc)
+
+
+def _sideboard_avversaria(inc: Incontro) -> None:
+    lista = inc.liste[AI]
+    nomi = set(lista.mazzo) | set(lista.sideboard) | set(inc.viste[UMANO])
+    info = {n: c for n in nomi if (c := database.cerca(conn_carte, n))}
+    entra, esce = scegli_cambi(lista.sideboard, lista.mazzo, inc.viste[UMANO], info)
+    if entra:
+        inc.cambia_sideboard(AI, entra, esce)
+        inc.partita.registro.aggiungi(Evento(inc.partita.turno, "sideboard", AI, "sideboard",
+                                             f"{AI} cambia {sum(entra.values())} carte con la sideboard"))
+
+
 @app.post("/api/partite/{id_partita}/prossima")
 def prossima_partita(id_partita: str) -> dict:
     inc = _incontro(id_partita)
     try:
+        if inc.partita.vincitore and not inc.vincitore:
+            _sideboard_avversaria(inc)
         inc.prossima()
     except ValueError as e:
         raise HTTPException(400, str(e))

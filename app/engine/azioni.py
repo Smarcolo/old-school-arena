@@ -133,8 +133,8 @@ def rispondi_scelta(partita: Partita, giocatore: str, paga: bool) -> None:
         piano = mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore), costo)
         if piano is None:
             raise AzioneIllegale(f"non hai abbastanza mana per pagare {scelta.costo}")
-        for fonte in piano:
-            tappa(partita, giocatore, fonte)
+        for fonte, colore in piano:
+            tappa(partita, giocatore, fonte.carta, colore)
         g.riserva = mana.paga(g.riserva, costo)
         _log(partita, giocatore, "paga", f"{giocatore} paga {scelta.costo} per {oggetto.carta.nome}")
     else:
@@ -167,16 +167,26 @@ def gioca_terra(partita: Partita, giocatore: str, carta: Carta) -> None:
     _log(partita, giocatore, "terra", f"{giocatore} gioca {carta.nome}", carta=carta.id)
 
 
-def tappa(partita: Partita, giocatore: str, carta: Carta) -> None:
-    """Tappa un permanente. Se ha un'abilità di mana, il mana va nella riserva (abilità di mana: niente pila)."""
+def tappa(partita: Partita, giocatore: str, carta: Carta, colore: str | None = None) -> None:
+    """Tappa un permanente. Se ha un'abilità di mana, il mana va nella riserva (abilità di mana: niente pila);
+    `colore` sceglie tra le opzioni della fonte (di default la prima). Black Lotus si sacrifica, City of Brass fa
+    1 danno a chi la tappa."""
     _verifica(puo_tappare(partita, giocatore, carta))
+    fonte = mana.mana_prodotto(carta)
+    if fonte and colore and colore not in fonte.colori:
+        raise AzioneIllegale(f"{carta.nome} non produce {{{colore}}}")
     carta.tappata = True
-    colore = mana.mana_prodotto(carta)
-    if colore:
-        partita.giocatore(giocatore).riserva[colore] += 1
-        _log(partita, giocatore, "mana", f"{giocatore} tappa {carta.nome} per {{{colore}}}", carta=carta.id)
-    else:
+    if not fonte:
         _log(partita, giocatore, "tappa", f"{giocatore} tappa {carta.nome}", carta=carta.id)
+        return
+    colore = colore or fonte.colori[0]
+    partita.giocatore(giocatore).riserva[colore] += fonte.quantita
+    _log(partita, giocatore, "mana", f"{giocatore} tappa {carta.nome} per {('{' + colore + '}') * fonte.quantita}",
+         carta=carta.id)
+    if fonte.sacrifica:
+        distruggi(partita, carta, "(sacrificata)", rigenerabile=False)
+    if fonte.danno:
+        modifica_vita(partita, giocatore, -fonte.danno, f"(danni da {carta.nome})")
 
 
 def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] | None = None) -> None:
@@ -186,8 +196,8 @@ def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] |
     _verifica(puo_lanciare(partita, giocatore, carta, bersagli))
     g = partita.giocatore(giocatore)
     costo = mana.analizza_costo(carta.costo)
-    for fonte in mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore), costo):
-        tappa(partita, giocatore, fonte)
+    for fonte, colore in mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore), costo):
+        tappa(partita, giocatore, fonte.carta, colore)
     g.riserva = mana.paga(g.riserva, costo)
     g[Zona.MANO].remove(carta)
     partita.pila.append(OggettoPila(carta, giocatore, bersagli))
@@ -202,9 +212,9 @@ def attiva(partita: Partita, giocatore: str, carta: Carta, abilita, bersagli: li
     _verifica(puo_attivare(partita, giocatore, carta, abilita, bersagli))
     g = partita.giocatore(giocatore)
     costo = mana.analizza_costo(abilita.costo_mana)
-    fonti = [f for f in fonti_di_mana(partita, giocatore) if not (abilita.tappa and f[0] is carta)]
-    for fonte in mana.piano_pagamento(g.riserva, fonti, costo):
-        tappa(partita, giocatore, fonte)
+    fonti = fonti_di_mana(partita, giocatore, carta if abilita.tappa else None)
+    for fonte, colore in mana.piano_pagamento(g.riserva, fonti, costo):
+        tappa(partita, giocatore, fonte.carta, colore)
     g.riserva = mana.paga(g.riserva, costo)
     if abilita.tappa:
         carta.tappata = True

@@ -72,13 +72,13 @@ def puo_tappare(partita: Partita, nome_giocatore: str, carta: Carta) -> str | No
     return None
 
 
-def fonti_di_mana(partita: Partita, nome_giocatore: str) -> list[tuple[Carta, str]]:
-    """Permanenti stappati che possono produrre mana adesso."""
+def fonti_di_mana(partita: Partita, nome_giocatore: str, esclusa: Carta | None = None) -> list:
+    """Fonti di mana (mana.FonteMana) su permanenti stappati che possono produrre mana adesso."""
     fonti = []
     for c in partita.giocatore(nome_giocatore)[Zona.CAMPO]:
-        colore = mana.mana_prodotto(c)
-        if colore and puo_tappare(partita, nome_giocatore, c) is None:
-            fonti.append((c, colore))
+        fonte = mana.mana_prodotto(c)
+        if fonte and c is not esclusa and puo_tappare(partita, nome_giocatore, c) is None:
+            fonti.append(fonte)
     return fonti
 
 
@@ -146,7 +146,7 @@ def puo_attivare(partita: Partita, nome_giocatore: str, carta: Carta, abilita, b
         return f"{carta.nome} non è sul tuo campo di battaglia"
     if abilita.tappa and (motivo := puo_tappare(partita, nome_giocatore, carta)):
         return motivo
-    fonti = [f for f in fonti_di_mana(partita, nome_giocatore) if not (abilita.tappa and f[0] is carta)]
+    fonti = fonti_di_mana(partita, nome_giocatore, carta if abilita.tappa else None)
     if mana.piano_pagamento(partita.giocatore(nome_giocatore).riserva, fonti, mana.analizza_costo(abilita.costo_mana)) is None:
         return f"non hai abbastanza mana per l'abilità di {carta.nome} ({abilita.costo_mana})"
     if bersagli is not None:

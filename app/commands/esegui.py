@@ -8,6 +8,7 @@ from app.engine.stato import Partita
 from app.engine.validazione import AzioneIllegale
 from app.engine.zone import Zona
 
+COLORI_PAROLE = {"bianco": "W", "blu": "U", "nero": "B", "rosso": "R", "verde": "G", "incolore": "C"}
 GIOCATORI_IO = {"me", "io", "me stesso", "tu"}
 GIOCATORI_AVVERSARIO = {"avversaria", "avversario", "lei", "faccia", "lui"}
 
@@ -31,7 +32,7 @@ def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
     return None
 
 
-AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta>, "
+AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta> [per <colore>], "
          "attiva <carta> [su <bersaglio>], passa, fine turno, "
          "tengo / mulligan / in fondo <carte>, concedo, danni [n] su <creatura> (banding), attacca con <carte>|tutto (con «+» in banda), non attacco, paga / non pago, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
          "mano, mana, stato, pesca [n], vita <+/-n>, giudice <domanda>")
@@ -168,10 +169,13 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
                 azioni.attiva(partita, giocatore, carta, abilita[indice], bersagli)
                 return f"Hai attivato l'abilità di {carta.nome}: è in pila."
             case "tappa":
-                carta = azioni.trova_in_zona(partita, giocatore, Zona.CAMPO, cmd.argomento)
+                nome, colore = cmd.argomento, None
+                if m := re.match(r"^(.+?)\s+per\s+\{?([wubrgc]|bianco|blu|nero|rosso|verde|incolore)\}?$", nome):
+                    nome, colore = m.group(1), COLORI_PAROLE.get(m.group(2), m.group(2).upper())
+                carta = azioni.trova_in_zona(partita, giocatore, Zona.CAMPO, nome)
                 if carta is None:
-                    return f"Non hai «{cmd.argomento}» sul campo."
-                azioni.tappa(partita, giocatore, carta)
+                    return f"Non hai «{nome}» sul campo."
+                azioni.tappa(partita, giocatore, carta, colore)
                 return f"Hai tappato {carta.nome}. Riserva: {mana.formatta(partita.giocatore(giocatore).riserva)}"
             case "vita":
                 azioni.modifica_vita(partita, giocatore, cmd.numero, "(manuale)")

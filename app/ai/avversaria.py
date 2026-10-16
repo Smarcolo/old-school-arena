@@ -61,7 +61,7 @@ def _potra_rigenerare(partita: Partita, nome: str, c: Carta) -> bool:
     from app.engine.validazione import fonti_di_mana
     for ab in analizza_abilita(c):
         if ab.tipo == "rigenera":
-            fonti = [f for f in fonti_di_mana(partita, nome) if f[0] is not c]
+            fonti = fonti_di_mana(partita, nome, c)
             if mana.piano_pagamento(partita.giocatore(nome).riserva, fonti, mana.analizza_costo(ab.costo_mana)) is not None:
                 return True
     return False

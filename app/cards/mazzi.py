@@ -75,7 +75,7 @@ def _limiti_motore(carta: Carta) -> str | None:
     capite = parole_chiave_da_testo(carta.testo)
     for riga in carta.testo.splitlines():
         riga = riga.strip()
-        if (not riga or _PROMEMORIA.match(riga) or mana.mana_prodotto(Carta("", "", testo=riga)) or riga_capita(carta, riga)
+        if (not riga or _PROMEMORIA.match(riga) or mana.riga_di_mana(riga) or riga_capita(carta, riga)
                 or inneschi.riga_capita(carta, riga) or statici.riga_capita(carta, riga)):
             continue
         if not {p.strip() for p in riga.lower().split(",")} <= capite:
@@ -102,8 +102,8 @@ def analizza(conn: sqlite3.Connection, mazzo: dict[str, int], sideboard: dict[st
         carta = database.cerca(conn, nome)
         if carta is None:
             continue
-        if colore := mana.mana_prodotto(carta):
-            prodotti.add(colore)
+        if fonte := mana.mana_prodotto(carta):
+            prodotti.update(fonte.colori)
         if motivo := _limiti_motore(carta):
             avvisi.append(f"{nome}: {motivo}")
         if not carta.is_terra:

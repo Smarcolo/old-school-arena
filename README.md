@@ -20,7 +20,7 @@ python -m uvicorn app.api.main:app
 - `attiva <carta> [su <bersaglio>]`: usa un'abilità della carta, es. `attiva shivan dragon`,
   `attiva prodigal sorcerer su avversaria`. Dall'interfaccia: clic sulla carta in campo.
 - `paga` / `non pago`: quando una carta chiede di pagare o subire (es. Force of Nature nel tuo mantenimento).
-- `tappa <carta>`: tappa per mana; `mana` mostra la riserva. Il mana non usato a fine fase fa perdere vita (mana burn).
+- `tappa <carta>`: tappa per mana; `mana` mostra la riserva. Il mana non usato a fine fase si perde (niente mana burn nel Swedish).
 - `passa`: passi la priorità. Se c'è qualcosa in pila si risolve, altrimenti si va alla fase dopo.
 - `fine turno`: chiudi il turno (risolvendo quello che hai in pila).
 - `attacca con <carte>` (separate da virgola o «e»), `attacca con tutto`, `non attacco`. Con «+» le creature
@@ -39,7 +39,7 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
 
 ## Cosa funziona oggi
 - Partita a due con mazzi di prova, turni e fasi, una terra per turno, stap e pescata automatici.
-- Mana, pila e priorità: si lanciano le creature, che entrano con debolezza da evocazione. C'è il mana burn.
+- Mana, pila e priorità: si lanciano le creature, che entrano con debolezza da evocazione. Niente mana burn, come nel Swedish (attivabile da `regole_swedish.json`).
 - Istantanei con bersaglio: Lightning Bolt e Giant Growth, anche in risposta l'uno all'altro.
 - Combattimento: attacchi, blocchi (anche più creature sullo stesso attaccante), danni, Giant Growth dopo i blocchi.
 - Abilità attivate semplici: pompaggio (Shivan Dragon, Frozen Shade), danno (Prodigal Sorcerer) e rigenerazione
@@ -59,7 +59,7 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
 - Giudice (riquadro accanto al registro): risponde con le regole scritte in `data/regole/` (formato Swedish, turno,
   pila, combattimento, abilità, chiarimenti sui casi difficili). Sono una bozza da verificare.
 - Regole Swedish in `app/cards/regole_swedish.json`: set ammessi, carte bandite e ristrette (bozza da verificare),
-  mana burn attivabile o disattivabile.
+  mana burn spento (si può accendere).
 
 ## Carte reali
 Le carte in `app/cards/carte_base.json` sono dati di prova scritti a mano: l'import da Scryfall le sovrascrive con i dati ufficiali.

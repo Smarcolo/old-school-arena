@@ -90,6 +90,7 @@ def test_debolezza_da_evocazione_e_turno_dopo(p):
 
 
 def test_mana_burn(p):
+    p.mana_burn = True  # opzione per chi gioca con il mana burn del 93/94 originale
     azioni.tappa(p, "A", carta(p, "forest", Zona.CAMPO))
     azioni.passa_priorita(p, "A")
     azioni.passa_priorita(p, "B")

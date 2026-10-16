@@ -199,7 +199,7 @@ class Partita:
     vincitore: str | None = None
     combattimento: Combattimento | None = None
     scelta: Scelta | None = None
-    mana_burn: bool = True  # regola del formato, da regole_swedish.json
+    mana_burn: bool = False  # il Swedish non lo usa; si può accendere da regole_swedish.json
 
     @property
     def giocatore_attivo(self) -> Giocatore:
@@ -239,7 +239,7 @@ class Partita:
 
 
 def nuova_partita(mazzi: dict[str, list[Carta]], mano_iniziale: int = 7, seed: int | None = None,
-                  mana_burn: bool = True) -> Partita:
+                  mana_burn: bool = False) -> Partita:
     """Crea la partita, mescola i mazzi e pesca la mano iniziale. Il primo giocatore salta la pescata."""
     rng = random.Random(seed)
     giocatori = []

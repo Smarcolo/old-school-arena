@@ -15,7 +15,7 @@ class RegoleMazzo:
     massimo_copie: int = 4
     bandite: list[str] = field(default_factory=list)
     ristrette: list[str] = field(default_factory=list)
-    mana_burn: bool = True
+    mana_burn: bool = False
     verificato: bool = False
     eccezioni_alle_regole_attuali: list[str] = field(default_factory=list)
 

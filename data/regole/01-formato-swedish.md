@@ -25,6 +25,6 @@ che tocca quando si risolve; si può sistemare le carte per un lancio «onesto»
 Il motore di questa app non gestisce le carte di destrezza.
 
 ## Mana burn nel formato
-Nel 93/94 originale il mana non usato a fine fase faceva perdere 1 vita per ogni mana (mana burn). Le regole attuali
-di Magic l'hanno tolto nel 2009. Nell'app è un'opzione («mana_burn» in app/cards/regole_swedish.json), attiva di
-default: DA VERIFICARE se il Swedish lo usa ancora.
+Nel Swedish 93/94 non c'è il mana burn: il mana non usato a fine fase si perde e basta, senza perdere vita (come
+nelle regole attuali di Magic). Nel 93/94 originale invece ogni mana avanzato faceva perdere 1 vita. Nell'app è
+un'opzione («mana_burn» in app/cards/regole_swedish.json), spenta per il Swedish.

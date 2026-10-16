@@ -68,7 +68,7 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   La regia non ferma l'umano per un innesco in pila se non può rispondere.
 - Regia: l'umano si ferma anche per dichiarare attaccanti/bloccanti e, dopo i blocchi, se ha un istantaneo lanciabile.
   `regia.suggerimento` aggiunge al messaggio cosa può fare adesso.
-- Terminologia 93/94: "rimosse dal gioco" (non esilio), mana burn e interrupt esistono, niente fase di cleanup separata.
+- Terminologia 93/94: "rimosse dal gioco" (non esilio), niente fase di cleanup separata. Mana burn: solo come opzione.
 - Il motore è deterministico dato un `seed`: i test devono passare il seed.
 
 ## Giudice
@@ -80,8 +80,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 ## Regole Swedish
 - `app/cards/regole_swedish.json` è una BOZZA (`"verificato": false`) compilata il 2026-10-16 da riepiloghi online:
   set Alpha, Beta, Unlimited, Summer Magic, Arabian Nights, Antiquities, Legends, The Dark; 7 bandite, 22 ristrette.
-  Marco la confronta con il regolamento ufficiale e mette `"verificato": true`. Punti incerti: Shahrazad, mana burn.
-- `"mana_burn"` nel JSON accende/spegne il mana burn (`Partita.mana_burn`).
+  Marco la confronta con il regolamento ufficiale e mette `"verificato": true`. Punto incerto: Shahrazad.
+- Niente mana burn nel Swedish (confermato da Marco): `"mana_burn": false`; resta come opzione (`Partita.mana_burn`).
 
 ## Lavoro
 - Test: `python -m pytest -q`. I test usano un database temporaneo (variabile `OSA_DATI`, impostata in `tests/conftest.py`). Ogni nuova regola del motore arriva con il suo test.

@@ -5,8 +5,8 @@ from app.engine.effetti import EFFETTI
 from app.engine.eventi import Evento
 from app.engine.stato import ORDINE_FASI, Carta, Fase, OggettoPila, Partita
 from app.engine.effetti import bersaglio_legale
-from app.engine.validazione import (AzioneIllegale, fonti_di_mana, puo_giocare_terra, puo_lanciare,
-                                    puo_passare, puo_tappare)
+from app.engine.validazione import (AzioneIllegale, fonti_di_mana, puo_attivare, puo_giocare_terra,
+                                    puo_lanciare, puo_passare, puo_tappare)
 from app.engine.zone import Zona
 
 
@@ -90,6 +90,40 @@ def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] |
     _log(partita, giocatore, "lancia", f"{giocatore} lancia {carta.nome}{su}", carta=carta.id)
 
 
+def attiva(partita: Partita, giocatore: str, carta: Carta, abilita, bersagli: list[str] | None = None) -> None:
+    """Paga il costo dell'abilità (tappando la carta se serve {T}) e la mette in pila."""
+    bersagli = bersagli or []
+    _verifica(puo_attivare(partita, giocatore, carta, abilita, bersagli))
+    g = partita.giocatore(giocatore)
+    costo = mana.analizza_costo(abilita.costo_mana)
+    fonti = [f for f in fonti_di_mana(partita, giocatore) if not (abilita.tappa and f[0] is carta)]
+    for fonte in mana.piano_pagamento(g.riserva, fonti, costo):
+        tappa(partita, giocatore, fonte)
+    g.riserva = mana.paga(g.riserva, costo)
+    if abilita.tappa:
+        carta.tappata = True
+    partita.pila.append(OggettoPila(carta, giocatore, bersagli, abilita))
+    partita.passaggi = 0
+    su = f" su {descrivi_bersaglio(partita, bersagli[0])}" if bersagli else ""
+    _log(partita, giocatore, "attiva", f"{giocatore} attiva l'abilità di {carta.nome}{su}", carta=carta.id)
+
+
+def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
+    ab, fonte, chi = oggetto.abilita, oggetto.carta, oggetto.controllore
+    if ab.bersaglio and not bersaglio_legale(partita, ab.bersaglio, oggetto.bersagli[0]):
+        _log(partita, chi, "neutralizzata", f"L'abilità di {fonte.nome} non ha più un bersaglio valido")
+        return
+    if ab.tipo == "pompa":
+        if not partita.trova_in_campo(fonte.id):
+            _log(partita, chi, "neutralizzata", f"{fonte.nome} non è più in campo: l'abilità non ha effetto")
+            return
+        fonte.bonus_forza += ab.forza
+        fonte.bonus_costituzione += ab.costituzione
+        _log(partita, chi, "risolve", f"{fonte.nome} prende {ab.forza:+d}/{ab.costituzione:+d} fino a fine turno")
+    elif ab.tipo == "danno":
+        infliggi_danno(partita, fonte, oggetto.bersagli[0], ab.danni)
+
+
 def descrivi_bersaglio(partita: Partita, rif: str) -> str:
     oggetto = partita.risolvi_bersaglio(rif)
     return getattr(oggetto, "nome", "un bersaglio scomparso")
@@ -98,7 +132,9 @@ def descrivi_bersaglio(partita: Partita, rif: str) -> str:
 def risolvi_pila(partita: Partita) -> None:
     oggetto = partita.pila.pop()
     carta, chi = oggetto.carta, oggetto.controllore
-    if carta.is_permanente:
+    if oggetto.abilita:
+        _risolvi_abilita(partita, oggetto)
+    elif carta.is_permanente:
         _entra_in_campo(partita, chi, carta)
         _log(partita, chi, "risolve", f"{carta.nome} si risolve ed entra in campo", carta=carta.id)
     else:

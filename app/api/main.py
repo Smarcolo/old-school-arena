@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from app.cards import database, mazzi
 from app.engine import combattimento, mana
+from app.engine.abilita import analizza_abilita
 from app.engine.azioni import descrivi_bersaglio
 from app.engine.stato import PAROLE_CHIAVE, Partita, nuova_partita, parole_chiave_da_testo
 from app.engine.validazione import tipo_bersaglio
@@ -20,7 +21,8 @@ AI = "Avversaria"
 # Mazzi di prova finché non c'è l'editor dei mazzi (non rispettano il limite di 4 copie).
 MAZZO_VERDE = {"Forest": 17, "Llanowar Elves": 4, "Elvish Archers": 4, "Grizzly Bears": 4, "War Mammoth": 4,
                "Giant Spider": 3, "Giant Growth": 4}
-MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 4, "Hurloon Minotaur": 4, "Gray Ogre": 4, "Hill Giant": 3,
+MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 4, "Hurloon Minotaur": 4, "Gray Ogre": 4, "Hill Giant": 2,
+               "Shivan Dragon": 1,
                "Roc of Kher Ridges": 4, "Lightning Bolt": 4}
 
 app = FastAPI(title="Old School Arena")
@@ -58,6 +60,7 @@ def vista(p: Partita) -> dict:
                  "forza": c.forza_attuale if c.is_creatura else None,
                  "costituzione": c.costituzione_attuale if c.is_creatura else None,
                  "danni": c.danni, "bersaglio": tipo_bersaglio(c), "abilita": _abilita(c),
+                 "attivabili": [{"testo": a.testo, "bersaglio": a.bersaglio} for a in analizza_abilita(c)],
                  "appena_entrata": p.ha_debolezza_da_evocazione(c)} for c in g[z]]
 
     giocatori = []
@@ -70,7 +73,7 @@ def vista(p: Partita) -> dict:
     return {
         "id": p.id, "turno": p.turno, "fase": p.fase.value, "attivo": p.giocatore_attivo.nome,
         "priorita": p.giocatore_con_priorita.nome,
-        "pila": [{"nome": o.carta.nome, "controllore": o.controllore,
+        "pila": [{"nome": o.descrizione, "controllore": o.controllore,
                   "bersaglio": descrivi_bersaglio(p, o.bersagli[0]) if o.bersagli else None} for o in p.pila],
         "vincitore": p.vincitore, "giocatori": giocatori,
         "combattimento": _vista_combattimento(p),

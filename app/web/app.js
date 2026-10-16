@@ -1,5 +1,5 @@
 let partita = null;
-let magiaInAttesa = null; // nome di una magia che aspetta il clic sul bersaglio
+let magiaInAttesa = null; // comando ("gioca X" o "attiva X") che aspetta il clic sul bersaglio
 let attaccantiScelti = new Set(); // id delle tue creature scelte per attaccare
 let bloccanteScelto = null; // id della tua creatura che sta per bloccare
 let blocchiScelti = []; // coppie [id attaccante, id bloccante]
@@ -24,7 +24,7 @@ function scegliBersaglio(rif) {
   const magia = magiaInAttesa;
   magiaInAttesa = null;
   document.body.classList.remove("mirino");
-  invia(`gioca ${magia} su ${rif}`);
+  invia(`${magia} su ${rif}`);
 }
 
 function azzeraScelteCombattimento() {
@@ -49,7 +49,7 @@ function cartaEl(c, azione) {
   const e = el("span", { className: classi.filter(Boolean).join(" ") }, c.nome);
   if (c.forza != null) e.append(el("span", { className: "pt", textContent: `${c.forza}/${c.costituzione - c.danni}` }));
   if (c.abilita && c.abilita.length) e.append(el("span", { className: "abilita", textContent: c.abilita.join(", ") }));
-  e.title = [c.tipo, c.costo, c.danni ? `${c.danni} danni` : "", c.appena_entrata ? "appena entrata" : ""]
+  e.title = [c.tipo, c.costo, ...(c.attivabili || []).map((a) => "clic: " + a.testo), c.danni ? `${c.danni} danni` : "", c.appena_entrata ? "appena entrata" : ""]
     .filter(Boolean).join(" · ");
   e.onclick = () => azione(c);
   return e;
@@ -72,6 +72,15 @@ function suCampo(c, mio) {
       avvisa("Blocco aggiunto. Conferma quando hai finito.");
     }
     return disegna();
+  }
+  if (mio && c.attivabili && c.attivabili.length) {
+    const ab = c.attivabili[0];
+    if (ab.bersaglio) {
+      magiaInAttesa = `attiva ${c.id}`;
+      document.body.classList.add("mirino");
+      return avvisa(`Scegli il bersaglio dell'abilità di ${c.nome} (Esc per annullare).`);
+    }
+    return invia(`attiva ${c.id}`);
   }
   if (mio) invia(`tappa ${c.id}`);
 }
@@ -102,7 +111,7 @@ function disegnaBarraCombattimento() {
 
 function suMano(c) {
   if (c.bersaglio) {
-    magiaInAttesa = c.nome;
+    magiaInAttesa = `gioca ${c.nome}`;
     document.body.classList.add("mirino");
     avvisa(`Scegli il bersaglio di ${c.nome}: clicca una creatura o il nome di un giocatore (Esc per annullare).`);
     return;

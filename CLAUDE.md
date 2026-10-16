@@ -38,7 +38,11 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   all'ultimo. Un attaccante bloccato non colpisce il giocatore (salvo travolgere).
 - Parole chiave lette dal testo Oracle (`stato.parole_chiave_da_testo`, `Carta.ha("flying")`): volare, raggiungere,
   passaterre, difensore, cautela, rapidità, travolgere, attacca per primo (due passi di danno senza priorità in mezzo).
-  Mancano: banding, protezione, abilità attivate e innescate.
+  Mancano: banding, protezione, abilità innescate.
+- Abilità attivate (`engine/abilita.py`): riconosce dal testo Oracle «{costo}: <nome> gets +X/+Y until end of turn.»
+  e «{costo}: <nome> deals N damage to any target / target creature / target player.». Vanno in pila
+  (`OggettoPila.abilita`); la carta resta in campo. Una riga con frasi in più (es. Dragon Whelp) NON è riconosciuta:
+  meglio non attivarla che attivarla male.
 - Regia: l'umano si ferma anche per dichiarare attaccanti/bloccanti e, dopo i blocchi, se ha un istantaneo lanciabile.
   `regia.suggerimento` aggiunge al messaggio cosa può fare adesso.
 - Terminologia 93/94: "rimosse dal gioco" (non esilio), mana burn e interrupt esistono, niente fase di cleanup separata.
@@ -63,5 +67,6 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 4. Fatto: editor mazzi (`/mazzi.html`), mazzi salvati, scelta dei mazzi a inizio partita.
    Serve che Marco compili bandite/ristrette in `regole_swedish.json` per il controllo completo.
 5. Fatto: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
-   Da fare: banding, protezione, abilità attivate (es. firebreathing) e innescate.
+   Fatto anche: abilità attivate semplici (pompaggio, danno). Da fare: banding, protezione, abilità innescate,
+   rigenerazione.
 6. Immagini delle carte in cache in `data/immagini/`.

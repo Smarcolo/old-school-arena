@@ -113,6 +113,11 @@ class OggettoPila:
     carta: Carta
     controllore: str
     bersagli: list[str] = field(default_factory=list)  # "giocatore:<nome>" o "carta:<id>"
+    abilita: object | None = None  # AbilitaAttivata se in pila c'è un'abilità e non la carta stessa
+
+    @property
+    def descrizione(self) -> str:
+        return f"abilità di {self.carta.nome}" if self.abilita else self.carta.nome
 
 
 @dataclass

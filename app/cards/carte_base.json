@@ -19,5 +19,8 @@
   {"nome": "Hurloon Minotaur", "tipo": "Creature — Minotaur", "costo": "{1}{R}{R}", "forza": 2, "costituzione": 3, "testo": ""},
   {"nome": "Roc of Kher Ridges", "tipo": "Creature — Bird", "costo": "{3}{R}", "forza": 3, "costituzione": 3, "testo": "Flying"},
   {"nome": "Wall of Stone", "tipo": "Creature — Wall", "costo": "{1}{R}{R}", "forza": 0, "costituzione": 8, "testo": "Defender"},
-  {"nome": "Serra Angel", "tipo": "Creature — Angel", "costo": "{3}{W}{W}", "forza": 4, "costituzione": 4, "testo": "Flying, vigilance"}
+  {"nome": "Serra Angel", "tipo": "Creature — Angel", "costo": "{3}{W}{W}", "forza": 4, "costituzione": 4, "testo": "Flying, vigilance"},
+  {"nome": "Shivan Dragon", "tipo": "Creature — Dragon", "costo": "{4}{R}{R}", "forza": 5, "costituzione": 5, "testo": "Flying\n{R}: Shivan Dragon gets +1/+0 until end of turn."},
+  {"nome": "Prodigal Sorcerer", "tipo": "Creature — Human Wizard", "costo": "{2}{U}", "forza": 1, "costituzione": 1, "testo": "{T}: Prodigal Sorcerer deals 1 damage to any target."},
+  {"nome": "Frozen Shade", "tipo": "Creature — Shade", "costo": "{2}{B}", "forza": 0, "costituzione": 1, "testo": "{B}: Frozen Shade gets +1/+1 until end of turn."}
 ]

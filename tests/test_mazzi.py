@@ -24,7 +24,8 @@ def test_analisi_normalizza_e_segnala(conn):
 def test_analisi_limiti_del_motore(conn):
     conn.execute("INSERT INTO carte (nome, tipo, costo, testo) VALUES ('Healing Salve', 'Instant', '{W}', 'Choose one...')")
     conn.execute("INSERT INTO carte (nome, tipo, costo, forza, costituzione, testo) VALUES "
-                 "('Dragon Whelp', 'Creature — Dragon', '{2}{R}{R}', 2, 3, 'Flying\n{R}: Dragon Whelp gets +1/+0 until end of turn.')")
+                 "('Dragon Whelp', 'Creature — Dragon', '{2}{R}{R}', 2, 3, 'Flying\n{R}: Dragon Whelp gets +1/+0 until end of turn. "
+                 "If this ability has been activated four or more times this turn, sacrifice Dragon Whelp at the beginning of the next end step.')")
     a = mazzi.analizza(conn, {"Healing Salve": 1, "Dragon Whelp": 1, "Serra Angel": 1, "Llanowar Elves": 1, "Forest": 56}, {})
     avvisi = " ".join(a["avvisi"])
     assert "Healing Salve: effetto non implementato" in avvisi

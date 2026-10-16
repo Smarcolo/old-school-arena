@@ -8,6 +8,7 @@ from app.cards import database
 from app.cards.regole_swedish import TERRE_BASE, RegoleMazzo, carica_regole, valida_mazzo
 from app.engine import carte_implementate  # noqa: F401  registra gli effetti
 from app.engine import mana
+from app.engine.abilita import riga_capita
 from app.engine.effetti import EFFETTI
 from app.engine.stato import Carta, parole_chiave_da_testo
 
@@ -73,7 +74,7 @@ def _limiti_motore(carta: Carta) -> str | None:
     capite = parole_chiave_da_testo(carta.testo)
     for riga in carta.testo.splitlines():
         riga = riga.strip()
-        if not riga or _PROMEMORIA.match(riga) or mana.mana_prodotto(Carta("", "", testo=riga)):
+        if not riga or _PROMEMORIA.match(riga) or mana.mana_prodotto(Carta("", "", testo=riga)) or riga_capita(carta, riga):
             continue
         if not {p.strip() for p in riga.lower().split(",")} <= capite:
             return "abilità non ancora attive nel motore"

@@ -4,15 +4,19 @@ from app.ai import avversaria
 from app.commands.esegui import esegui
 from app.commands.parser import analizza
 from app.engine import azioni, combattimento
+from app.engine.abilita import analizza_abilita
 from app.engine.stato import Partita
-from app.engine.validazione import FASI_PRINCIPALI, puo_lanciare
+from app.engine.validazione import FASI_PRINCIPALI, puo_attivare, puo_lanciare
 from app.engine.zone import Zona
 
 MAX_PASSI = 1000  # protezione contro cicli infiniti
 
 
 def ha_istantanei(partita: Partita, umano: str) -> bool:
-    return any(c.is_istantaneo and puo_lanciare(partita, umano, c) is None for c in partita.giocatore(umano)[Zona.MANO])
+    """Ha un istantaneo lanciabile o un'abilità attivabile adesso?"""
+    g = partita.giocatore(umano)
+    return (any(c.is_istantaneo and puo_lanciare(partita, umano, c) is None for c in g[Zona.MANO])
+            or any(puo_attivare(partita, umano, c, ab) is None for c in g[Zona.CAMPO] for ab in analizza_abilita(c)))
 
 
 def deve_fermarsi(partita: Partita, umano: str) -> bool:
@@ -60,11 +64,11 @@ def suggerimento(partita: Partita, umano: str) -> str:
     if partita.pila:
         cima = partita.pila[-1]
         if cima.controllore != umano:
-            return f"{cima.controllore} ha lanciato {cima.carta.nome}: puoi rispondere con un istantaneo o passare."
-        return f"{cima.carta.nome} è in pila: passa per farla risolvere."
+            return f"{cima.controllore} ha messo in pila {cima.descrizione}: puoi rispondere o passare."
+        return f"{cima.descrizione} è in pila: passa per farla risolvere."
     comb = partita.combattimento
     if comb and comb.bloccanti_dichiarati and not comb.danni_inflitti and comb.attaccanti:
-        return "Blocchi fatti: puoi lanciare un istantaneo prima dei danni, o passare."
+        return "Blocchi fatti: puoi lanciare un istantaneo o attivare un'abilità prima dei danni, o passare."
     return ""
 
 

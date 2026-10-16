@@ -108,3 +108,24 @@ def puo_passare(partita: Partita, nome_giocatore: str) -> str | None:
     if partita.combattimento and partita.combattimento.attesa_bloccanti:
         return "prima vanno dichiarati i bloccanti (anche «nessun blocco»)"
     return _priorita(partita, nome_giocatore)
+
+
+def puo_attivare(partita: Partita, nome_giocatore: str, carta: Carta, abilita, bersagli: list[str] | None = None) -> str | None:
+    """abilita è un AbilitaAttivata di quella carta. bersagli None = controlla solo se è attivabile."""
+    if partita.combattimento and partita.combattimento.attesa_bloccanti:
+        return "prima vanno dichiarati i bloccanti"
+    if motivo := _priorita(partita, nome_giocatore):
+        return motivo
+    if carta not in partita.giocatore(nome_giocatore)[Zona.CAMPO]:
+        return f"{carta.nome} non è sul tuo campo di battaglia"
+    if abilita.tappa and (motivo := puo_tappare(partita, nome_giocatore, carta)):
+        return motivo
+    fonti = [f for f in fonti_di_mana(partita, nome_giocatore) if not (abilita.tappa and f[0] is carta)]
+    if mana.piano_pagamento(partita.giocatore(nome_giocatore).riserva, fonti, mana.analizza_costo(abilita.costo_mana)) is None:
+        return f"non hai abbastanza mana per l'abilità di {carta.nome} ({abilita.costo_mana})"
+    if bersagli is not None:
+        if abilita.bersaglio and len(bersagli) != 1:
+            return f"l'abilità di {carta.nome} ha bisogno di un bersaglio ({NOMI_BERSAGLI[abilita.bersaglio]})"
+        if abilita.bersaglio and not bersaglio_legale(partita, abilita.bersaglio, bersagli[0]):
+            return f"bersaglio non valido: serve {NOMI_BERSAGLI[abilita.bersaglio]}"
+    return None

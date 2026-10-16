@@ -3,6 +3,7 @@ from app.commands.parser import Comando
 import re
 
 from app.engine import azioni, combattimento, mana
+from app.engine.abilita import analizza_abilita
 from app.engine.stato import Partita
 from app.engine.validazione import AzioneIllegale
 from app.engine.zone import Zona
@@ -30,7 +31,8 @@ def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
     return None
 
 
-AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta>, passa, fine turno, "
+AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta>, "
+         "attiva <carta> [su <bersaglio>], passa, fine turno, "
          "attacca con <carte>|tutto, non attacco, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
          "mano, mana, stato, pesca [n], vita <+/-n>, giudice <domanda>")
 TUTTO = {"", "tutto", "tutte", "tutti", "con tutto", "con tutte"}
@@ -113,6 +115,26 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
                     bersagli = [rif]
                 azioni.lancia(partita, giocatore, carta, bersagli)
                 return f"Hai lanciato {carta.nome}: è in pila. Scrivi «passa» per farla risolvere."
+            case "attiva":
+                nome, indice = cmd.argomento, 0
+                if m := re.match(r"^(.+?)\s+(\d)$", nome):
+                    nome, indice = m.group(1), int(m.group(2)) - 1
+                carta = azioni.trova_in_zona(partita, giocatore, Zona.CAMPO, nome)
+                if carta is None:
+                    return f"Non hai «{nome}» sul campo."
+                abilita = analizza_abilita(carta)
+                if not abilita:
+                    return f"{carta.nome} non ha abilità attivabili che il motore conosca."
+                if indice >= len(abilita):
+                    return f"{carta.nome} ha solo {len(abilita)} abilità."
+                bersagli = []
+                if cmd.bersaglio:
+                    rif = trova_bersaglio(partita, giocatore, cmd.bersaglio)
+                    if rif is None:
+                        return f"Non trovo il bersaglio «{cmd.bersaglio}»."
+                    bersagli = [rif]
+                azioni.attiva(partita, giocatore, carta, abilita[indice], bersagli)
+                return f"Hai attivato l'abilità di {carta.nome}: è in pila."
             case "tappa":
                 carta = azioni.trova_in_zona(partita, giocatore, Zona.CAMPO, cmd.argomento)
                 if carta is None:

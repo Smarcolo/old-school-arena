@@ -17,6 +17,8 @@ python -m uvicorn app.api.main:app
 - `gioca <carta>`: gioca una terra o lancia una magia (paga il costo tappando le terre da solo).
 - `gioca <carta> su <bersaglio>`: per le magie con bersaglio, es. `gioca giant growth su grizzly bears`,
   `gioca lightning bolt su avversaria`. Dall'interfaccia: clicchi la magia, poi il bersaglio.
+- `attiva <carta> [su <bersaglio>]`: usa un'abilità della carta, es. `attiva shivan dragon`,
+  `attiva prodigal sorcerer su avversaria`. Dall'interfaccia: clic sulla carta in campo.
 - `tappa <carta>`: tappa per mana; `mana` mostra la riserva. Il mana non usato a fine fase fa perdere vita (mana burn).
 - `passa`: passi la priorità. Se c'è qualcosa in pila si risolve, altrimenti si va alla fase dopo.
 - `fine turno`: chiudi il turno (risolvendo quello che hai in pila).
@@ -38,10 +40,11 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
 - Mana, pila e priorità: si lanciano le creature, che entrano con debolezza da evocazione. C'è il mana burn.
 - Istantanei con bersaglio: Lightning Bolt e Giant Growth, anche in risposta l'uno all'altro.
 - Combattimento: attacchi, blocchi (anche più creature sullo stesso attaccante), danni, Giant Growth dopo i blocchi.
+- Abilità attivate semplici: pompaggio (Shivan Dragon, Frozen Shade) e danno (Prodigal Sorcerer).
 - Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
 - Editor dei mazzi con analisi e mazzi salvati.
 - Sconfitta a 0 vita o pescando da grimorio vuoto; registro eventi.
-- Avversaria base: gioca terre, lancia la creatura più cara che può pagare, usa Lightning Bolt sulle tue creature o su di te, attacca quando non rischia e blocca con giudizio.
+- Avversaria base: gioca terre, lancia la creatura più cara che può pagare, usa Lightning Bolt sulle tue creature o su di te, attacca quando non rischia, blocca con giudizio, usa Giant Growth e le abilità delle sue creature.
 - Giudice che cerca nei testi di `data/regole/`.
 
 ## Carte reali

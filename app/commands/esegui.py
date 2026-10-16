@@ -33,7 +33,7 @@ def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
 
 AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta>, "
          "attiva <carta> [su <bersaglio>], passa, fine turno, "
-         "attacca con <carte>|tutto, non attacco, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
+         "attacca con <carte>|tutto, non attacco, paga / non pago, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
          "mano, mana, stato, pesca [n], vita <+/-n>, giudice <domanda>")
 TUTTO = {"", "tutto", "tutte", "tutti", "con tutto", "con tutte"}
 
@@ -154,6 +154,9 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
             case "nonblocco":
                 combattimento.dichiara_bloccanti(partita, giocatore, [])
                 return "Non blocchi."
+            case "paga" | "nonpago":
+                azioni.rispondi_scelta(partita, giocatore, cmd.azione == "paga")
+                return "Hai pagato." if cmd.azione == "paga" else "Non hai pagato."
             case "passa":
                 if combattimento.deve_dichiarare_bloccanti(partita, giocatore):
                     combattimento.dichiara_bloccanti(partita, giocatore, [])

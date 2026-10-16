@@ -22,5 +22,12 @@
   {"nome": "Serra Angel", "tipo": "Creature — Angel", "costo": "{3}{W}{W}", "forza": 4, "costituzione": 4, "testo": "Flying, vigilance"},
   {"nome": "Shivan Dragon", "tipo": "Creature — Dragon", "costo": "{4}{R}{R}", "forza": 5, "costituzione": 5, "testo": "Flying\n{R}: Shivan Dragon gets +1/+0 until end of turn."},
   {"nome": "Prodigal Sorcerer", "tipo": "Creature — Human Wizard", "costo": "{2}{U}", "forza": 1, "costituzione": 1, "testo": "{T}: Prodigal Sorcerer deals 1 damage to any target."},
-  {"nome": "Frozen Shade", "tipo": "Creature — Shade", "costo": "{2}{B}", "forza": 0, "costituzione": 1, "testo": "{B}: Frozen Shade gets +1/+1 until end of turn."}
+  {"nome": "Frozen Shade", "tipo": "Creature — Shade", "costo": "{2}{B}", "forza": 0, "costituzione": 1, "testo": "{B}: Frozen Shade gets +1/+1 until end of turn."},
+  {"nome": "Juzám Djinn", "tipo": "Creature — Djinn", "costo": "{2}{B}{B}", "forza": 5, "costituzione": 5, "testo": "At the beginning of your upkeep, Juzám Djinn deals 1 damage to you."},
+  {"nome": "Serendib Efreet", "tipo": "Creature — Efreet", "costo": "{2}{U}", "forza": 3, "costituzione": 4, "testo": "Flying\nAt the beginning of your upkeep, Serendib Efreet deals 1 damage to you."},
+  {"nome": "Black Vise", "tipo": "Artifact", "costo": "{1}", "testo": "As Black Vise enters the battlefield, choose an opponent.\nAt the beginning of the chosen player's upkeep, Black Vise deals X damage to that player, where X is the number of cards in their hand minus 4."},
+  {"nome": "Howling Mine", "tipo": "Artifact", "costo": "{2}", "testo": "At the beginning of each player's draw step, if Howling Mine is untapped, that player draws an additional card."},
+  {"nome": "Ivory Tower", "tipo": "Artifact", "costo": "{1}", "testo": "At the beginning of your upkeep, you gain X life, where X is the number of cards in your hand minus 4."},
+  {"nome": "Ball Lightning", "tipo": "Creature — Elemental", "costo": "{R}{R}{R}", "forza": 6, "costituzione": 1, "testo": "Trample, haste\nAt the beginning of the end step, sacrifice Ball Lightning."},
+  {"nome": "Force of Nature", "tipo": "Creature — Elemental", "costo": "{2}{G}{G}{G}{G}", "forza": 8, "costituzione": 8, "testo": "Trample\nAt the beginning of your upkeep, Force of Nature deals 8 damage to you unless you pay {G}{G}{G}{G}."}
 ]

@@ -114,10 +114,23 @@ class OggettoPila:
     controllore: str
     bersagli: list[str] = field(default_factory=list)  # "giocatore:<nome>" o "carta:<id>"
     abilita: object | None = None  # AbilitaAttivata se in pila c'è un'abilità e non la carta stessa
+    innesco: object | None = None  # Innesco se in pila c'è un'abilità innescata
+    giocatore_del_turno: str = ""  # per gli inneschi: «that player» = chi era di turno quando è scattato
 
     @property
     def descrizione(self) -> str:
+        if self.innesco:
+            return f"innesco di {self.carta.nome}"
         return f"abilità di {self.carta.nome}" if self.abilita else self.carta.nome
+
+
+@dataclass
+class Scelta:
+    """Una decisione che blocca la partita finché il giocatore non risponde (es. «paga o subisci»)."""
+    giocatore: str
+    oggetto: OggettoPila
+    costo: str
+    testo: str
 
 
 @dataclass
@@ -147,6 +160,7 @@ class Partita:
     registro: RegistroEventi = field(default_factory=RegistroEventi)
     vincitore: str | None = None
     combattimento: Combattimento | None = None
+    scelta: Scelta | None = None
 
     @property
     def giocatore_attivo(self) -> Giocatore:

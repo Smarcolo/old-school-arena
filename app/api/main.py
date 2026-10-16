@@ -22,7 +22,7 @@ AI = "Avversaria"
 # Mazzi di prova finché non c'è l'editor dei mazzi (non rispettano il limite di 4 copie).
 MAZZO_VERDE = {"Forest": 17, "Llanowar Elves": 4, "Elvish Archers": 4, "Grizzly Bears": 4, "War Mammoth": 4,
                "Giant Spider": 3, "Giant Growth": 4}
-MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 4, "Hurloon Minotaur": 4, "Gray Ogre": 4, "Hill Giant": 2,
+MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 4, "Hurloon Minotaur": 4, "Gray Ogre": 4, "Ball Lightning": 2,
                "Shivan Dragon": 1,
                "Roc of Kher Ridges": 4, "Lightning Bolt": 4}
 
@@ -78,7 +78,10 @@ def vista(p: Partita) -> dict:
                   "bersaglio": descrivi_bersaglio(p, o.bersagli[0]) if o.bersagli else None} for o in p.pila],
         "vincitore": p.vincitore, "giocatori": giocatori,
         "combattimento": _vista_combattimento(p),
-        "richiesta": ("attaccanti" if combattimento.deve_dichiarare_attaccanti(p, UMANO)
+        "scelta": ({"testo": p.scelta.testo, "costo": p.scelta.costo, "carta": p.scelta.oggetto.carta.nome}
+                   if p.scelta and p.scelta.giocatore == UMANO else None),
+        "richiesta": ("scelta" if p.scelta and p.scelta.giocatore == UMANO
+                      else "attaccanti" if combattimento.deve_dichiarare_attaccanti(p, UMANO)
                       else "bloccanti" if combattimento.deve_dichiarare_bloccanti(p, UMANO) else None),
         "eventi": [e.descrizione for e in p.registro.ultimi(30)],
     }

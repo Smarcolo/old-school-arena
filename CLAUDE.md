@@ -46,6 +46,12 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   e «{costo}: <nome> deals N damage to any target / target creature / target player.». Vanno in pila
   (`OggettoPila.abilita`); la carta resta in campo. Una riga con frasi in più (es. Dragon Whelp) NON è riconosciuta:
   meglio non attivarla che attivarla male.
+- Abilità innescate (`engine/inneschi.py`): mantenimento / pescata / fase finale / entrata in campo, con le frasi
+  elencate nel docstring. `azioni.metti_inneschi` le mette in pila a inizio fase (prima quelle dell'attivo).
+  «that player» = chi era di turno quando è scattata (`OggettoPila.giocatore_del_turno`).
+  «...unless you pay {..}» crea una `Partita.scelta`: finché non si risponde (`azioni.rispondi_scelta`, comandi
+  «paga» / «non pago») nessuno può fare altro. L'AI decide in `avversaria.decidi_scelta`.
+  La regia non ferma l'umano per un innesco in pila se non può rispondere.
 - Regia: l'umano si ferma anche per dichiarare attaccanti/bloccanti e, dopo i blocchi, se ha un istantaneo lanciabile.
   `regia.suggerimento` aggiunge al messaggio cosa può fare adesso.
 - Terminologia 93/94: "rimosse dal gioco" (non esilio), mana burn e interrupt esistono, niente fase di cleanup separata.
@@ -70,7 +76,7 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 4. Fatto: editor mazzi (`/mazzi.html`), mazzi salvati, scelta dei mazzi a inizio partita.
    Serve che Marco compili bandite/ristrette in `regole_swedish.json` per il controllo completo.
 5. Fatto: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
-   Fatto anche: abilità attivate semplici (pompaggio, danno). Da fare: banding, protezione, abilità innescate,
-   rigenerazione.
+   Fatto anche: abilità attivate semplici (pompaggio, danno) e innescate comuni.
+   Da fare: banding, protezione, rigenerazione.
 6. Fatto: immagini delle carte con anteprima al passaggio del mouse.
-7. Da fare: banding, protezione, abilità innescate, rigenerazione; testi ufficiali per il giudice.
+7. Da fare: rigenerazione, protezione, banding; testi ufficiali per il giudice.

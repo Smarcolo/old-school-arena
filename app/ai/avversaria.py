@@ -12,6 +12,7 @@ Priorità delle scelte:
 """
 from app.engine import azioni, combattimento, mana
 from app.engine.abilita import analizza_abilita
+from app.engine.inneschi import analizza_inneschi
 from app.engine.stato import Carta, Fase, Partita
 from app.engine.validazione import FASI_PRINCIPALI, puo_attivare, puo_giocare_terra, puo_lanciare
 from app.engine.zone import Zona
@@ -82,8 +83,18 @@ def bersaglio_bolt(partita: Partita, nome: str) -> str | None:
     return None
 
 
+def decidi_scelta(partita: Partita, nome: str) -> None:
+    """«Paga o subisci»: paga se può."""
+    azioni.rispondi_scelta(partita, nome, azioni.puo_pagare_scelta(partita))
+
+
+def _muore_a_fine_turno(c: Carta) -> bool:
+    return any(i.momento == "finale" and i.effetto == "sacrifica" for i in analizza_inneschi(c))
+
+
 def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
-    """Attacca con ogni creatura che nessun bloccante possibile ucciderebbe senza morire a sua volta."""
+    """Attacca con ogni creatura che nessun bloccante possibile ucciderebbe senza morire a sua volta.
+    Chi verrà sacrificato a fine turno (es. Ball Lightning) attacca sempre."""
     avversario = partita.avversario_di(nome).nome
     difensori = combattimento.possibili_bloccanti(partita, avversario)
     scelti = []
@@ -91,7 +102,7 @@ def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
         possibili = [b for b in difensori if combattimento.puo_bloccare_contro(partita, avversario, b, a) is None]
         cattivo_scambio = any(b.forza_attuale >= a.costituzione_attuale - a.danni
                               and a.forza_attuale < b.costituzione_attuale - b.danni for b in possibili)
-        if not cattivo_scambio:
+        if not cattivo_scambio or _muore_a_fine_turno(a):
             scelti.append(a)
     return scelti
 
@@ -178,6 +189,8 @@ def agisci(partita: Partita, nome: str) -> None:
             azioni.gioca_terra(partita, nome, terra)
             return
         lanciabili = [c for c in mano if c.is_creatura and puo_lanciare(partita, nome, c) is None]
+        if not lanciabili:  # poi gli altri permanenti (artefatti, incantesimi)
+            lanciabili = [c for c in mano if c.is_permanente and not c.is_terra and puo_lanciare(partita, nome, c) is None]
         if lanciabili:
             piu_cara = max(lanciabili, key=lambda c: sum(mana.analizza_costo(c.costo).values()))
             azioni.lancia(partita, nome, piu_cara)

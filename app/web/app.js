@@ -93,7 +93,12 @@ function bottone(testo, azione) {
 function disegnaBarraCombattimento() {
   const barra = $("barra-combattimento");
   barra.hidden = !partita.richiesta;
-  if (partita.richiesta === "attaccanti") {
+  if (partita.richiesta === "scelta") {
+    barra.replaceChildren(
+      el("span", { textContent: `${partita.scelta.carta}: ${partita.scelta.testo}` }),
+      bottone(`Paga ${partita.scelta.costo}`, () => invia("paga")),
+      bottone("Non pago", () => invia("non pago")));
+  } else if (partita.richiesta === "attaccanti") {
     barra.replaceChildren(
       el("span", { textContent: "Combattimento: clicca le creature che attaccano." }),
       bottone(`Attacca con le scelte (${attaccantiScelti.size})`, () => invia(`attacca con ${[...attaccantiScelti].join(", ")}`)),

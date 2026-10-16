@@ -20,6 +20,16 @@ def ha_istantanei(partita: Partita, umano: str) -> bool:
 
 
 def deve_fermarsi(partita: Partita, umano: str) -> bool:
+    """Vedi sotto; in più: le scelte in sospeso dell'umano lo fermano sempre, e un innesco in cima alla pila
+    lo ferma solo se può rispondere (altrimenti si risolve da solo, resta nel registro)."""
+    if partita.scelta:
+        return partita.scelta.giocatore == umano
+    if partita.pila and partita.pila[-1].innesco and not ha_istantanei(partita, umano):
+        return False
+    return _deve_fermarsi(partita, umano)
+
+
+def _deve_fermarsi(partita: Partita, umano: str) -> bool:
     """L'umano decide quando: c'è qualcosa in pila; è nelle fasi principali del suo turno; deve dichiarare
     attaccanti o bloccanti; i blocchi sono fatti e può ancora lanciare un istantaneo prima dei danni.
     Il resto (mantenimento, pescata, turno dell'AI a pila vuota) scorre da solo."""
@@ -38,6 +48,11 @@ def avanza(partita: Partita, umano: str, ai: str, fino_a_fine_turno: bool = Fals
     for _ in range(MAX_PASSI):
         if partita.vincitore:
             return
+        if partita.scelta:
+            if partita.scelta.giocatore != ai:
+                return
+            avversaria.decidi_scelta(partita, ai)
+            continue
         if partita.giocatore_con_priorita.nome == ai:
             avversaria.agisci(partita, ai)
             continue
@@ -56,6 +71,8 @@ def suggerimento(partita: Partita, umano: str) -> str:
     """Cosa può fare l'umano adesso, detto in una riga."""
     if partita.vincitore:
         return f"Partita finita: vince {partita.vincitore}."
+    if partita.scelta and partita.scelta.giocatore == umano:
+        return f"Scegli: {partita.scelta.testo} «paga» o «non pago»."
     if combattimento.deve_dichiarare_bloccanti(partita, umano):
         nomi = ", ".join(c.nome for c in combattimento.attaccanti_in_campo(partita))
         return f"Ti attaccano con {nomi}: dichiara i bloccanti o «nessun blocco»."

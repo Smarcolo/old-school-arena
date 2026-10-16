@@ -15,6 +15,8 @@ class AzioneIllegale(Exception):
 def _priorita(partita: Partita, nome_giocatore: str) -> str | None:
     if partita.vincitore:
         return "la partita è finita"
+    if partita.scelta:
+        return f"prima {partita.scelta.giocatore} deve rispondere: {partita.scelta.testo}"
     if partita.giocatore_con_priorita.nome != nome_giocatore:
         return "non hai la priorità"
     return None
@@ -34,6 +36,8 @@ def puo_giocare_terra(partita: Partita, nome_giocatore: str, carta: Carta) -> st
     g = partita.giocatore(nome_giocatore)
     if partita.vincitore:
         return "la partita è finita"
+    if partita.scelta:
+        return "c'è una scelta in sospeso"
     if g is not partita.giocatore_attivo:
         return "puoi giocare terre solo nel tuo turno"
     if motivo := _velocita_stregoneria(partita, nome_giocatore, "le terre si giocano"):

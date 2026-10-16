@@ -19,6 +19,7 @@ python -m uvicorn app.api.main:app
   `gioca lightning bolt su avversaria`. Dall'interfaccia: clicchi la magia, poi il bersaglio.
 - `attiva <carta> [su <bersaglio>]`: usa un'abilità della carta, es. `attiva shivan dragon`,
   `attiva prodigal sorcerer su avversaria`. Dall'interfaccia: clic sulla carta in campo.
+- `paga` / `non pago`: quando una carta chiede di pagare o subire (es. Force of Nature nel tuo mantenimento).
 - `tappa <carta>`: tappa per mana; `mana` mostra la riserva. Il mana non usato a fine fase fa perdere vita (mana burn).
 - `passa`: passi la priorità. Se c'è qualcosa in pila si risolve, altrimenti si va alla fase dopo.
 - `fine turno`: chiudi il turno (risolvendo quello che hai in pila).
@@ -41,6 +42,8 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
 - Istantanei con bersaglio: Lightning Bolt e Giant Growth, anche in risposta l'uno all'altro.
 - Combattimento: attacchi, blocchi (anche più creature sullo stesso attaccante), danni, Giant Growth dopo i blocchi.
 - Abilità attivate semplici: pompaggio (Shivan Dragon, Frozen Shade) e danno (Prodigal Sorcerer).
+- Abilità innescate comuni: Juzám Djinn, Serendib Efreet, Black Vise, Howling Mine, Ivory Tower, Ball Lightning,
+  Force of Nature (con la scelta «paga o subisci»), effetti quando una creatura entra in campo.
 - Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
 - Editor dei mazzi con analisi e mazzi salvati.
 - Immagini delle carte: passando il mouse su una carta compare l'immagine (scaricata da Scryfall la prima volta,

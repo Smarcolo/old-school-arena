@@ -19,6 +19,8 @@ SINONIMI = {
     "mana": "mana", "riserva": "mana",
     "fine turno": "fineturno", "fine": "fineturno",
     "non attacco": "nonattacco", "nessun attacco": "nonattacco", "niente attacco": "nonattacco",
+    "paga": "paga", "pago": "paga", "si": "paga", "sì": "paga",
+    "non pago": "nonpago", "non pagare": "nonpago", "no": "nonpago",
     "nessun blocco": "nonblocco", "non blocco": "nonblocco", "niente blocchi": "nonblocco",
     "aiuto": "aiuto", "help": "aiuto", "?": "aiuto",
 }

@@ -22,7 +22,7 @@ AI = "Avversaria"
 # Mazzi di prova finché non c'è l'editor dei mazzi (non rispettano il limite di 4 copie).
 MAZZO_VERDE = {"Forest": 17, "Llanowar Elves": 4, "Elvish Archers": 4, "Grizzly Bears": 4, "War Mammoth": 4,
                "Giant Spider": 3, "Giant Growth": 4}
-MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 4, "Hurloon Minotaur": 4, "Gray Ogre": 4, "Ball Lightning": 2,
+MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 2, "Uthden Troll": 2, "Hurloon Minotaur": 4, "Gray Ogre": 4, "Ball Lightning": 2,
                "Shivan Dragon": 1,
                "Roc of Kher Ridges": 4, "Lightning Bolt": 4}
 
@@ -60,7 +60,7 @@ def vista(p: Partita) -> dict:
         return [{"id": c.id, "nome": c.nome, "tipo": c.tipo, "costo": c.costo, "tappata": c.tappata,
                  "forza": c.forza_attuale if c.is_creatura else None,
                  "costituzione": c.costituzione_attuale if c.is_creatura else None,
-                 "danni": c.danni, "bersaglio": tipo_bersaglio(c), "abilita": _abilita(c),
+                 "danni": c.danni, "bersaglio": tipo_bersaglio(c), "abilita": _abilita(c), "scudi": c.scudi_rigenerazione,
                  "attivabili": [{"testo": a.testo, "bersaglio": a.bersaglio} for a in analizza_abilita(c)],
                  "appena_entrata": p.ha_debolezza_da_evocazione(c)} for c in g[z]]
 

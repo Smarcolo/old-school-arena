@@ -110,7 +110,7 @@ def _risolvi_innesco(partita: Partita, oggetto: OggettoPila) -> None:
             pesca(partita, chi)
         case "sacrifica":
             if in_campo:
-                distruggi(partita, carta, "(sacrificata)")
+                distruggi(partita, carta, "(sacrificata)", rigenerabile=False)
         case "sacrifica_salvo_paga" | "danno_te_salvo_paga":
             if inn.effetto == "sacrifica_salvo_paga" and not in_campo:
                 return
@@ -139,7 +139,7 @@ def rispondi_scelta(partita: Partita, giocatore: str, paga: bool) -> None:
     else:
         _log(partita, giocatore, "non_paga", f"{giocatore} non paga per {oggetto.carta.nome}")
         if oggetto.innesco.effetto == "sacrifica_salvo_paga":
-            distruggi(partita, oggetto.carta, "(sacrificata)")
+            distruggi(partita, oggetto.carta, "(sacrificata)", rigenerabile=False)
         else:
             modifica_vita(partita, giocatore, -oggetto.innesco.n, f"(danni da {oggetto.carta.nome})")
     partita.scelta = None
@@ -227,6 +227,12 @@ def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
         _log(partita, chi, "risolve", f"{fonte.nome} prende {ab.forza:+d}/{ab.costituzione:+d} fino a fine turno")
     elif ab.tipo == "danno":
         infliggi_danno(partita, fonte, oggetto.bersagli[0], ab.danni)
+    elif ab.tipo == "rigenera":
+        if not partita.trova_in_campo(fonte.id):
+            _log(partita, chi, "neutralizzata", f"{fonte.nome} non è più in campo: niente rigenerazione")
+            return
+        fonte.scudi_rigenerazione += 1
+        _log(partita, chi, "risolve", f"{fonte.nome} ha uno scudo di rigenerazione fino a fine turno")
 
 
 def descrivi_bersaglio(partita: Partita, rif: str) -> str:
@@ -266,11 +272,31 @@ def infliggi_danno(partita: Partita, fonte: Carta, rif: str, quantita: int) -> N
         modifica_vita(partita, bersaglio.nome, -quantita, f"(danni da {fonte.nome})")
 
 
-def distruggi(partita: Partita, carta: Carta, motivo: str = "") -> None:
+def _rigenera(partita: Partita, controllore: str, carta: Carta) -> None:
+    """Usa uno scudo: niente danni, tappata, fuori dal combattimento. Un attaccante resta «bloccato»."""
+    carta.scudi_rigenerazione -= 1
+    carta.danni = 0
+    carta.tappata = True
+    comb = partita.combattimento
+    if comb:
+        if carta.id in comb.attaccanti:
+            comb.attaccanti.remove(carta.id)
+            comb.blocchi.pop(carta.id, None)
+        for bloccanti in comb.blocchi.values():
+            if carta.id in bloccanti:
+                bloccanti.remove(carta.id)
+    _log(partita, controllore, "rigenera", f"{carta.nome} si rigenera", carta=carta.id)
+
+
+def distruggi(partita: Partita, carta: Carta, motivo: str = "", rigenerabile: bool = True) -> None:
+    """Distrugge (o sacrifica, con rigenerabile=False) un permanente. Uno scudo di rigenerazione lo salva."""
     trovato = partita.trova_in_campo(carta.id)
     if not trovato:
         return
     controllore, _ = trovato
+    if rigenerabile and carta.scudi_rigenerazione > 0:
+        _rigenera(partita, controllore.nome, carta)
+        return
     controllore[Zona.CAMPO].remove(carta)
     carta.azzera_stato_in_campo()
     carta.tappata = False
@@ -282,7 +308,9 @@ def azioni_di_stato(partita: Partita) -> None:
     """Controlli automatici: creature con danni letali o costituzione 0 muoiono."""
     for g in partita.giocatori:
         for c in list(g[Zona.CAMPO]):
-            if c.is_creatura and (c.costituzione_attuale <= 0 or c.danni >= c.costituzione_attuale):
+            if c.is_creatura and c.costituzione_attuale <= 0:
+                distruggi(partita, c, "(costituzione 0)", rigenerabile=False)
+            elif c.is_creatura and c.danni >= c.costituzione_attuale:
                 distruggi(partita, c, "(danni letali)")
 
 

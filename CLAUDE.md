@@ -46,6 +46,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   e «{costo}: <nome> deals N damage to any target / target creature / target player.». Vanno in pila
   (`OggettoPila.abilita`); la carta resta in campo. Una riga con frasi in più (es. Dragon Whelp) NON è riconosciuta:
   meglio non attivarla che attivarla male.
+- Rigenerazione («{B}: Regenerate X.»): l'abilità dà uno scudo (`Carta.scudi_rigenerazione`) fino a fine turno.
+  `azioni.distruggi` lo consuma: niente danni, tappata, fuori dal combattimento (un attaccante resta bloccato).
+  Sacrificio e costituzione 0 usano `rigenerabile=False`.
 - Abilità innescate (`engine/inneschi.py`): mantenimento / pescata / fase finale / entrata in campo, con le frasi
   elencate nel docstring. `azioni.metti_inneschi` le mette in pila a inizio fase (prima quelle dell'attivo).
   «that player» = chi era di turno quando è scattata (`OggettoPila.giocatore_del_turno`).
@@ -77,6 +80,6 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
    Serve che Marco compili bandite/ristrette in `regole_swedish.json` per il controllo completo.
 5. Fatto: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.
    Fatto anche: abilità attivate semplici (pompaggio, danno) e innescate comuni.
-   Da fare: banding, protezione, rigenerazione.
+   Fatto anche: rigenerazione. Da fare: protezione, banding.
 6. Fatto: immagini delle carte con anteprima al passaggio del mouse.
-7. Da fare: rigenerazione, protezione, banding; testi ufficiali per il giudice.
+7. Da fare: protezione, banding; testi ufficiali per il giudice.

@@ -29,5 +29,8 @@
   {"nome": "Howling Mine", "tipo": "Artifact", "costo": "{2}", "testo": "At the beginning of each player's draw step, if Howling Mine is untapped, that player draws an additional card."},
   {"nome": "Ivory Tower", "tipo": "Artifact", "costo": "{1}", "testo": "At the beginning of your upkeep, you gain X life, where X is the number of cards in your hand minus 4."},
   {"nome": "Ball Lightning", "tipo": "Creature — Elemental", "costo": "{R}{R}{R}", "forza": 6, "costituzione": 1, "testo": "Trample, haste\nAt the beginning of the end step, sacrifice Ball Lightning."},
-  {"nome": "Force of Nature", "tipo": "Creature — Elemental", "costo": "{2}{G}{G}{G}{G}", "forza": 8, "costituzione": 8, "testo": "Trample\nAt the beginning of your upkeep, Force of Nature deals 8 damage to you unless you pay {G}{G}{G}{G}."}
+  {"nome": "Force of Nature", "tipo": "Creature — Elemental", "costo": "{2}{G}{G}{G}{G}", "forza": 8, "costituzione": 8, "testo": "Trample\nAt the beginning of your upkeep, Force of Nature deals 8 damage to you unless you pay {G}{G}{G}{G}."},
+  {"nome": "Drudge Skeletons", "tipo": "Creature — Skeleton", "costo": "{1}{B}", "forza": 1, "costituzione": 1, "testo": "{B}: Regenerate Drudge Skeletons."},
+  {"nome": "Uthden Troll", "tipo": "Creature — Troll", "costo": "{2}{R}", "forza": 2, "costituzione": 2, "testo": "{R}: Regenerate Uthden Troll."},
+  {"nome": "Will-o'-the-Wisp", "tipo": "Creature — Spirit", "costo": "{B}", "forza": 0, "costituzione": 1, "testo": "Flying\n{B}: Regenerate Will-o'-the-Wisp."}
 ]

@@ -2,7 +2,8 @@
 
 Priorità delle scelte:
 0. In combattimento: dichiara attaccanti e bloccanti quando tocca a lei.
-1. Giant Growth per salvare una sua creatura (da un danno in pila o in combattimento) o per chiudere la partita.
+1. Rigenerazione o Giant Growth per salvare una sua creatura (da un danno in pila o in combattimento);
+   Giant Growth anche per chiudere la partita.
 2. Lightning Bolt o un'abilità di danno su una creatura avversaria che muore (anche in risposta).
 3. Nel suo turno, fase principale, pila vuota: terra, poi la creatura più cara che può pagare.
 4. Sempre nella sua fase principale: Lightning Bolt all'avversario se non ci sono creature da uccidere.
@@ -46,6 +47,45 @@ def _danni_in_combattimento(partita: Partita, c: Carta) -> int:
         if c.id in bloccanti and (t := partita.trova_in_campo(attaccante)):
             return t[1].forza_attuale
     return 0
+
+
+def _rigenerazione_pronta(partita: Partita, nome: str, c: Carta):
+    """L'abilità di rigenerazione di c, se si può attivare adesso."""
+    return next((ab for ab in analizza_abilita(c) if ab.tipo == "rigenera"
+                 and puo_attivare(partita, nome, c, ab) is None), None)
+
+
+def _potra_rigenerare(partita: Partita, nome: str, c: Carta) -> bool:
+    """Per valutare i blocchi: c ha la rigenerazione e il mana per pagarla (si attiverà dopo la dichiarazione)."""
+    from app.engine.validazione import fonti_di_mana
+    for ab in analizza_abilita(c):
+        if ab.tipo == "rigenera":
+            fonti = [f for f in fonti_di_mana(partita, nome) if f[0] is not c]
+            if mana.piano_pagamento(partita.giocatore(nome).riserva, fonti, mana.analizza_costo(ab.costo_mana)) is not None:
+                return True
+    return False
+
+
+def da_rigenerare(partita: Partita, nome: str) -> tuple[Carta, object] | None:
+    """Una creatura dell'AI senza scudo che sta per morire (danno in cima alla pila o combattimento) e può rigenerare."""
+    minacciate: list[Carta] = []
+    if partita.pila:
+        cima = partita.pila[-1]
+        if cima.controllore != nome and cima.bersagli:
+            bersaglio = partita.risolvi_bersaglio(cima.bersagli[0])
+            if isinstance(bersaglio, Carta) and _vita(bersaglio) <= _danni_oggetto(cima):
+                minacciate.append(bersaglio)
+    else:
+        comb = partita.combattimento
+        if comb and comb.bloccanti_dichiarati and not comb.danni_inflitti:
+            in_combattimento = set(comb.attaccanti) | comb.bloccanti()
+            minacciate = [c for c in partita.giocatore(nome)[Zona.CAMPO]
+                          if c.id in in_combattimento and _vita(c) <= _danni_in_combattimento(partita, c)]
+    for c in minacciate:
+        if c in partita.giocatore(nome)[Zona.CAMPO] and not c.scudi_rigenerazione:
+            if ab := _rigenerazione_pronta(partita, nome, c):
+                return c, ab
+    return None
 
 
 def bersaglio_growth(partita: Partita, nome: str) -> Carta | None:
@@ -123,7 +163,7 @@ def scegli_bloccanti(partita: Partita, nome: str) -> list[tuple[Carta, Carta]]:
 
     for a in attaccanti:
         uccide = [b for b in legali(a) if b.forza_attuale >= vita(a)]
-        sopravvive = [b for b in legali(a) if vita(b) > a.forza_attuale]
+        sopravvive = [b for b in legali(a) if vita(b) > a.forza_attuale or _potra_rigenerare(partita, nome, b)]
         scelta = (next((b for b in uccide if b in sopravvive), None)
                   or (min(sopravvive, key=lambda b: b.forza_attuale) if sopravvive else None)
                   or next((b for b in uccide if b.forza_attuale <= a.forza_attuale), None))
@@ -164,6 +204,10 @@ def agisci(partita: Partita, nome: str) -> None:
         return
     if combattimento.deve_dichiarare_attaccanti(partita, nome):
         combattimento.dichiara_attaccanti(partita, nome, scegli_attaccanti(partita, nome))
+        return
+
+    if salvabile := da_rigenerare(partita, nome):
+        azioni.attiva(partita, nome, *salvabile)
         return
 
     growth = next((c for c in mano if c.nome == "Giant Growth" and puo_lanciare(partita, nome, c) is None), None)

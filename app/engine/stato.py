@@ -58,6 +58,7 @@ class Carta:
     danni: int = 0  # danni subiti in questo turno
     bonus_forza: int = 0  # modifiche "fino alla fine del turno"
     bonus_costituzione: int = 0
+    scudi_rigenerazione: int = 0  # fino a fine turno
 
     @property
     def forza_attuale(self) -> int:
@@ -77,7 +78,7 @@ class Carta:
 
     def azzera_stato_in_campo(self) -> None:
         """Quando lascia il campo o a fine turno: niente danni né bonus."""
-        self.danni = self.bonus_forza = self.bonus_costituzione = 0
+        self.danni = self.bonus_forza = self.bonus_costituzione = self.scudi_rigenerazione = 0
 
     @property
     def is_istantaneo(self) -> bool:

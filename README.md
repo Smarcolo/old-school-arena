@@ -41,7 +41,8 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
 - Mana, pila e priorità: si lanciano le creature, che entrano con debolezza da evocazione. C'è il mana burn.
 - Istantanei con bersaglio: Lightning Bolt e Giant Growth, anche in risposta l'uno all'altro.
 - Combattimento: attacchi, blocchi (anche più creature sullo stesso attaccante), danni, Giant Growth dopo i blocchi.
-- Abilità attivate semplici: pompaggio (Shivan Dragon, Frozen Shade) e danno (Prodigal Sorcerer).
+- Abilità attivate semplici: pompaggio (Shivan Dragon, Frozen Shade), danno (Prodigal Sorcerer) e rigenerazione
+  (Drudge Skeletons, Uthden Troll, Will-o'-the-Wisp): lo scudo vale fino a fine turno e compare sulla carta.
 - Abilità innescate comuni: Juzám Djinn, Serendib Efreet, Black Vise, Howling Mine, Ivory Tower, Ball Lightning,
   Force of Nature (con la scelta «paga o subisci»), effetti quando una creatura entra in campo.
 - Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo.

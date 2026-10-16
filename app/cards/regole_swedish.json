@@ -1,6 +1,6 @@
 {
-  "_nota": "BOZZA DA VERIFICARE con il regolamento Swedish in vigore (blog oldschool-mtg.blogspot.com, pagina Rules). Compilata il 2026-10-16 da riepiloghi online: mtgoldframe.com '93/94 Old School: Swedish' (pagina di circa 2 anni fa), oldschoolmagic.nl, MTG Salvation. Punti incerti: Shahrazad (alcune fonti la danno ristretta, mtgoldframe no). Mana burn: assente nel Swedish (confermato da Marco il 2026-10-16). La lista viene rivista ogni anno dopo il campionato mondiale.",
-  "verificato": false,
+  "_nota": "Liste confermate da Marco il 2026-10-16: 23 ristrette (incluso Shahrazad) e 7 bandite (le carte con l'ante). Niente mana burn, mulligan London, chi inizia salta la prima pescata. Fonti consultate prima della conferma: mtgoldframe.com, oldschoolmagic.nl, MTG Salvation. La lista viene rivista ogni anno dopo il campionato mondiale: ricontrollarla sul blog oldschool-mtg.blogspot.com (pagina Rules).",
+  "verificato": true,
   "set_ammessi": [
     "lea",
     "leb",
@@ -42,6 +42,7 @@
     "Mox Ruby",
     "Mox Sapphire",
     "Regrowth",
+    "Shahrazad",
     "Sol Ring",
     "Strip Mine",
     "Time Walk",
@@ -52,5 +53,6 @@
     "Chaos Orb: costa {1},{T}; va lanciata da almeno 30 cm e deve girarsi completamente; distrugge i permanenti che tocca (non gestita dal motore).",
     "Falling Star: stesso principio del lancio «onesto» di Chaos Orb (non gestita dal motore).",
     "Nessuna ristampa: valgono solo le stampe dei set ammessi (le altre contano come proxy)."
-  ]
+  ],
+  "mulligan": "london"
 }

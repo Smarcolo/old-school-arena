@@ -2,7 +2,7 @@
 from app.commands.parser import Comando
 import re
 
-from app.engine import azioni, combattimento, mana
+from app.engine import azioni, combattimento, mana, mulligan
 from app.engine.abilita import analizza_abilita
 from app.engine.stato import Partita
 from app.engine.validazione import AzioneIllegale
@@ -33,7 +33,7 @@ def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
 
 AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta>, "
          "attiva <carta> [su <bersaglio>], passa, fine turno, "
-         "attacca con <carte>|tutto (con «+» in banda), non attacco, paga / non pago, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
+         "tengo / mulligan / in fondo <carte>, attacca con <carte>|tutto (con «+» in banda), non attacco, paga / non pago, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
          "mano, mana, stato, pesca [n], vita <+/-n>, giudice <domanda>")
 TUTTO = {"", "tutto", "tutte", "tutti", "con tutto", "con tutte"}
 
@@ -164,6 +164,27 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
             case "nonblocco":
                 combattimento.dichiara_bloccanti(partita, giocatore, [])
                 return "Non blocchi."
+            case "tengo":
+                mulligan.tieni(partita, giocatore)
+                da_mettere = partita.mulligan[giocatore].da_mettere_in_fondo
+                parola = "carta" if da_mettere == 1 else "carte"
+                return f"Tieni la mano. Ora metti in fondo {da_mettere} {parola}." if da_mettere else "Tieni la mano."
+            case "mulligan":
+                mulligan.fai_mulligan(partita, giocatore)
+                return "Mulligan: nuova mano di 7 carte."
+            case "infondo":
+                mano = partita.giocatore(giocatore)[Zona.MANO]
+                scelte, usate = [], set()
+                for nome in re.split(r",|\s+e\s+", cmd.argomento):
+                    if not nome.strip():
+                        continue
+                    c = _scegli(mano, nome, usate)
+                    if c is None:
+                        return f"Non hai «{nome.strip()}» in mano."
+                    scelte.append(c)
+                    usate.add(c.id)
+                mulligan.metti_in_fondo(partita, giocatore, scelte)
+                return "Carte messe in fondo al mazzo."
             case "paga" | "nonpago":
                 azioni.rispondi_scelta(partita, giocatore, cmd.azione == "paga")
                 return "Hai pagato." if cmd.azione == "paga" else "Non hai pagato."

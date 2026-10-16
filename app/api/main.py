@@ -97,11 +97,20 @@ def vista(p: Partita) -> dict:
         "combattimento": _vista_combattimento(p),
         "scelta": ({"testo": p.scelta.testo, "costo": p.scelta.costo, "carta": p.scelta.oggetto.carta.nome}
                    if p.scelta and p.scelta.giocatore == UMANO else None),
-        "richiesta": ("scelta" if p.scelta and p.scelta.giocatore == UMANO
+        "mulligan": _vista_mulligan(p),
+        "richiesta": ("mulligan" if p.mulligan and not p.mulligan[UMANO].finito
+                      else "scelta" if p.scelta and p.scelta.giocatore == UMANO
                       else "attaccanti" if combattimento.deve_dichiarare_attaccanti(p, UMANO)
                       else "bloccanti" if combattimento.deve_dichiarare_bloccanti(p, UMANO) else None),
         "eventi": [e.descrizione for e in p.registro.ultimi(30)],
     }
+
+
+def _vista_mulligan(p: Partita) -> dict | None:
+    if not p.mulligan or p.mulligan[UMANO].finito:
+        return None
+    s = p.mulligan[UMANO]
+    return {"fatti": s.fatti, "tenuta": s.tenuta, "da_mettere_in_fondo": s.da_mettere_in_fondo}
 
 
 def _vista_combattimento(p: Partita) -> dict | None:
@@ -133,8 +142,9 @@ def _carica_mazzo(nome: str) -> list:
 @app.post("/api/partite")
 def crea_partita(richiesta: RichiestaPartita | None = None) -> dict:
     richiesta = richiesta or RichiestaPartita()
+    regole = carica_regole()
     p = nuova_partita({UMANO: _carica_mazzo(richiesta.mazzo), AI: _carica_mazzo(richiesta.mazzo_avversaria)},
-                      mana_burn=carica_regole().mana_burn)
+                      mana_burn=regole.mana_burn, mulligan=regole.mulligan == "london")
     partite[p.id] = p
     avanza(p, UMANO, AI)
     return vista(p)

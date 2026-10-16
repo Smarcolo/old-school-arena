@@ -13,6 +13,10 @@ def test_partita_completa_via_api():
     p = client.post("/api/partite").json()
     assert isinstance(p["giocatori"][1]["mano"], int)  # mano avversaria nascosta
     assert p["priorita"] == "Tu" and p["pila"] == []
+    assert p["richiesta"] == "mulligan"
+    assert "mulligan" in comando(p["id"], "fine turno")["messaggio"]
+    p = comando(p["id"], "tengo")["partita"]
+    assert p["richiesta"] is None
     assert comando(p["id"], "mano")["messaggio"].startswith("Mano:")
     # Avanti finché non torna il tuo turno: l'AI gioca il suo, rispondendo «passa» quando lancia qualcosa.
     r = {"partita": p}

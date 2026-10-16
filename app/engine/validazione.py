@@ -12,11 +12,17 @@ class AzioneIllegale(Exception):
     pass
 
 
+def _mulligan_in_corso(partita: Partita) -> bool:
+    return bool(partita.mulligan) and not all(s.finito for s in partita.mulligan.values())
+
+
 def _priorita(partita: Partita, nome_giocatore: str) -> str | None:
     if partita.vincitore:
         return "la partita è finita"
     if partita.scelta:
         return f"prima {partita.scelta.giocatore} deve rispondere: {partita.scelta.testo}"
+    if _mulligan_in_corso(partita):
+        return "prima finite i mulligan"
     if partita.giocatore_con_priorita.nome != nome_giocatore:
         return "non hai la priorità"
     return None
@@ -38,6 +44,8 @@ def puo_giocare_terra(partita: Partita, nome_giocatore: str, carta: Carta) -> st
         return "la partita è finita"
     if partita.scelta:
         return "c'è una scelta in sospeso"
+    if _mulligan_in_corso(partita):
+        return "prima finite i mulligan"
     if g is not partita.giocatore_attivo:
         return "puoi giocare terre solo nel tuo turno"
     if motivo := _velocita_stregoneria(partita, nome_giocatore, "le terre si giocano"):

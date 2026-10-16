@@ -3,6 +3,7 @@ let magiaInAttesa = null; // comando ("gioca X" o "attiva X") che aspetta il cli
 let attaccantiScelti = new Set(); // id delle tue creature scelte per attaccare
 let bloccanteScelto = null; // id della tua creatura che sta per bloccare
 let blocchiScelti = []; // coppie [id attaccante, id bloccante]
+let inFondoScelte = new Set(); // id delle carte da mettere in fondo dopo il mulligan
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, ...figli) => {
   const e = Object.assign(document.createElement(tag), props);
@@ -28,6 +29,7 @@ function scegliBersaglio(rif) {
 }
 
 function azzeraScelteCombattimento() {
+  inFondoScelte = new Set();
   attaccantiScelti = new Set();
   bloccanteScelto = null;
   blocchiScelti = [];
@@ -46,7 +48,7 @@ function cartaEl(c, azione) {
   const inBanda = comb && comb.bande && comb.bande.some((b) => b.includes(c.id));
   const classi = ["carta", inBanda && "in-banda", c.tappata && "tappata", c.appena_entrata && "appena-entrata", c.danni && "ferita",
     comb && comb.attaccanti.includes(c.id) && "attaccante", comb && comb.bloccanti.includes(c.id) && "bloccante",
-    (attaccantiScelti.has(c.id) || bloccanteScelto === c.id || blocchiScelti.some(([, b]) => b === c.id)) && "selezionata"];
+    (attaccantiScelti.has(c.id) || inFondoScelte.has(c.id) || bloccanteScelto === c.id || blocchiScelti.some(([, b]) => b === c.id)) && "selezionata"];
   const e = el("span", { className: classi.filter(Boolean).join(" ") }, c.nome);
   e.dataset.carta = c.nome;
   if (c.forza != null) e.append(el("span", { className: "pt", textContent: `${c.forza}/${c.costituzione - c.danni}` }));
@@ -96,7 +98,15 @@ function bottone(testo, azione) {
 function disegnaBarraCombattimento() {
   const barra = $("barra-combattimento");
   barra.hidden = !partita.richiesta;
-  if (partita.richiesta === "scelta") {
+  if (partita.richiesta === "mulligan") {
+    const m = partita.mulligan;
+    barra.replaceChildren(...(m.tenuta
+      ? [el("span", { textContent: `Clicca ${m.da_mettere_in_fondo} ${m.da_mettere_in_fondo === 1 ? "carta" : "carte"} della mano da mettere in fondo al mazzo.` }),
+         bottone(`Metti in fondo (${inFondoScelte.size}/${m.da_mettere_in_fondo})`, () => invia(`in fondo ${[...inFondoScelte].join(", ")}`))]
+      : [el("span", { textContent: m.fatti ? `Mano iniziale (mulligan fatti: ${m.fatti}).` : "Mano iniziale: la tieni?" }),
+         bottone("Tengo", () => invia("tengo")),
+         bottone("Mulligan", () => invia("mulligan"))]));
+  } else if (partita.richiesta === "scelta") {
     barra.replaceChildren(
       el("span", { textContent: `${partita.scelta.carta}: ${partita.scelta.testo}` }),
       bottone(`Paga ${partita.scelta.costo}`, () => invia("paga")),
@@ -120,6 +130,11 @@ function disegnaBarraCombattimento() {
 }
 
 function suMano(c) {
+  if (partita.richiesta === "mulligan") {
+    if (!partita.mulligan.tenuta) return;
+    inFondoScelte.has(c.id) ? inFondoScelte.delete(c.id) : inFondoScelte.add(c.id);
+    return disegna();
+  }
   if (c.bersaglio) {
     magiaInAttesa = `gioca ${c.nome}`;
     document.body.classList.add("mirino");
@@ -185,7 +200,7 @@ $("nuova").onclick = async () => {
   }
   $("testo").disabled = false;
   $("comando").querySelectorAll("button").forEach((b) => (b.disabled = false));
-  avvisa("Partita iniziata. Scrivi «aiuto» per i comandi.");
+  avvisa(partita.richiesta === "mulligan" ? "Partita iniziata: tieni la mano o fai mulligan." : "Partita iniziata. Scrivi «aiuto» per i comandi.");
   disegna();
   $("testo").focus();
 };

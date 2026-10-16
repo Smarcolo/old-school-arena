@@ -78,10 +78,14 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Nell'interfaccia: riquadro «Giudice» accanto al registro, oppure il comando «giudice <domanda>».
 
 ## Regole Swedish
-- `app/cards/regole_swedish.json` è una BOZZA (`"verificato": false`) compilata il 2026-10-16 da riepiloghi online:
-  set Alpha, Beta, Unlimited, Summer Magic, Arabian Nights, Antiquities, Legends, The Dark; 7 bandite, 22 ristrette.
-  Marco la confronta con il regolamento ufficiale e mette `"verificato": true`. Punto incerto: Shahrazad.
+- `app/cards/regole_swedish.json` compilato il 2026-10-16 da riepiloghi online e confermato da Marco:
+  set Alpha, Beta, Unlimited, Summer Magic, Arabian Nights, Antiquities, Legends, The Dark; 7 bandite, 23 ristrette.
 - Niente mana burn nel Swedish (confermato da Marco): `"mana_burn": false`; resta come opzione (`Partita.mana_burn`).
+- Confermato da Marco il 2026-10-16: liste B&R (23 ristrette con Shahrazad, 7 bandite), mulligan London, chi inizia
+  salta la prima pescata. `"verificato": true`.
+- Mulligan (`engine/mulligan.py`): `Partita.mulligan` = nome -> StatoMulligan finché tutti non hanno tenuto e messo
+  in fondo le carte; fino ad allora `_priorita` blocca ogni azione. Comandi «tengo», «mulligan», «in fondo <carte>».
+  L'AI tiene con 2-5 terre (`avversaria.decidi_mulligan`).
 
 ## Lavoro
 - Test: `python -m pytest -q`. I test usano un database temporaneo (variabile `OSA_DATI`, impostata in `tests/conftest.py`). Ogni nuova regola del motore arriva con il suo test.
@@ -99,6 +103,6 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
    Fatto anche: rigenerazione, protezione da un colore e dagli artefatti, banding.
 6. Fatto: immagini delle carte con anteprima al passaggio del mouse.
 7. Fatto: aure e incantesimi globali.
-8. Serve Marco: verificare `regole_swedish.json` e i testi in `data/regole/`; creare la repo GitHub.
+8. Serve Marco: verificare i testi in `data/regole/`; creare la repo GitHub.
 9. Idee: divisione dei danni del banding scelta dal giocatore (oggi automatica), altre famiglie di effetti
-   (distruggi bersaglio, contromagie, pescate), mulligan, salvataggio della partita.
+   (distruggi bersaglio, contromagie, pescate), salvataggio della partita.

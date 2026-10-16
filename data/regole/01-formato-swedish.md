@@ -10,13 +10,13 @@ tranne le terre base. Le carte ristrette si possono avere in una sola copia, que
 
 ## Formato Swedish: carte bandite
 Bronze Tablet, Contract from Below, Darkpact, Demonic Attorney, Jeweled Bird, Rebirth, Tempest Efreet (sono le carte
-con l'ante, il gioco a posta). Shahrazad: fonti in disaccordo, alcune la danno ristretta. DA VERIFICARE.
+con l'ante, il gioco a posta).
 
 ## Formato Swedish: carte ristrette
 Ancestral Recall, Balance, Black Lotus, Braingeyser, Channel, Chaos Orb, Demonic Tutor, Library of Alexandria,
 Mana Drain, Mind Twist, Mishra's Workshop, Mox Emerald, Mox Jet, Mox Pearl, Mox Ruby, Mox Sapphire, Regrowth,
-Sol Ring, Strip Mine, Time Walk, Timetwister, Wheel of Fortune. La lista viene rivista ogni anno dopo il
-campionato mondiale di Old School. DA VERIFICARE.
+Shahrazad, Sol Ring, Strip Mine, Time Walk, Timetwister, Wheel of Fortune. La lista viene rivista ogni anno dopo
+il campionato mondiale di Old School.
 
 ## Formato Swedish: regole attuali ed eccezioni (Chaos Orb, Falling Star)
 Si gioca con le regole attuali di Magic e il testo Oracle aggiornato, con poche eccezioni. Chaos Orb costa {1} e
@@ -28,3 +28,8 @@ Il motore di questa app non gestisce le carte di destrezza.
 Nel Swedish 93/94 non c'è il mana burn: il mana non usato a fine fase si perde e basta, senza perdere vita (come
 nelle regole attuali di Magic). Nel 93/94 originale invece ogni mana avanzato faceva perdere 1 vita. Nell'app è
 un'opzione («mana_burn» in app/cards/regole_swedish.json), spenta per il Swedish.
+
+## Mulligan (London) e chi inizia
+Nel Swedish si usa il mulligan London: se non ti piace la mano iniziale, rimescoli le carte nel mazzo e peschi di
+nuovo 7 carte; quando decidi di tenere, metti in fondo al mazzo una carta per ogni mulligan fatto. Chi inizia la
+partita salta la pescata del primo turno.

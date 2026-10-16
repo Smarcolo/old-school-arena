@@ -14,6 +14,8 @@ python -m uvicorn app.api.main:app
 ```
 
 ## Comandi
+- `tengo` / `mulligan` a inizio partita (mulligan London); dopo un mulligan, `in fondo <carte>` per scegliere
+  quali carte mettere in fondo al mazzo (oppure i pulsanti e un clic sulle carte).
 - `gioca <carta>`: gioca una terra o lancia una magia (paga il costo tappando le terre da solo).
 - `gioca <carta> su <bersaglio>`: per le magie con bersaglio, es. `gioca giant growth su grizzly bears`,
   `gioca lightning bolt su avversaria`. Dall'interfaccia: clicchi la magia, poi il bersaglio.
@@ -58,8 +60,8 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
 - Avversaria base: gioca terre, lancia la creatura più cara che può pagare, usa Lightning Bolt sulle tue creature o su di te, attacca quando non rischia, blocca con giudizio, usa Giant Growth e le abilità delle sue creature.
 - Giudice (riquadro accanto al registro): risponde con le regole scritte in `data/regole/` (formato Swedish, turno,
   pila, combattimento, abilità, chiarimenti sui casi difficili). Sono una bozza da verificare.
-- Regole Swedish in `app/cards/regole_swedish.json`: set ammessi, carte bandite e ristrette (bozza da verificare),
-  mana burn spento (si può accendere).
+- Regole Swedish in `app/cards/regole_swedish.json`: set ammessi, 7 carte bandite e 23 ristrette, niente mana burn,
+  mulligan London.
 
 ## Carte reali
 Le carte in `app/cards/carte_base.json` sono dati di prova scritti a mano: l'import da Scryfall le sovrascrive con i dati ufficiali.

@@ -18,7 +18,7 @@ def test_analisi_normalizza_e_segnala(conn):
     assert a["mazzo"]["Lightning Bolt"] == 4
     assert "carta sconosciuta: Black Lotus" in a["problemi"]
     assert not a["giocabile"] and not a["legale"]
-    assert any("bozza" in x for x in a["avvisi"])
+    assert not any("bozza" in x for x in a["avvisi"])  # liste verificate da Marco
 
 
 def test_analisi_limiti_del_motore(conn):

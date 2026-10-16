@@ -200,6 +200,8 @@ class Partita:
     combattimento: Combattimento | None = None
     scelta: Scelta | None = None
     mana_burn: bool = False  # il Swedish non lo usa; si può accendere da regole_swedish.json
+    mulligan: dict | None = None  # nome -> StatoMulligan durante i mulligan iniziali (engine/mulligan.py)
+    rng: random.Random = field(default_factory=random.Random, repr=False)
 
     @property
     def giocatore_attivo(self) -> Giocatore:
@@ -239,7 +241,7 @@ class Partita:
 
 
 def nuova_partita(mazzi: dict[str, list[Carta]], mano_iniziale: int = 7, seed: int | None = None,
-                  mana_burn: bool = False) -> Partita:
+                  mana_burn: bool = False, mulligan: bool = False) -> Partita:
     """Crea la partita, mescola i mazzi e pesca la mano iniziale. Il primo giocatore salta la pescata."""
     rng = random.Random(seed)
     giocatori = []
@@ -253,4 +255,8 @@ def nuova_partita(mazzi: dict[str, list[Carta]], mano_iniziale: int = 7, seed: i
         for _ in range(mano_iniziale):
             g[Zona.MANO].append(g[Zona.GRIMORIO].pop())
         giocatori.append(g)
-    return Partita(giocatori=giocatori, mana_burn=mana_burn)
+    partita = Partita(giocatori=giocatori, mana_burn=mana_burn, rng=rng)
+    if mulligan:
+        from app.engine import mulligan as mod_mulligan
+        mod_mulligan.avvia(partita)
+    return partita

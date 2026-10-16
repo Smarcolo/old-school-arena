@@ -3,7 +3,7 @@ in automatico le priorità dell'umano in cui non c'è niente da decidere."""
 from app.ai import avversaria
 from app.commands.esegui import esegui
 from app.commands.parser import analizza
-from app.engine import azioni, combattimento
+from app.engine import azioni, combattimento, mulligan
 from app.engine.abilita import analizza_abilita
 from app.engine.stato import Partita
 from app.engine.validazione import FASI_PRINCIPALI, puo_attivare, puo_lanciare
@@ -48,6 +48,11 @@ def avanza(partita: Partita, umano: str, ai: str, fino_a_fine_turno: bool = Fals
     for _ in range(MAX_PASSI):
         if partita.vincitore:
             return
+        if mulligan.in_corso(partita):
+            if not partita.mulligan[ai].finito:
+                avversaria.decidi_mulligan(partita, ai)
+                continue
+            return  # tocca all'umano
         if partita.scelta:
             if partita.scelta.giocatore != ai:
                 return
@@ -71,6 +76,12 @@ def suggerimento(partita: Partita, umano: str) -> str:
     """Cosa può fare l'umano adesso, detto in una riga."""
     if partita.vincitore:
         return f"Partita finita: vince {partita.vincitore}."
+    if partita.mulligan and not partita.mulligan[umano].finito:
+        stato = partita.mulligan[umano]
+        if stato.tenuta:
+            n = stato.da_mettere_in_fondo
+            return f"Scegli {n} {'carta' if n == 1 else 'carte'} da mettere in fondo al mazzo: «in fondo <carta>, <carta>»."
+        return "Mano iniziale: «tengo» oppure «mulligan»."
     if partita.scelta and partita.scelta.giocatore == umano:
         return f"Scegli: {partita.scelta.testo} «paga» o «non pago»."
     if combattimento.deve_dichiarare_bloccanti(partita, umano):
@@ -92,6 +103,8 @@ def suggerimento(partita: Partita, umano: str) -> str:
 def esegui_comando(partita: Partita, umano: str, ai: str, testo: str, giudice=None) -> str:
     cmd = analizza(testo)
     if cmd.azione == "fineturno":
+        if mulligan.in_corso(partita):
+            return "Prima finisci il mulligan. " + suggerimento(partita, umano)
         if partita.giocatore_attivo.nome != umano:
             return "Non è il tuo turno."
         avanza(partita, umano, ai, fino_a_fine_turno=True)

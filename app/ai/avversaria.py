@@ -130,6 +130,30 @@ def bersaglio_aura(partita: Partita, nome: str, aura: Carta) -> Carta | None:
     return max(candidate, key=lambda c: (c.forza_attuale, c.costituzione_attuale)) if candidate else None
 
 
+def decidi_mulligan(partita: Partita, nome: str) -> None:
+    """Tiene con 2-5 terre su 7 (o dopo due mulligan); poi mette in fondo le carte che servono di meno."""
+    from app.engine import mulligan
+    stato = partita.mulligan[nome]
+    mano = partita.giocatore(nome)[Zona.MANO]
+    if not stato.tenuta:
+        terre = sum(c.is_terra for c in mano)
+        if 2 <= terre <= 5 or stato.fatti >= 2:
+            mulligan.tieni(partita, nome)
+        else:
+            mulligan.fai_mulligan(partita, nome)
+        return
+    terre = [c for c in mano if c.is_terra]
+    magie = sorted((c for c in mano if not c.is_terra), key=lambda c: -sum(mana.analizza_costo(c.costo).values()))
+    via = []
+    for _ in range(stato.da_mettere_in_fondo):
+        # troppe terre rispetto alle magie: via una terra, altrimenti la magia più cara
+        if terre and (len(terre) > len(magie) or not magie):
+            via.append(terre.pop())
+        else:
+            via.append(magie.pop(0))
+    mulligan.metti_in_fondo(partita, nome, via)
+
+
 def decidi_scelta(partita: Partita, nome: str) -> None:
     """«Paga o subisci»: paga se può."""
     azioni.rispondi_scelta(partita, nome, azioni.puo_pagare_scelta(partita))

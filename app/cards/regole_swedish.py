@@ -16,6 +16,7 @@ class RegoleMazzo:
     bandite: list[str] = field(default_factory=list)
     ristrette: list[str] = field(default_factory=list)
     mana_burn: bool = False
+    mulligan: str = "london"  # "london" o "nessuno"
     verificato: bool = False
     eccezioni_alle_regole_attuali: list[str] = field(default_factory=list)
 

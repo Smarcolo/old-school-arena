@@ -11,6 +11,7 @@ Priorità delle scelte:
 6. Nella fase finale dell'avversario: abilità di danno a {T} rimaste stappate sull'avversario.
 7. Altrimenti passa.
 """
+from app.ai import politiche
 from app.engine import azioni, combattimento, mana
 from app.engine.abilita import analizza_abilita
 from app.engine.inneschi import analizza_inneschi
@@ -272,6 +273,15 @@ def agisci(partita: Partita, nome: str) -> None:
             azioni.attiva(partita, nome, fonte, ab, [f"carta:{vittima.id}"])
             return
 
+    if scelta := politiche.scegli_magia(partita, nome):
+        carta, bersagli, x = scelta
+        azioni.lancia(partita, nome, carta, bersagli, x)
+        return
+    if scelta := politiche.scegli_abilita(partita, nome):
+        fonte, ab, bersagli = scelta
+        azioni.attiva(partita, nome, fonte, ab, bersagli)
+        return
+
     bolt = next((c for c in mano if c.nome == "Lightning Bolt" and puo_lanciare(partita, nome, c) is None), None)
     if bolt:
         rif = bersaglio_bolt(partita, nome, bolt)
@@ -307,7 +317,8 @@ def agisci(partita: Partita, nome: str) -> None:
             and partita.giocatore_attivo.nome == nome):
         for fonte, ab in _abilita_pronte(partita, nome, "pompa"):
             creatura = azioni.creatura_pompata(partita, fonte, ab)
-            if creatura and creatura.id in comb.attaccanti and creatura.id not in comb.blocchi and ab.forza > 0:
+            if (creatura and creatura.id in comb.attaccanti and creatura.id not in comb.blocchi and ab.forza > 0
+                    and not ab.sacrifica_tipo):
                 azioni.attiva(partita, nome, fonte, ab)
                 return
 

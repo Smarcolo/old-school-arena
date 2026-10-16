@@ -6,8 +6,8 @@ from app.engine.eventi import Evento
 from app.engine.inneschi import analizza_inneschi
 from app.engine.stato import ORDINE_FASI, Carta, Fase, OggettoPila, Partita, Scelta
 from app.engine.effetti import bersaglio_legale
-from app.engine.validazione import (AzioneIllegale, fonti_di_mana, puo_attivare, puo_giocare_terra,
-                                    puo_lanciare, puo_passare, puo_tappare)
+from app.engine.validazione import (AzioneIllegale, da_sacrificare, fonti_di_mana, puo_attivare,
+                                    puo_giocare_terra, puo_lanciare, puo_passare, puo_tappare)
 from app.engine.zone import Zona
 
 
@@ -189,27 +189,36 @@ def tappa(partita: Partita, giocatore: str, carta: Carta, colore: str | None = N
         modifica_vita(partita, giocatore, -fonte.danno, f"(danni da {carta.nome})")
 
 
-def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] | None = None) -> None:
-    """Paga il costo (tappando da solo le fonti necessarie) e mette la magia in pila.
+def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] | None = None, x: int = 0) -> None:
+    """Paga il costo (tappando da solo le fonti necessarie, con X scelto) e mette la magia in pila.
     Chi lancia mantiene la priorità."""
     bersagli = bersagli or []
-    _verifica(puo_lanciare(partita, giocatore, carta, bersagli))
+    _verifica(puo_lanciare(partita, giocatore, carta, bersagli, x))
+    carta.proprietario = carta.proprietario or giocatore
     g = partita.giocatore(giocatore)
-    costo = mana.analizza_costo(carta.costo)
+    costo = mana.con_x(mana.analizza_costo(carta.costo), x)
     for fonte, colore in mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore), costo):
         tappa(partita, giocatore, fonte.carta, colore)
     g.riserva = mana.paga(g.riserva, costo)
     g[Zona.MANO].remove(carta)
-    partita.pila.append(OggettoPila(carta, giocatore, bersagli))
+    partita.pila.append(OggettoPila(carta, giocatore, bersagli, x=x))
     partita.passaggi = 0
     su = f" su {descrivi_bersaglio(partita, bersagli[0])}" if bersagli else ""
-    _log(partita, giocatore, "lancia", f"{giocatore} lancia {carta.nome}{su}", carta=carta.id)
+    con_x = f" (X={x})" if "X" in carta.costo else ""
+    _log(partita, giocatore, "lancia", f"{giocatore} lancia {carta.nome}{con_x}{su}", carta=carta.id)
 
 
-def attiva(partita: Partita, giocatore: str, carta: Carta, abilita, bersagli: list[str] | None = None) -> None:
-    """Paga il costo dell'abilità (tappando la carta se serve {T}) e la mette in pila."""
+def attiva(partita: Partita, giocatore: str, carta: Carta, abilita, bersagli: list[str] | None = None,
+           sacrificio: Carta | None = None) -> None:
+    """Paga il costo dell'abilità (mana, {T}, sacrifici) e la mette in pila. Per «Sacrifice an artifact» si può
+    indicare quale; altrimenti si sacrifica quello di valore più basso."""
     bersagli = bersagli or []
     _verifica(puo_attivare(partita, giocatore, carta, abilita, bersagli))
+    if abilita.sacrifica_tipo:
+        possibili = da_sacrificare(partita, giocatore, carta, abilita.sacrifica_tipo)
+        if sacrificio is not None and sacrificio not in possibili:
+            raise AzioneIllegale(f"non puoi sacrificare {sacrificio.nome} per questa abilità")
+        sacrificio = sacrificio or min(possibili, key=lambda c: (mana.valore(c.costo), c is carta))
     g = partita.giocatore(giocatore)
     costo = mana.analizza_costo(abilita.costo_mana)
     fonti = fonti_di_mana(partita, giocatore, carta if abilita.tappa else None)
@@ -218,7 +227,11 @@ def attiva(partita: Partita, giocatore: str, carta: Carta, abilita, bersagli: li
     g.riserva = mana.paga(g.riserva, costo)
     if abilita.tappa:
         carta.tappata = True
-    partita.pila.append(OggettoPila(carta, giocatore, bersagli, abilita))
+    if sacrificio is not None:
+        distruggi(partita, sacrificio, f"(sacrificata per {carta.nome})", rigenerabile=False)
+    if abilita.sacrifica_se:
+        distruggi(partita, carta, "(sacrificata)", rigenerabile=False)
+    partita.pila.append(OggettoPila(carta, giocatore, bersagli, abilita=abilita))
     partita.passaggi = 0
     su = f" su {descrivi_bersaglio(partita, bersagli[0])}" if bersagli else ""
     _log(partita, giocatore, "attiva", f"{giocatore} attiva l'abilità di {carta.nome}{su}", carta=carta.id)
@@ -249,6 +262,14 @@ def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
         _log(partita, chi, "risolve", f"{creatura.nome} prende {ab.forza:+d}/{ab.costituzione:+d} fino a fine turno")
     elif ab.tipo == "danno":
         infliggi_danno(partita, fonte, oggetto.bersagli[0], ab.danni)
+    elif ab.tipo == "distruggi":
+        distruggi(partita, partita.risolvi_bersaglio(oggetto.bersagli[0]), f"({fonte.nome})")
+    elif ab.tipo == "pesca":
+        pesca(partita, chi)
+    elif ab.tipo == "tappa":
+        bersaglio = partita.risolvi_bersaglio(oggetto.bersagli[0])
+        bersaglio.tappata = True
+        _log(partita, chi, "tappa", f"{fonte.nome} tappa {bersaglio.nome}")
     elif ab.tipo == "rigenera":
         if not partita.trova_in_campo(fonte.id):
             _log(partita, chi, "neutralizzata", f"{fonte.nome} non è più in campo: niente rigenerazione")
@@ -259,6 +280,8 @@ def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
 
 def descrivi_bersaglio(partita: Partita, rif: str) -> str:
     oggetto = partita.risolvi_bersaglio(rif)
+    if isinstance(oggetto, OggettoPila):
+        return oggetto.descrizione
     return getattr(oggetto, "nome", "un bersaglio scomparso")
 
 
@@ -339,6 +362,110 @@ def distruggi(partita: Partita, carta: Carta, motivo: str = "", rigenerabile: bo
     carta.attaccata_a = None
     partita.giocatore(carta.proprietario or controllore.nome)[Zona.CIMITERO].append(carta)
     _log(partita, controllore.nome, "muore", f"{carta.nome} va al cimitero {motivo}".strip(), carta=carta.id)
+
+
+# --- Spostamenti di carte usati dagli effetti ---------------------------------------------------
+
+def _lascia_il_campo(partita: Partita, carta: Carta) -> str | None:
+    """Toglie la carta dal campo (se c'è) azzerandone lo stato; ritorna il nome del controllore."""
+    trovato = partita.trova_in_campo(carta.id)
+    if not trovato:
+        return None
+    trovato[0][Zona.CAMPO].remove(carta)
+    carta.azzera_stato_in_campo()
+    carta.tappata = False
+    carta.attaccata_a = None
+    return trovato[0].nome
+
+
+def rimuovi_dal_gioco(partita: Partita, carta: Carta, motivo: str = "") -> None:
+    """Esilio («rimossa dal gioco» nel 93/94): non si rigenera."""
+    chi = _lascia_il_campo(partita, carta)
+    if chi is None:
+        return
+    partita.giocatore(carta.proprietario or chi)[Zona.RIMOSSE].append(carta)
+    _log(partita, chi, "rimossa", f"{carta.nome} è rimossa dal gioco {motivo}".strip(), carta=carta.id)
+
+
+def torna_in_mano(partita: Partita, carta: Carta) -> None:
+    chi = _lascia_il_campo(partita, carta)
+    if chi is None:
+        return
+    partita.giocatore(carta.proprietario or chi)[Zona.MANO].append(carta)
+    _log(partita, chi, "in_mano", f"{carta.nome} torna in mano a {carta.proprietario or chi}", carta=carta.id)
+
+
+def scarta(partita: Partita, giocatore: str, carta: Carta, motivo: str = "") -> None:
+    g = partita.giocatore(giocatore)
+    g[Zona.MANO].remove(carta)
+    g[Zona.CIMITERO].append(carta)
+    _log(partita, giocatore, "scarta", f"{giocatore} scarta {carta.nome} {motivo}".strip(), carta=carta.id)
+
+
+def scarta_a_caso(partita: Partita, giocatore: str, quante: int, motivo: str = "") -> None:
+    mano = partita.giocatore(giocatore)[Zona.MANO]
+    for carta in partita.rng.sample(mano, min(quante, len(mano))):
+        scarta(partita, giocatore, carta, motivo)
+
+
+def neutralizza(partita: Partita, oggetto: OggettoPila, da: str) -> None:
+    """Toglie una magia dalla pila e la mette nel cimitero del proprietario."""
+    if oggetto not in partita.pila:
+        return
+    partita.pila.remove(oggetto)
+    partita.giocatore(oggetto.carta.proprietario or oggetto.controllore)[Zona.CIMITERO].append(oggetto.carta)
+    _log(partita, oggetto.controllore, "neutralizzata", f"{oggetto.carta.nome} è neutralizzata da {da}")
+
+
+def mescola_nel_grimorio(partita: Partita, giocatore: str, *zone: Zona) -> None:
+    g = partita.giocatore(giocatore)
+    for zona in zone:
+        g[Zona.GRIMORIO].extend(g[zona])
+        g[zona].clear()
+    partita.rng.shuffle(g[Zona.GRIMORIO])
+
+
+def aggiungi_mana(partita: Partita, giocatore: str, colore: str, quanto: int, motivo: str = "") -> None:
+    partita.giocatore(giocatore).riserva[colore] += quanto
+    _log(partita, giocatore, "mana", f"{giocatore} aggiunge {('{' + colore + '}') * quanto} {motivo}".strip())
+
+
+def cerca_nel_grimorio(partita: Partita, giocatore: str, fonte: Carta, scegli_auto) -> None:
+    """Demonic Tutor e simili: chi è in scelte_manuali sceglie (Scelta "cerca"), gli altri con scegli_auto(carte)."""
+    g = partita.giocatore(giocatore)
+    if not g[Zona.GRIMORIO]:
+        return
+    if giocatore in partita.scelte_manuali:
+        nomi = {}
+        for c in g[Zona.GRIMORIO]:
+            nomi.setdefault(c.nome, c.id)  # una voce per nome
+        partita.scelta = Scelta(giocatore, testo=f"scegli una carta dal grimorio per {fonte.nome}", tipo="cerca",
+                                dati={"carte": {i: n for n, i in sorted(nomi.items())}, "fonte": fonte.nome})
+        return
+    _prendi_dal_grimorio(partita, giocatore, scegli_auto(list(g[Zona.GRIMORIO])), fonte.nome)
+
+
+def _prendi_dal_grimorio(partita: Partita, giocatore: str, carta: Carta, fonte: str) -> None:
+    g = partita.giocatore(giocatore)
+    g[Zona.GRIMORIO].remove(carta)
+    g[Zona.MANO].append(carta)
+    partita.rng.shuffle(g[Zona.GRIMORIO])
+    _log(partita, giocatore, "cerca", f"{giocatore} prende una carta dal grimorio con {fonte} e rimescola")
+
+
+def rispondi_cerca(partita: Partita, giocatore: str, id_carta: str) -> None:
+    scelta = partita.scelta
+    if scelta is None or scelta.tipo != "cerca":
+        raise AzioneIllegale("ora non c'è da scegliere una carta dal grimorio")
+    if scelta.giocatore != giocatore:
+        raise AzioneIllegale(f"tocca a {scelta.giocatore} scegliere")
+    carta = next((c for c in partita.giocatore(giocatore)[Zona.GRIMORIO] if c.id == id_carta), None)
+    if carta is None:
+        raise AzioneIllegale("quella carta non è nel tuo grimorio")
+    partita.scelta = None
+    _prendi_dal_grimorio(partita, giocatore, carta, scelta.dati["fonte"])
+    partita.priorita = partita.attivo
+    partita.passaggi = 0
 
 
 def azioni_di_stato(partita: Partita) -> None:
@@ -436,8 +563,11 @@ def passa_fase(partita: Partita) -> None:
     for giocatore in partita.giocatori:
         for c in giocatore[Zona.CAMPO]:
             c.azzera_stato_in_campo()
-    # Nuovo turno
-    partita.attivo = 1 - partita.attivo
+    # Nuovo turno (Time Walk: prima i turni extra)
+    if partita.turni_extra:
+        partita.attivo = [g.nome for g in partita.giocatori].index(partita.turni_extra.pop(0))
+    else:
+        partita.attivo = 1 - partita.attivo
     partita.priorita = partita.attivo
     partita.turno += 1
     partita.fase = Fase.STAP
@@ -459,6 +589,10 @@ def _automatismi_fase(partita: Partita) -> None:
         pesca(partita, g.nome)
         if not partita.vincitore:
             metti_inneschi(partita, "pescata")
+    elif partita.fase == Fase.PRINCIPALE_1:
+        for chi, quanto in [m for m in partita.mana_ritardato if m[0] == g.nome]:
+            partita.mana_ritardato.remove((chi, quanto))
+            aggiungi_mana(partita, chi, "C", quanto, "(Mana Drain)")
     elif partita.fase == Fase.FINALE:
         metti_inneschi(partita, "finale")
     elif partita.fase == Fase.COMBATTIMENTO:

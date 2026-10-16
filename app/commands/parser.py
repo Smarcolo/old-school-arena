@@ -9,6 +9,7 @@ class Comando:
     argomento: str = ""
     numero: int | None = None
     bersaglio: str = ""
+    x: int = 0
 
 
 SINONIMI = {
@@ -37,6 +38,7 @@ PATTERN = [
     (re.compile(r"^blocca\s+(.+)$"), "blocca"),
     (re.compile(r"^(?:in fondo|metti in fondo|fondo)\s+(.+)$"), "infondo"),
     (re.compile(r"^danni\s+(.+)$"), "danni"),
+    (re.compile(r"^(?:scelgo|prendo)\s+(.+)$"), "scelgo"),
     (re.compile(r"^pesca\s+(\d+)$"), "pesca"),
     (re.compile(r"^(?:vita|punti vita)\s+([+-]?\d+)$"), "vita"),
     (re.compile(r"^(?:giudice|regola|domanda)[:\s]+(.+)$"), "giudice"),
@@ -53,8 +55,12 @@ def analizza(testo: str) -> Comando:
             valore = m.group(1)
             if azione in ("pesca", "vita"):
                 return Comando(azione, numero=int(valore))
+            x = 0
+            if azione in ("gioca", "lancia") and (mx := re.search(r"\s+x\s*=?\s*(\d+)", valore)):
+                x = int(mx.group(1))
+                valore = (valore[:mx.start()] + valore[mx.end():]).strip()
             if azione in ("gioca", "lancia", "attiva") and " su " in valore:
                 carta, bersaglio = valore.split(" su ", 1)
-                return Comando(azione, argomento=carta, bersaglio=bersaglio)
-            return Comando(azione, argomento=valore)
+                return Comando(azione, argomento=carta.strip(), bersaglio=bersaglio.strip(), x=x)
+            return Comando(azione, argomento=valore, x=x)
     return Comando("sconosciuto", argomento=testo.strip())

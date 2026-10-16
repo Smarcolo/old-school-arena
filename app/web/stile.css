@@ -56,3 +56,4 @@ textarea { font: .95rem/1.4 ui-monospace, Consolas, monospace; padding: .5rem; b
 .carta.in-banda { outline: 2px dashed #a3241b; outline-offset: 2px; }
 #giudice input { width: 100%; padding: .4rem; font-size: .85rem; }
 #risposta-giudice { font-size: .85rem; line-height: 1.4; }
+.fila.cimitero .carta { font-size: .75rem; opacity: .75; padding: .2rem .4rem; }

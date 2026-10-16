@@ -33,7 +33,13 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Mana: `engine/mana.py`. A fine fase le riserve si svuotano con mana burn. `lancia` tappa da solo le fonti
   necessarie (`piano_pagamento`), usando prima la riserva e, per il generico, prima le terre delle creature.
 - Istantanei e stregonerie si lanciano solo se il loro effetto è registrato con `@effetto("Nome Carta", bersaglio=...)`
-  in `engine/carte_implementate.py`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
+  in `engine/carte_implementate.py` (oggi 31 carte: Power 9 incluse, StP, Terror, Counterspell, Mana Drain,
+  Disenchant, Fireball, Mind Twist, Demonic Tutor, Balance, Wrath...). I tipi di bersaglio sono in
+  `effetti._tipi()` (creatura, magia in pila «pila:<id>», carta nel tuo cimitero «cimitero:<id>», terra, ...).
+  Costi con X: `OggettoPila.x`, `mana.con_x`, comando «gioca fireball x=5 su avversaria».
+- Mana (`engine/mana.py`): `FonteMana` con colori a scelta, quantità, sacrificio (Black Lotus), danno (City of Brass);
+  terre doppie dai tipi base. `piano_pagamento` ritorna [(fonte, colore)].
+- L'AI decide le magie in `ai/politiche.py` (POLITICHE per nome carta) e le abilità di utilità in `scegli_abilita`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
 - Bersagli: stringhe `"giocatore:<nome>"` o `"carta:<id>"`, risolte con `Partita.risolvi_bersaglio`. Se alla
   risoluzione il bersaglio non è più valido la magia non ha effetto. Dopo ogni risoluzione girano `azioni_di_stato`
   (creature con danni letali al cimitero). A fine turno danni e bonus "fino alla fine del turno" si azzerano.

@@ -14,9 +14,9 @@ def test_analizza_testo():
 
 
 def test_analisi_normalizza_e_segnala(conn):
-    a = mazzi.analizza(conn, {"lightning bolt": 4, "Black Lotus": 1, "Mountain": 20}, {})
+    a = mazzi.analizza(conn, {"lightning bolt": 4, "Carta Inesistente": 1, "Mountain": 20}, {})
     assert a["mazzo"]["Lightning Bolt"] == 4
-    assert "carta sconosciuta: Black Lotus" in a["problemi"]
+    assert "carta sconosciuta: Carta Inesistente" in a["problemi"]
     assert not a["giocabile"] and not a["legale"]
     assert not any("bozza" in x for x in a["avvisi"])  # liste verificate da Marco
 
@@ -80,7 +80,6 @@ def test_avviso_colore_mancante(conn):
 
 
 def test_lista_swedish_in_bozza(conn):
-    conn.execute("INSERT INTO carte (nome, tipo, costo) VALUES ('Black Lotus', 'Artifact', '{0}')")
     conn.execute("INSERT INTO carte (nome, tipo, costo) VALUES ('Darkpact', 'Sorcery', '{B}{B}{B}')")
     a = mazzi.analizza(conn, {"Black Lotus": 2, "Darkpact": 1, "Swamp": 57}, {})
     assert any("Black Lotus è ristretta" in p for p in a["problemi"])

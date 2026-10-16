@@ -17,6 +17,8 @@ python -m uvicorn app.api.main:app
 - `tengo` / `mulligan` a inizio partita (mulligan London); dopo un mulligan, `in fondo <carte>` per scegliere
   quali carte mettere in fondo al mazzo (oppure i pulsanti e un clic sulle carte).
 - `gioca <carta>`: gioca una terra o lancia una magia (paga il costo tappando le terre da solo).
+- `gioca fireball x=5 su avversaria`: per le magie con X (dall'interfaccia ti viene chiesto il valore).
+- `gioca counterspell su <magia in pila>`, `gioca regrowth su <carta nel tuo cimitero>`, `scelgo <carta>` per Demonic Tutor.
 - `gioca <carta> su <bersaglio>`: per le magie con bersaglio, es. `gioca giant growth su grizzly bears`,
   `gioca lightning bolt su avversaria`. Dall'interfaccia: clicchi la magia, poi il bersaglio.
 - `attiva <carta> [su <bersaglio>]`: usa un'abilità della carta, es. `attiva shivan dragon`,
@@ -49,6 +51,10 @@ inizia chi ha perso. A fine partita il pulsante «Partita 2» (o 3) avvia la suc
 - Partita a due con mazzi di prova, turni e fasi, una terra per turno, stap e pescata automatici.
 - Mana, pila e priorità: si lanciano le creature, che entrano con debolezza da evocazione. Niente mana burn, come nel Swedish (attivabile da `regole_swedish.json`).
 - Istantanei con bersaglio: Lightning Bolt e Giant Growth, anche in risposta l'uno all'altro.
+- Le carte fondamentali del 93/94: Power 9 (Black Lotus, Mox, Ancestral Recall, Time Walk, Timetwister), Sol Ring,
+  terre doppie, City of Brass, Strip Mine, Library of Alexandria, Swords to Plowshares, Terror, Counterspell,
+  Mana Drain, Disenchant, Shatter, Fireball, Psionic Blast, Braingeyser, Mind Twist, Demonic Tutor, Regrowth,
+  Wheel of Fortune, Balance, Wrath of God, Armageddon, Dark Ritual, Red/Blue Elemental Blast, Icy Manipulator, Atog.
 - Combattimento: attacchi, blocchi (anche più creature sullo stesso attaccante), danni, Giant Growth dopo i blocchi.
 - Abilità attivate semplici: pompaggio (Shivan Dragon, Frozen Shade), danno (Prodigal Sorcerer) e rigenerazione
   (Drudge Skeletons, Uthden Troll, Will-o'-the-Wisp): lo scudo vale fino a fine turno e compare sulla carta.

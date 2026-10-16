@@ -74,12 +74,13 @@ def _nome_incantata(p: Partita, c) -> str | None:
 def vista(p: Partita) -> dict:
     """Stato visibile al giocatore umano: la mano dell'avversaria resta nascosta."""
     def zona(g, z):
-        return [{"id": c.id, "nome": c.nome, "tipo": c.tipo, "costo": c.costo, "tappata": c.tappata,
+        return [{"id": c.id, "nome": c.nome, "tipo": c.tipo, "testo": c.testo, "costo": c.costo, "tappata": c.tappata,
                  "forza": c.forza_attuale if c.is_creatura else None,
                  "costituzione": c.costituzione_attuale if c.is_creatura else None,
                  "danni": c.danni, "bersaglio": tipo_bersaglio(c),
                  "incanta": _nome_incantata(p, c), "abilita": _abilita(c), "scudi": c.scudi_rigenerazione,
                  "attivabili": [{"testo": a.testo, "bersaglio": a.bersaglio} for a in analizza_abilita(c)],
+                 "x": "X" in c.costo,
                  "appena_entrata": p.ha_debolezza_da_evocazione(c)} for c in g[z]]
 
     giocatori = []
@@ -92,7 +93,7 @@ def vista(p: Partita) -> dict:
     return {
         "id": p.id, "turno": p.turno, "fase": p.fase.value, "attivo": p.giocatore_attivo.nome,
         "priorita": p.giocatore_con_priorita.nome,
-        "pila": [{"nome": o.descrizione, "controllore": o.controllore,
+        "pila": [{"id": o.id, "nome": o.descrizione, "controllore": o.controllore, "x": o.x,
                   "bersaglio": descrivi_bersaglio(p, o.bersagli[0]) if o.bersagli else None} for o in p.pila],
         "vincitore": p.vincitore, "giocatori": giocatori,
         "combattimento": _vista_combattimento(p),
@@ -110,6 +111,9 @@ def _vista_scelta(p: Partita) -> dict | None:
     s = p.scelta
     if s is None or s.giocatore != UMANO:
         return None
+    if s.tipo == "cerca":
+        return {"tipo": "cerca", "testo": s.testo, "fonte": s.dati["fonte"],
+                "carte": [{"id": i, "nome": n} for i, n in s.dati["carte"].items()]}
     if s.tipo == "danni":
         return {"tipo": "danni", "testo": s.testo, "danni": s.dati["danni"], "fonte": s.dati["nome_fonte"],
                 "candidate": [{"id": i, "nome": n} for i, n in s.dati["candidate"].items()]}

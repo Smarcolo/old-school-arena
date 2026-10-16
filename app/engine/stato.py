@@ -146,7 +146,9 @@ class Giocatore:
 class OggettoPila:
     carta: Carta
     controllore: str
-    bersagli: list[str] = field(default_factory=list)  # "giocatore:<nome>" o "carta:<id>"
+    bersagli: list[str] = field(default_factory=list)  # "giocatore:<nome>", "carta:<id>", "pila:<id>", "cimitero:<id>"
+    x: int = 0  # valore scelto per {X}
+    id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
     abilita: object | None = None  # AbilitaAttivata se in pila c'è un'abilità e non la carta stessa
     innesco: object | None = None  # Innesco se in pila c'è un'abilità innescata
     giocatore_del_turno: str = ""  # per gli inneschi: «that player» = chi era di turno quando è scattato
@@ -208,6 +210,8 @@ class Partita:
     mana_burn: bool = False  # il Swedish non lo usa; si può accendere da regole_swedish.json
     scelte_manuali: set[str] = field(default_factory=set)  # chi decide a mano le divisioni del banding
     mulligan: dict | None = None  # nome -> StatoMulligan durante i mulligan iniziali (engine/mulligan.py)
+    turni_extra: list[str] = field(default_factory=list)  # Time Walk: chi gioca un turno in più
+    mana_ritardato: list[tuple[str, int]] = field(default_factory=list)  # Mana Drain: (chi, quanto) alla sua prossima fase principale
     rng: random.Random = field(default_factory=random.Random, repr=False)
 
     @property
@@ -238,13 +242,21 @@ class Partita:
                     return g, c
         return None
 
-    def risolvi_bersaglio(self, rif: str) -> Giocatore | Carta | None:
-        """Da "giocatore:<nome>" o "carta:<id>" all'oggetto, se è ancora un bersaglio esistente."""
+    def risolvi_bersaglio(self, rif: str):
+        """Da un riferimento all'oggetto, se esiste ancora: giocatore, carta in campo, magia in pila (OggettoPila),
+        carta in un cimitero."""
         tipo, _, valore = rif.partition(":")
         if tipo == "giocatore":
             return next((g for g in self.giocatori if g.nome == valore), None)
+        if tipo == "pila":
+            return next((o for o in self.pila if o.id == valore), None)
+        if tipo == "cimitero":
+            return next((c for g in self.giocatori for c in g[Zona.CIMITERO] if c.id == valore), None)
         trovato = self.trova_in_campo(valore)
         return trovato[1] if trovato else None
+
+    def proprietario_cimitero(self, carta: Carta) -> Giocatore | None:
+        return next((g for g in self.giocatori if carta in g[Zona.CIMITERO]), None)
 
 
 def nuova_partita(mazzi: dict[str, list[Carta]], mano_iniziale: int = 7, seed: int | None = None,

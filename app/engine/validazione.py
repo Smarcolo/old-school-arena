@@ -5,7 +5,15 @@ from app.engine.stato import Carta, Fase, Partita
 from app.engine.zone import Zona
 
 FASI_PRINCIPALI = {Fase.PRINCIPALE_1, Fase.PRINCIPALE_2}
-NOMI_BERSAGLI = {"qualsiasi": "una creatura o un giocatore", "creatura": "una creatura", "giocatore": "un giocatore"}
+
+
+class _NomiBersagli(dict):
+    def __missing__(self, tipo):
+        from app.engine.effetti import nome_tipo
+        return nome_tipo(tipo)
+
+
+NOMI_BERSAGLI = _NomiBersagli()
 
 
 class AzioneIllegale(Exception):
@@ -99,7 +107,8 @@ def tipo_bersaglio(carta: Carta) -> str | None:
     return effetto.bersaglio if effetto else None
 
 
-def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta, bersagli: list[str] | None = None) -> str | None:
+def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta, bersagli: list[str] | None = None,
+                 x: int = 0) -> str | None:
     g = partita.giocatore(nome_giocatore)
     if partita.combattimento and partita.combattimento.attesa_bloccanti:
         return "prima vanno dichiarati i bloccanti"
@@ -124,9 +133,12 @@ def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta, bersagli: 
             return _motivo_bersaglio(partita, bersagli[0], carta, f"bersaglio non valido per {carta.nome}: serve {NOMI_BERSAGLI[tipo]}")
         if not tipo and bersagli:
             return f"{carta.nome} non ha bersagli"
-    costo = mana.analizza_costo(carta.costo)
+    if x < 0:
+        return "X non può essere negativo"
+    costo = mana.con_x(mana.analizza_costo(carta.costo), x)
     if mana.piano_pagamento(g.riserva, fonti_di_mana(partita, nome_giocatore), costo) is None:
-        return f"non hai abbastanza mana per {carta.nome} ({carta.costo})"
+        con = f" con X={x}" if "X" in carta.costo else ""
+        return f"non hai abbastanza mana per {carta.nome} ({carta.costo}{con})"
     return None
 
 
@@ -146,6 +158,10 @@ def puo_attivare(partita: Partita, nome_giocatore: str, carta: Carta, abilita, b
         return f"{carta.nome} non è sul tuo campo di battaglia"
     if abilita.tappa and (motivo := puo_tappare(partita, nome_giocatore, carta)):
         return motivo
+    if abilita.solo_con_sette and len(partita.giocatore(nome_giocatore)[Zona.MANO]) != 7:
+        return f"{carta.nome}: si attiva solo con esattamente sette carte in mano"
+    if abilita.sacrifica_tipo and not da_sacrificare(partita, nome_giocatore, carta, abilita.sacrifica_tipo):
+        return f"non hai un {'artefatto' if abilita.sacrifica_tipo == 'artefatto' else 'creatura'} da sacrificare"
     fonti = fonti_di_mana(partita, nome_giocatore, carta if abilita.tappa else None)
     if mana.piano_pagamento(partita.giocatore(nome_giocatore).riserva, fonti, mana.analizza_costo(abilita.costo_mana)) is None:
         return f"non hai abbastanza mana per l'abilità di {carta.nome} ({abilita.costo_mana})"
@@ -155,3 +171,10 @@ def puo_attivare(partita: Partita, nome_giocatore: str, carta: Carta, abilita, b
         if abilita.bersaglio and not bersaglio_legale(partita, abilita.bersaglio, bersagli[0], carta):
             return _motivo_bersaglio(partita, bersagli[0], carta, f"bersaglio non valido: serve {NOMI_BERSAGLI[abilita.bersaglio]}")
     return None
+
+
+def da_sacrificare(partita: Partita, nome_giocatore: str, fonte: Carta, tipo: str) -> list[Carta]:
+    """Permanenti che si possono sacrificare per un costo «Sacrifice an artifact / a creature»."""
+    def adatto(c: Carta) -> bool:
+        return ("Artifact" in c.tipo) if tipo == "artefatto" else c.is_creatura
+    return [c for c in partita.giocatore(nome_giocatore)[Zona.CAMPO] if adatto(c)]

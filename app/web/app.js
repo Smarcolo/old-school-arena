@@ -127,6 +127,11 @@ function disegnaBarraCombattimento() {
       : [el("span", { textContent: m.fatti ? `Mano iniziale (mulligan fatti: ${m.fatti}).` : "Mano iniziale: la tieni?" }),
          bottone("Tengo", () => invia("tengo")),
          bottone("Mulligan", () => invia("mulligan"))]));
+  } else if (partita.richiesta === "scelta" && partita.scelta.tipo === "cerca") {
+    const sc = partita.scelta;
+    const scelta = el("select", {}, ...sc.carte.map((c) => el("option", { value: c.id, textContent: c.nome })));
+    barra.replaceChildren(el("span", { textContent: `${sc.fonte}: scegli una carta dal grimorio.` }), scelta,
+      bottone("Prendi", () => invia(`scelgo ${scelta.value}`)));
   } else if (partita.richiesta === "scelta" && partita.scelta.tipo === "danni") {
     const sc = partita.scelta;
     barra.replaceChildren(
@@ -155,19 +160,27 @@ function disegnaBarraCombattimento() {
   }
 }
 
+function chiediX(c) {
+  if (!c.x) return "";
+  const x = prompt(`${c.nome}: quanto vale X?`, "1");
+  return x === null ? null : ` x=${parseInt(x, 10) || 0}`;
+}
+
 function suMano(c) {
   if (partita.richiesta === "mulligan") {
     if (!partita.mulligan.tenuta) return;
     inFondoScelte.has(c.id) ? inFondoScelte.delete(c.id) : inFondoScelte.add(c.id);
     return disegna();
   }
+  const x = chiediX(c);
+  if (x === null) return;
   if (c.bersaglio) {
-    magiaInAttesa = `gioca ${c.nome}`;
+    magiaInAttesa = `gioca ${c.nome}${x}`;
     document.body.classList.add("mirino");
     avvisa(`Scegli il bersaglio di ${c.nome}: clicca una creatura o il nome di un giocatore (Esc per annullare).`);
     return;
   }
-  invia(`gioca ${c.nome}`);
+  invia(`gioca ${c.nome}${x}`);
 }
 
 function disegnaGiocatore(sezione, g, umano) {
@@ -181,6 +194,11 @@ function disegnaGiocatore(sezione, g, umano) {
   const fila = (carte, azione) => el("div", { className: "fila" }, ...carte.map((c) => cartaEl(c, azione)));
   sezione.replaceChildren(titolo, etichetta("Campo"), fila(g.campo, (c) => suCampo(c, umano)));
   if (umano) sezione.append(etichetta("Mano"), fila(g.mano, suMano));
+  if (g.cimitero.length) {
+    const cim = fila(g.cimitero, (c) => magiaInAttesa && scegliBersaglio(c.id));
+    cim.classList.add("cimitero");
+    sezione.append(etichetta(`Cimitero (${g.cimitero.length})`), cim);
+  }
 }
 
 function disegna() {
@@ -193,7 +211,8 @@ function disegna() {
   disegnaGiocatore($("tu"), partita.giocatori[0], true);
   $("pila").replaceChildren(...(partita.pila.length
     ? partita.pila.slice().reverse().map((o) => el("span", { className: "carta",
-        textContent: `${o.nome}${o.bersaglio ? " → " + o.bersaglio : ""} (${o.controllore})` }))
+        textContent: `${o.nome}${o.x ? " X=" + o.x : ""}${o.bersaglio ? " → " + o.bersaglio : ""} (${o.controllore})`,
+        onclick: () => magiaInAttesa && scegliBersaglio(o.id) }))
     : [el("span", { textContent: "vuota" })]));
   disegnaBarraCombattimento();
   $("eventi").replaceChildren(...partita.eventi.slice().reverse().map((t) => el("li", { textContent: t })));

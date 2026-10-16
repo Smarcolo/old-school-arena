@@ -29,10 +29,17 @@ def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
         for c in g[Zona.CAMPO]:
             if c.id == t or c.nome.lower() == t:
                 return f"carta:{c.id}"
+    # magie in pila (prima quelle dell'avversario, dalla cima), poi il tuo cimitero (Regrowth)
+    for o in sorted(reversed(partita.pila), key=lambda o: o.controllore == giocatore):
+        if o.id == t or o.carta.nome.lower() == t:
+            return f"pila:{o.id}"
+    for c in partita.giocatore(giocatore)[Zona.CIMITERO]:
+        if c.id == t or c.nome.lower() == t:
+            return f"cimitero:{c.id}"
     return None
 
 
-AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> su <bersaglio>, tappa <carta> [per <colore>], "
+AIUTO = ("Comandi: gioca <carta> (terre e magie), gioca <carta> [x=N] su <bersaglio>, scelgo <carta>, tappa <carta> [per <colore>], "
          "attiva <carta> [su <bersaglio>], passa, fine turno, "
          "tengo / mulligan / in fondo <carte>, concedo, danni [n] su <creatura> (banding), attacca con <carte>|tutto (con «+» in banda), non attacco, paga / non pago, blocca <attaccante> con <bloccante>; ..., nessun blocco, "
          "mano, mana, stato, pesca [n], vita <+/-n>, giudice <domanda>")
@@ -146,7 +153,7 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
                     if rif is None:
                         return f"Non trovo il bersaglio «{cmd.bersaglio}»."
                     bersagli = [rif]
-                azioni.lancia(partita, giocatore, carta, bersagli)
+                azioni.lancia(partita, giocatore, carta, bersagli, cmd.x)
                 return f"Hai lanciato {carta.nome}: è in pila. Scrivi «passa» per farla risolvere."
             case "attiva":
                 nome, indice = cmd.argomento, 0
@@ -166,7 +173,11 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
                     if rif is None:
                         return f"Non trovo il bersaglio «{cmd.bersaglio}»."
                     bersagli = [rif]
-                azioni.attiva(partita, giocatore, carta, abilita[indice], bersagli)
+                sacrificio = None
+                if cmd.bersaglio and abilita[indice].sacrifica_tipo and not abilita[indice].bersaglio:
+                    sacrificio = azioni.trova_in_zona(partita, giocatore, Zona.CAMPO, cmd.bersaglio)
+                    bersagli = []
+                azioni.attiva(partita, giocatore, carta, abilita[indice], bersagli, sacrificio)
                 return f"Hai attivato l'abilità di {carta.nome}: è in pila."
             case "tappa":
                 nome, colore = cmd.argomento, None
@@ -216,6 +227,16 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
                     usate.add(c.id)
                 mulligan.metti_in_fondo(partita, giocatore, scelte)
                 return "Carte messe in fondo al mazzo."
+            case "scelgo":
+                scelta = partita.scelta
+                if scelta is None or scelta.tipo != "cerca":
+                    return "Ora non c'è da scegliere una carta."
+                t = cmd.argomento.strip().lower()
+                id_ = next((i for i, n in scelta.dati["carte"].items() if i == t or n.lower() == t), None)
+                if id_ is None:
+                    return f"«{cmd.argomento}» non è nel tuo grimorio."
+                azioni.rispondi_cerca(partita, giocatore, id_)
+                return "Carta presa e grimorio rimescolato."
             case "danni":
                 return _dividi_danni(partita, giocatore, cmd.argomento)
             case "paga" | "nonpago":

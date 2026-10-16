@@ -5,7 +5,7 @@ from app.cards.scryfall import converti
 
 def test_cerca_carta(conn):
     assert database.cerca(conn, "grizzly bears").forza == 2
-    assert database.cerca(conn, "Black Lotus") is None
+    assert database.cerca(conn, "Carta Inesistente") is None
 
 
 def test_mazzo_da_lista(conn):

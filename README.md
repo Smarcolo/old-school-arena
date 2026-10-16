@@ -45,6 +45,8 @@ Prima di «Nuova partita» scegli il tuo mazzo e quello dell'avversaria.
   (Drudge Skeletons, Uthden Troll, Will-o'-the-Wisp): lo scudo vale fino a fine turno e compare sulla carta.
 - Abilità innescate comuni: Juzám Djinn, Serendib Efreet, Black Vise, Howling Mine, Ivory Tower, Ball Lightning,
   Force of Nature (con la scelta «paga o subisci»), effetti quando una creatura entra in campo.
+- Incantesimi: aure sulle creature (Holy Strength, Unholy Strength, Giant Strength, Firebreathing, Flight) e
+  globali (Crusade, Bad Moon). Si lanciano come le magie con bersaglio: clic sull'aura, poi sulla creatura.
 - Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo,
   protezione da un colore (White Knight, Black Knight).
 - Editor dei mazzi con analisi e mazzi salvati.

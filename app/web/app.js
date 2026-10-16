@@ -49,6 +49,7 @@ function cartaEl(c, azione) {
   const e = el("span", { className: classi.filter(Boolean).join(" ") }, c.nome);
   e.dataset.carta = c.nome;
   if (c.forza != null) e.append(el("span", { className: "pt", textContent: `${c.forza}/${c.costituzione - c.danni}` }));
+  if (c.incanta) e.append(el("span", { className: "abilita", textContent: `incanta ${c.incanta}` }));
   if (c.scudi) e.append(el("span", { className: "abilita scudo", textContent: c.scudi > 1 ? `scudo ×${c.scudi}` : "scudo" }));
   if (c.abilita && c.abilita.length) e.append(el("span", { className: "abilita", textContent: c.abilita.join(", ") }));
   e.title = [c.tipo, c.costo, ...(c.attivabili || []).map((a) => "clic: " + a.testo), c.danni ? `${c.danni} danni` : "", c.appena_entrata ? "appena entrata" : ""]

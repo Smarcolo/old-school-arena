@@ -34,5 +34,12 @@
   {"nome": "Uthden Troll", "tipo": "Creature — Troll", "costo": "{2}{R}", "forza": 2, "costituzione": 2, "testo": "{R}: Regenerate Uthden Troll."},
   {"nome": "Will-o'-the-Wisp", "tipo": "Creature — Spirit", "costo": "{B}", "forza": 0, "costituzione": 1, "testo": "Flying\n{B}: Regenerate Will-o'-the-Wisp."},
   {"nome": "White Knight", "tipo": "Creature — Human Knight", "costo": "{W}{W}", "forza": 2, "costituzione": 2, "testo": "First strike, protection from black"},
-  {"nome": "Black Knight", "tipo": "Creature — Human Knight", "costo": "{B}{B}", "forza": 2, "costituzione": 2, "testo": "First strike, protection from white"}
+  {"nome": "Black Knight", "tipo": "Creature — Human Knight", "costo": "{B}{B}", "forza": 2, "costituzione": 2, "testo": "First strike, protection from white"},
+  {"nome": "Holy Strength", "tipo": "Enchantment — Aura", "costo": "{W}", "testo": "Enchant creature\nEnchanted creature gets +1/+2."},
+  {"nome": "Unholy Strength", "tipo": "Enchantment — Aura", "costo": "{B}", "testo": "Enchant creature\nEnchanted creature gets +2/+1."},
+  {"nome": "Giant Strength", "tipo": "Enchantment — Aura", "costo": "{R}{R}", "testo": "Enchant creature\nEnchanted creature gets +2/+2."},
+  {"nome": "Firebreathing", "tipo": "Enchantment — Aura", "costo": "{R}", "testo": "Enchant creature\n{R}: Enchanted creature gets +1/+0 until end of turn."},
+  {"nome": "Flight", "tipo": "Enchantment — Aura", "costo": "{U}", "testo": "Enchant creature\nEnchanted creature has flying."},
+  {"nome": "Crusade", "tipo": "Enchantment", "costo": "{W}{W}", "testo": "White creatures get +1/+1."},
+  {"nome": "Bad Moon", "tipo": "Enchantment", "costo": "{1}{B}", "testo": "Black creatures get +1/+1."}
 ]

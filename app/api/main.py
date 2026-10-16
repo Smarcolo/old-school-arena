@@ -59,7 +59,12 @@ def _nome_abilita(k: str) -> str:
 
 
 def _abilita(c) -> list[str]:
-    return sorted(_nome_abilita(k) for k in parole_chiave_da_testo(c.testo))
+    return sorted(_nome_abilita(k) for k in c.parole())
+
+
+def _nome_incantata(p: Partita, c) -> str | None:
+    trovato = p.trova_in_campo(c.attaccata_a) if c.attaccata_a else None
+    return trovato[1].nome if trovato else None
 
 
 def vista(p: Partita) -> dict:
@@ -68,7 +73,8 @@ def vista(p: Partita) -> dict:
         return [{"id": c.id, "nome": c.nome, "tipo": c.tipo, "costo": c.costo, "tappata": c.tappata,
                  "forza": c.forza_attuale if c.is_creatura else None,
                  "costituzione": c.costituzione_attuale if c.is_creatura else None,
-                 "danni": c.danni, "bersaglio": tipo_bersaglio(c), "abilita": _abilita(c), "scudi": c.scudi_rigenerazione,
+                 "danni": c.danni, "bersaglio": tipo_bersaglio(c),
+                 "incanta": _nome_incantata(p, c), "abilita": _abilita(c), "scudi": c.scudi_rigenerazione,
                  "attivabili": [{"testo": a.testo, "bersaglio": a.bersaglio} for a in analizza_abilita(c)],
                  "appena_entrata": p.ha_debolezza_da_evocazione(c)} for c in g[z]]
 

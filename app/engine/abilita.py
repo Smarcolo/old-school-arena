@@ -30,6 +30,7 @@ class AbilitaAttivata:
     costituzione: int = 0
     danni: int = 0
     bersaglio: str | None = None
+    su_incantata: bool = False  # abilità di un'aura che pompa la creatura incantata (es. Firebreathing)
 
 
 def _di_se_stessa(nome_nel_testo: str, carta: Carta) -> bool:
@@ -49,6 +50,8 @@ def analizza_abilita(carta: Carta) -> list[AbilitaAttivata]:
         base = dict(indice=len(trovate), testo=riga.strip(), costo_mana=costo, tappa=tappa)
         if (p := _POMPA.match(effetto)) and _di_se_stessa(p["nome"], carta):
             trovate.append(AbilitaAttivata(**base, tipo="pompa", forza=int(p["f"]), costituzione=int(p["c"])))
+        elif p and p["nome"].lower() == "enchanted creature" and carta.is_aura:
+            trovate.append(AbilitaAttivata(**base, tipo="pompa", forza=int(p["f"]), costituzione=int(p["c"]), su_incantata=True))
         elif (r := _RIGENERA.match(effetto)) and _di_se_stessa(r["nome"], carta):
             trovate.append(AbilitaAttivata(**base, tipo="rigenera"))
         elif (d := _DANNO.match(effetto)) and _di_se_stessa(d["nome"], carta):

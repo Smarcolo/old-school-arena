@@ -84,6 +84,9 @@ def _motivo_bersaglio(partita: Partita, rif: str, fonte: Carta, altrimenti: str)
 
 
 def tipo_bersaglio(carta: Carta) -> str | None:
+    from app.engine.statici import is_aura_creatura
+    if is_aura_creatura(carta):
+        return "creatura"
     effetto = EFFETTI.get(carta.nome)
     return effetto.bersaglio if effetto else None
 
@@ -103,6 +106,8 @@ def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta, bersagli: 
             return motivo
     if not carta.is_permanente and carta.nome not in EFFETTI:
         return f"l'effetto di {carta.nome} non è ancora implementato"
+    if carta.is_aura and tipo_bersaglio(carta) is None:
+        return f"{carta.nome}: questo tipo di aura non è ancora gestito"
     if bersagli is not None:  # None = controlla solo se è lanciabile, senza ancora il bersaglio
         tipo = tipo_bersaglio(carta)
         if tipo and len(bersagli) != 1:

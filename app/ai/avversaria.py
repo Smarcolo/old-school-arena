@@ -124,6 +124,12 @@ def bersaglio_bolt(partita: Partita, nome: str, bolt: Carta | None = None) -> st
     return None
 
 
+def bersaglio_aura(partita: Partita, nome: str, aura: Carta) -> Carta | None:
+    """Le aure gestite sono tutte di potenziamento: vanno sulla propria creatura più forte che possono incantare."""
+    candidate = [c for c in partita.giocatore(nome)[Zona.CAMPO] if c.is_creatura and not c.protetta_da(aura)]
+    return max(candidate, key=lambda c: (c.forza_attuale, c.costituzione_attuale)) if candidate else None
+
+
 def decidi_scelta(partita: Partita, nome: str) -> None:
     """«Paga o subisci»: paga se può."""
     azioni.rispondi_scelta(partita, nome, azioni.puo_pagare_scelta(partita))
@@ -236,8 +242,14 @@ def agisci(partita: Partita, nome: str) -> None:
             azioni.gioca_terra(partita, nome, terra)
             return
         lanciabili = [c for c in mano if c.is_creatura and puo_lanciare(partita, nome, c) is None]
-        if not lanciabili:  # poi gli altri permanenti (artefatti, incantesimi)
-            lanciabili = [c for c in mano if c.is_permanente and not c.is_terra and puo_lanciare(partita, nome, c) is None]
+        if not lanciabili:  # poi le aure, sulla sua creatura migliore
+            for aura in (c for c in mano if c.is_aura and puo_lanciare(partita, nome, c) is None):
+                if bersaglio := bersaglio_aura(partita, nome, aura):
+                    azioni.lancia(partita, nome, aura, [f"carta:{bersaglio.id}"])
+                    return
+        if not lanciabili:  # poi gli altri permanenti (artefatti, incantesimi globali)
+            lanciabili = [c for c in mano if c.is_permanente and not c.is_terra and not c.is_aura
+                          and puo_lanciare(partita, nome, c) is None]
         if lanciabili:
             piu_cara = max(lanciabili, key=lambda c: sum(mana.analizza_costo(c.costo).values()))
             azioni.lancia(partita, nome, piu_cara)
@@ -251,7 +263,8 @@ def agisci(partita: Partita, nome: str) -> None:
     if (comb and comb.bloccanti_dichiarati and not comb.danni_inflitti and solo_miei_pompaggi
             and partita.giocatore_attivo.nome == nome):
         for fonte, ab in _abilita_pronte(partita, nome, "pompa"):
-            if fonte.id in comb.attaccanti and fonte.id not in comb.blocchi and ab.forza > 0:
+            creatura = azioni.creatura_pompata(partita, fonte, ab)
+            if creatura and creatura.id in comb.attaccanti and creatura.id not in comb.blocchi and ab.forza > 0:
                 azioni.attiva(partita, nome, fonte, ab)
                 return
 

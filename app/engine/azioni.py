@@ -1,6 +1,6 @@
 """Azioni che modificano lo stato. Validano, applicano e scrivono sempre nel registro eventi."""
 from app.engine import carte_implementate  # noqa: F401  registra gli effetti delle carte
-from app.engine import mana
+from app.engine import mana, statici
 from app.engine.effetti import EFFETTI
 from app.engine.eventi import Evento
 from app.engine.inneschi import analizza_inneschi
@@ -50,6 +50,7 @@ def _entra_in_campo(partita: Partita, giocatore: str, carta: Carta) -> None:
     carta.entrata_nel_turno = partita.turno
     carta.tappata = False
     partita.giocatore(giocatore)[Zona.CAMPO].append(carta)
+    statici.aggiorna(partita)
     for innesco in analizza_inneschi(carta):
         if innesco.momento == "entra":
             _metti_innesco(partita, giocatore, carta, innesco)
@@ -213,18 +214,29 @@ def attiva(partita: Partita, giocatore: str, carta: Carta, abilita, bersagli: li
     _log(partita, giocatore, "attiva", f"{giocatore} attiva l'abilità di {carta.nome}{su}", carta=carta.id)
 
 
+def creatura_pompata(partita: Partita, fonte: Carta, ab) -> Carta | None:
+    """La creatura che riceve un pompaggio: la fonte stessa o, per un'aura, la creatura incantata."""
+    if not partita.trova_in_campo(fonte.id):
+        return None
+    if getattr(ab, "su_incantata", False):
+        trovato = partita.trova_in_campo(fonte.attaccata_a) if fonte.attaccata_a else None
+        return trovato[1] if trovato else None
+    return fonte
+
+
 def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
     ab, fonte, chi = oggetto.abilita, oggetto.carta, oggetto.controllore
     if ab.bersaglio and not bersaglio_legale(partita, ab.bersaglio, oggetto.bersagli[0], fonte):
         _log(partita, chi, "neutralizzata", f"L'abilità di {fonte.nome} non ha più un bersaglio valido")
         return
     if ab.tipo == "pompa":
-        if not partita.trova_in_campo(fonte.id):
-            _log(partita, chi, "neutralizzata", f"{fonte.nome} non è più in campo: l'abilità non ha effetto")
+        creatura = creatura_pompata(partita, fonte, ab)
+        if creatura is None:
+            _log(partita, chi, "neutralizzata", f"{fonte.nome}: la creatura non è più in campo, l'abilità non ha effetto")
             return
-        fonte.bonus_forza += ab.forza
-        fonte.bonus_costituzione += ab.costituzione
-        _log(partita, chi, "risolve", f"{fonte.nome} prende {ab.forza:+d}/{ab.costituzione:+d} fino a fine turno")
+        creatura.bonus_forza += ab.forza
+        creatura.bonus_costituzione += ab.costituzione
+        _log(partita, chi, "risolve", f"{creatura.nome} prende {ab.forza:+d}/{ab.costituzione:+d} fino a fine turno")
     elif ab.tipo == "danno":
         infliggi_danno(partita, fonte, oggetto.bersagli[0], ab.danni)
     elif ab.tipo == "rigenera":
@@ -247,6 +259,15 @@ def risolvi_pila(partita: Partita) -> None:
         _risolvi_innesco(partita, oggetto)
     elif oggetto.abilita:
         _risolvi_abilita(partita, oggetto)
+    elif carta.is_aura:
+        if not bersaglio_legale(partita, "creatura", oggetto.bersagli[0], carta):
+            _log(partita, chi, "neutralizzata", f"{carta.nome} non ha più una creatura valida e va al cimitero")
+            partita.giocatore(carta.proprietario or chi)[Zona.CIMITERO].append(carta)
+        else:
+            carta.attaccata_a = oggetto.bersagli[0].removeprefix("carta:")
+            _log(partita, chi, "risolve", f"{carta.nome} incanta {descrivi_bersaglio(partita, oggetto.bersagli[0])}",
+                 carta=carta.id)
+            _entra_in_campo(partita, chi, carta)
     elif carta.is_permanente:
         _log(partita, chi, "risolve", f"{carta.nome} si risolve ed entra in campo", carta=carta.id)
         _entra_in_campo(partita, chi, carta)
@@ -302,18 +323,40 @@ def distruggi(partita: Partita, carta: Carta, motivo: str = "", rigenerabile: bo
     controllore[Zona.CAMPO].remove(carta)
     carta.azzera_stato_in_campo()
     carta.tappata = False
+    carta.attaccata_a = None
     partita.giocatore(carta.proprietario or controllore.nome)[Zona.CIMITERO].append(carta)
     _log(partita, controllore.nome, "muore", f"{carta.nome} va al cimitero {motivo}".strip(), carta=carta.id)
 
 
 def azioni_di_stato(partita: Partita) -> None:
-    """Controlli automatici: creature con danni letali o costituzione 0 muoiono."""
+    """Controlli automatici, ripetuti finché qualcosa cambia: aure senza creatura (o su una creatura protetta dal
+    loro colore) al cimitero, creature con danni letali o costituzione 0 al cimitero. Ricalcola gli effetti statici."""
+    for _ in range(20):
+        statici.aggiorna(partita)
+        if not _un_giro_di_controlli(partita):
+            return
+
+
+def _un_giro_di_controlli(partita: Partita) -> bool:
+    cambiato = False
+    for g in partita.giocatori:
+        for c in list(g[Zona.CAMPO]):
+            if c.is_aura:
+                trovato = partita.trova_in_campo(c.attaccata_a) if c.attaccata_a else None
+                if trovato is None or trovato[1].protetta_da(c):
+                    distruggi(partita, c, "(non incanta più una creatura valida)", rigenerabile=False)
+                    cambiato = True
+    statici.aggiorna(partita)
     for g in partita.giocatori:
         for c in list(g[Zona.CAMPO]):
             if c.is_creatura and c.costituzione_attuale <= 0:
                 distruggi(partita, c, "(costituzione 0)", rigenerabile=False)
+                cambiato = True
             elif c.is_creatura and c.danni >= c.costituzione_attuale:
+                prima = c.scudi_rigenerazione
                 distruggi(partita, c, "(danni letali)")
+                cambiato = cambiato or prima == 0 or c.danni == 0
+    return cambiato
 
 
 def passa_priorita(partita: Partita, giocatore: str) -> None:

@@ -51,6 +51,11 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Rigenerazione («{B}: Regenerate X.»): l'abilità dà uno scudo (`Carta.scudi_rigenerazione`) fino a fine turno.
   `azioni.distruggi` lo consuma: niente danni, tappata, fuori dal combattimento (un attaccante resta bloccato).
   Sacrificio e costituzione 0 usano `rigenerabile=False`.
+- Incantesimi (`engine/statici.py`): aure «Enchant creature» con «Enchanted creature gets +X/+Y [and has ...]» o
+  «has <parole chiave>», e globali «<Colore> creatures get +X/+Y.». Le aure si lanciano bersagliando una creatura
+  (`Carta.attaccata_a`); i bonus statici vanno in `statico_forza/statico_costituzione/parole_extra`, ricalcolati
+  da `statici.aggiorna` dentro `azioni_di_stato` (che ora ripete i controlli finché qualcosa cambia).
+  Abilità di un'aura su «Enchanted creature» (Firebreathing): `AbilitaAttivata.su_incantata`.
 - Abilità innescate (`engine/inneschi.py`): mantenimento / pescata / fase finale / entrata in campo, con le frasi
   elencate nel docstring. `azioni.metti_inneschi` le mette in pila a inizio fase (prima quelle dell'attivo).
   «that player» = chi era di turno quando è scattata (`OggettoPila.giocatore_del_turno`).
@@ -84,4 +89,4 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
    Fatto anche: abilità attivate semplici (pompaggio, danno) e innescate comuni.
    Fatto anche: rigenerazione, protezione da un colore. Da fare: banding, protezione da artefatti/altro.
 6. Fatto: immagini delle carte con anteprima al passaggio del mouse.
-7. Da fare: banding; incantesimi aura; testi ufficiali per il giudice.
+7. Fatto: aure e incantesimi globali. Da fare: banding; testi ufficiali per il giudice.

@@ -62,17 +62,29 @@ class Carta:
     bonus_forza: int = 0  # modifiche "fino alla fine del turno"
     bonus_costituzione: int = 0
     scudi_rigenerazione: int = 0  # fino a fine turno
+    attaccata_a: str | None = None  # per le aure: id della creatura incantata
+    statico_forza: int = 0  # da aure e incantesimi globali, ricalcolati da statici.aggiorna
+    statico_costituzione: int = 0
+    parole_extra: set[str] = field(default_factory=set)
 
     @property
     def forza_attuale(self) -> int:
-        return (self.forza or 0) + self.bonus_forza
+        return (self.forza or 0) + self.bonus_forza + self.statico_forza
 
     @property
     def costituzione_attuale(self) -> int:
-        return (self.costituzione or 0) + self.bonus_costituzione
+        return (self.costituzione or 0) + self.bonus_costituzione + self.statico_costituzione
+
+    @property
+    def is_aura(self) -> bool:
+        return "Aura" in self.tipo
+
+    def parole(self) -> set[str]:
+        """Parole chiave dal testo più quelle date da aure e incantesimi."""
+        return parole_chiave_da_testo(self.testo) | self.parole_extra
 
     def ha(self, parola_chiave: str) -> bool:
-        return parola_chiave in parole_chiave_da_testo(self.testo)
+        return parola_chiave in self.parole()
 
     @property
     def colori(self) -> set[str]:
@@ -81,7 +93,7 @@ class Carta:
 
     @property
     def protezioni(self) -> set[str]:
-        return {COLORI_INGLESE[m.group(1)] for p in parole_chiave_da_testo(self.testo) if (m := _PROTEZIONE.match(p))}
+        return {COLORI_INGLESE[m.group(1)] for p in self.parole() if (m := _PROTEZIONE.match(p))}
 
     def protetta_da(self, fonte: "Carta | None") -> bool:
         return fonte is not None and bool(self.protezioni & fonte.colori)
@@ -89,7 +101,7 @@ class Carta:
     @property
     def passaterre(self) -> list[str]:
         """Tipi di terra della passaterre ("Forest" per forestwalk)."""
-        return [p[:-4].capitalize() for p in parole_chiave_da_testo(self.testo) if _PASSATERRE.match(p)]
+        return [p[:-4].capitalize() for p in self.parole() if _PASSATERRE.match(p)]
 
     def azzera_stato_in_campo(self) -> None:
         """Quando lascia il campo o a fine turno: niente danni né bonus."""

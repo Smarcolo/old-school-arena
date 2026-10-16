@@ -123,11 +123,14 @@ def analizza(conn: sqlite3.Connection, mazzo: dict[str, int], sideboard: dict[st
     }
 
 
-def salva(conn: sqlite3.Connection, nome: str, mazzo: dict[str, int], sideboard: dict[str, int]) -> None:
+def salva(conn: sqlite3.Connection, nome: str, mazzo: dict[str, int], sideboard: dict[str, int],
+          origine: str = "", info: dict | None = None) -> None:
     conn.execute(
-        "INSERT INTO mazzi (nome, mazzo, sideboard) VALUES (?, ?, ?) ON CONFLICT(nome) DO UPDATE SET "
-        "mazzo=excluded.mazzo, sideboard=excluded.sideboard, aggiornato=CURRENT_TIMESTAMP",
-        (nome, json.dumps(mazzo, ensure_ascii=False), json.dumps(sideboard, ensure_ascii=False)),
+        "INSERT INTO mazzi (nome, mazzo, sideboard, origine, info) VALUES (?, ?, ?, ?, ?) ON CONFLICT(nome) DO UPDATE "
+        "SET mazzo=excluded.mazzo, sideboard=excluded.sideboard, origine=excluded.origine, info=excluded.info, "
+        "aggiornato=CURRENT_TIMESTAMP",
+        (nome, json.dumps(mazzo, ensure_ascii=False), json.dumps(sideboard, ensure_ascii=False), origine,
+         json.dumps(info or {}, ensure_ascii=False)),
     )
     conn.commit()
 
@@ -137,9 +140,31 @@ def leggi(conn: sqlite3.Connection, nome: str) -> tuple[dict[str, int], dict[str
     return (json.loads(r["mazzo"]), json.loads(r["sideboard"])) if r else None
 
 
-def elenco(conn: sqlite3.Connection) -> list[dict]:
-    righe = conn.execute("SELECT nome, mazzo, aggiornato FROM mazzi ORDER BY nome").fetchall()
-    return [{"nome": r["nome"], "totale": sum(json.loads(r["mazzo"]).values()), "aggiornato": r["aggiornato"]} for r in righe]
+def elenco(conn: sqlite3.Connection, origine: str | None = None) -> list[dict]:
+    righe = conn.execute("SELECT nome, mazzo, aggiornato, origine, info FROM mazzi ORDER BY origine, nome").fetchall()
+    return [{"nome": r["nome"], "totale": sum(json.loads(r["mazzo"]).values()), "aggiornato": r["aggiornato"],
+             "origine": r["origine"], "info": json.loads(r["info"])}
+            for r in righe if origine is None or r["origine"] == origine]
+
+
+def supporto(analisi: dict) -> float:
+    """Quota delle carte (non terre) che il motore sa giocare per intero: 1.0 = tutte."""
+    non_capite = sum(1 for a in analisi["avvisi"] if ":" in a and not a.startswith(("Liste", "Ci sono")))
+    distinte = max(1, len(analisi["mazzo"]))
+    return 1 - non_capite / distinte
+
+
+def scegli_mazzo_avversaria(conn: sqlite3.Connection, rng, minimo: float = 0.8) -> str | None:
+    """Un mazzo a caso tra quelli da TCDecks giocabili, preferendo quelli che il motore gioca meglio."""
+    candidati = []
+    for voce in elenco(conn, "tcdecks"):
+        analisi = analizza(conn, *leggi(conn, voce["nome"]))
+        if analisi["giocabile"]:
+            candidati.append((supporto(analisi), voce["nome"]))
+    if not candidati:
+        return None
+    buoni = [n for s, n in candidati if s >= minimo]
+    return rng.choice(buoni) if buoni else max(candidati)[1]
 
 
 def elimina(conn: sqlite3.Connection, nome: str) -> bool:

@@ -43,9 +43,32 @@ async function analizza() {
 
 async function caricaElenco() {
   const mazzi = await api("/api/mazzi");
-  $("elenco").replaceChildren(...mazzi.map((m) => el("li", {},
-    el("button", { type: "button", className: "link", textContent: `${m.nome} (${m.totale})`, onclick: () => apri(m.nome) }))));
+  const voce = (m) => el("li", {}, el("button", { type: "button", className: "link", onclick: () => apri(m.nome),
+    textContent: m.origine === "tcdecks" ? `${m.info.posizione}° ${m.nome.split(" · ")[0].replace(/^TC \d+° /, "")} — ${m.info.torneo}` : `${m.nome} (${m.totale})` }));
+  $("elenco").replaceChildren(...mazzi.filter((m) => m.origine !== "tcdecks").map(voce));
+  $("elenco-tc").replaceChildren(...mazzi.filter((m) => m.origine === "tcdecks").map(voce));
 }
+
+async function operazioneLunga(bottone, url, testo, resoconto) {
+  bottone.disabled = true;
+  avvisa(testo);
+  try {
+    avvisa(resoconto(await api(url, { method: "POST" })));
+    caricaElenco();
+  } catch (e) {
+    avvisa("Errore: " + e.message);
+  } finally {
+    bottone.disabled = false;
+  }
+}
+
+$("importa-carte").onclick = () => operazioneLunga($("importa-carte"), "/api/carte/importa",
+  "Scarico le carte da Scryfall…", (r) => `Importate ${r.importate} carte dai set ammessi.`);
+$("aggiorna-tc").onclick = () => operazioneLunga($("aggiorna-tc"), "/api/tcdecks/aggiorna",
+  "Scarico la top 8 degli ultimi tornei da TCDecks (circa un minuto)…", (r) =>
+    `Salvati ${r.salvati.length} mazzi.` +
+    (r.carte_sconosciute.length ? ` ${r.carte_sconosciute.length} carte non sono nel database: premi «Importa carte da Scryfall» e poi aggiorna di nuovo.` : "") +
+    (r.errori.length ? ` Problemi: ${r.errori.slice(0, 3).join("; ")}` : ""));
 
 async function apri(nome) {
   const m = await api(`/api/mazzi/${encodeURIComponent(nome)}`);
@@ -120,3 +143,16 @@ $("nuovo").onclick = () => {
 
 caricaElenco();
 $("cerca").dispatchEvent(new Event("input"));
+
+$("url-tc").addEventListener("keydown", async (e) => {
+  if (e.key !== "Enter" || !$("url-tc").value.trim()) return;
+  try {
+    const r = await api("/api/tcdecks/mazzo", { method: "POST", body: JSON.stringify({ url: $("url-tc").value.trim() }) });
+    avvisa(r.salvati.length ? `Salvato «${r.salvati[0]}».` + (r.carte_sconosciute.length ? ` Carte mancanti: ${r.carte_sconosciute.join(", ")}.` : "")
+      : `Non importato: ${r.errori.join("; ")}`);
+    $("url-tc").value = "";
+    caricaElenco();
+  } catch (err) {
+    avvisa("Errore: " + err.message);
+  }
+});

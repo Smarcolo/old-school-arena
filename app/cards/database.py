@@ -33,6 +33,10 @@ def connetti(percorso: Path | str = DB_CARTE) -> sqlite3.Connection:
     conn = sqlite3.connect(percorso, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    colonne = {r[1] for r in conn.execute("PRAGMA table_info(mazzi)")}
+    if "origine" not in colonne:  # database creati prima dei mazzi da TCDecks
+        conn.execute("ALTER TABLE mazzi ADD COLUMN origine TEXT NOT NULL DEFAULT ''")
+        conn.execute("ALTER TABLE mazzi ADD COLUMN info TEXT NOT NULL DEFAULT '{}'")
     return conn
 
 

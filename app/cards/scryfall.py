@@ -1,29 +1,33 @@
-"""Import delle carte 93/94 dai bulk data di Scryfall (https://scryfall.com/docs/api/bulk-data).
+"""Import delle carte dei set ammessi dalla ricerca di Scryfall (https://scryfall.com/docs/api/cards/search).
 
-Uso:  python -m app.cards.scryfall
-Scarica 'default_cards' (pesante, ~centinaia di MB), tiene solo i set ammessi e salva nel DB locale.
+Uso:  python -m app.cards.scryfall      (oppure il pulsante nell'editor dei mazzi)
+Una ricerca per i soli set ammessi, con tutte le stampe: una ventina di pagine, con una pausa tra le richieste
+come chiede Scryfall. Le carte importate sostituiscono quelle di prova con lo stesso nome.
 """
-import json
 import sys
+import time
 
 import httpx
 
 from app.cards import database
 from app.cards.regole_swedish import carica_regole
-from app.config import CARTELLA_BULK
 
 HEADERS = {"User-Agent": "OldSchoolArena/0.1", "Accept": "application/json"}
+URL = "https://api.scryfall.com/cards/search"
 
 
-def scarica_bulk() -> list[dict]:
-    CARTELLA_BULK.mkdir(parents=True, exist_ok=True)
-    destinazione = CARTELLA_BULK / "default_cards.json"
-    if not destinazione.exists():
-        indice = httpx.get("https://api.scryfall.com/bulk-data/default-cards", headers=HEADERS, timeout=30).json()
-        with httpx.stream("GET", indice["download_uri"], headers=HEADERS, timeout=None) as r, open(destinazione, "wb") as f:
-            for blocco in r.iter_bytes():
-                f.write(blocco)
-    return json.loads(destinazione.read_text(encoding="utf-8"))
+def scarica(set_ammessi: list[str], get=httpx.get, pausa: float = 0.1) -> list[dict]:
+    query = " or ".join(f"e:{s}" for s in set_ammessi)
+    params = {"q": f"({query})", "unique": "prints", "order": "name"}
+    url, carte = URL, []
+    while url:
+        risposta = get(url, params=params, headers=HEADERS, timeout=30)
+        risposta.raise_for_status()
+        dati = risposta.json()
+        carte.extend(dati.get("data", []))
+        url, params = (dati.get("next_page"), None) if dati.get("has_more") else (None, None)
+        time.sleep(pausa)
+    return carte
 
 
 def converti(carte_scryfall: list[dict], set_ammessi: set[str]) -> list[dict]:
@@ -52,16 +56,20 @@ def converti(carte_scryfall: list[dict], set_ammessi: set[str]) -> list[dict]:
 def _intero(valore: str | None) -> int | None:
     try:
         return int(valore) if valore is not None else None
-    except ValueError:  # es. "*" per Tarmogoyf-like
+    except ValueError:  # es. "*"
         return None
 
 
-def main() -> None:
+def importa(conn, get=httpx.get, pausa: float = 0.1) -> int:
     regole = carica_regole()
-    righe = converti(scarica_bulk(), set(regole.set_ammessi))
+    righe = converti(scarica(regole.set_ammessi, get, pausa), set(regole.set_ammessi))
+    return database.salva(conn, righe)
+
+
+def main() -> None:
     with database.connetti() as conn:
-        n = database.salva(conn, righe)
-    print(f"Importate {n} carte nei set {', '.join(regole.set_ammessi)}", file=sys.stderr)
+        n = importa(conn)
+    print(f"Importate {n} carte nei set {', '.join(carica_regole().set_ammessi)}", file=sys.stderr)
 
 
 if __name__ == "__main__":

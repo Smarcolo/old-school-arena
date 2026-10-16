@@ -281,9 +281,12 @@ async function invia(testo) {
 
 async function caricaMazzi() {
   const mazzi = await api("/api/mazzi");
-  for (const [id, predefinito] of [["mazzo", "Verde (prova)"], ["mazzo-avversaria", "Rosso (prova)"]]) {
-    $(id).replaceChildren(...mazzi.map((m) => el("option", { value: m.nome, textContent: `${m.nome} (${m.totale})`, selected: m.nome === predefinito })));
-  }
+  const opzioni = (predefinito) => mazzi.map((m) => el("option", { value: m.nome, textContent: `${m.nome} (${m.totale})`, selected: m.nome === predefinito }));
+  $("mazzo").replaceChildren(...opzioni("Verde (prova)"));
+  const tc = mazzi.filter((m) => m.origine === "tcdecks").length;
+  $("mazzo-avversaria").replaceChildren(
+    el("option", { value: "auto", textContent: tc ? `Automatico (top 8 TCDecks: ${tc})` : "Automatico (nessun mazzo TCDecks: prova)", selected: true }),
+    ...opzioni(""));
 }
 caricaMazzi();
 

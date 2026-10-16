@@ -10,6 +10,12 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 ## Struttura
 - `app/engine/` — stato della partita (`stato.py`), zone, azioni, validazione, event log. Nessuna dipendenza da API, AI o web.
 - `app/cards/` — `carte_base.json` (dati di prova scritti a mano, sovrascritti dall'import Scryfall), database SQLite delle carte, import Scryfall, regole di costruzione mazzo Swedish (`regole_swedish.json`).
+- `app/cards/tcdecks.py` — top 8 degli ultimi tornei Old School da TCDecks (format.php → deck.php?id → deck.php?id&iddeck).
+  Parser volutamente generico (link e righe «4 Nome»), verificato solo su pagine di prova: la struttura reale di
+  TCDecks non era raggiungibile dalla sessione in cui è stato scritto. Mazzi salvati con origine "tcdecks" e info
+  (torneo, posizione, giocatore, url). `mazzi.scegli_mazzo_avversaria` sceglie a caso tra i giocabili con supporto
+  del motore ≥ 80%. Riserva: import di un singolo mazzo dall'indirizzo.
+- `app/cards/scryfall.py` — import dalla ricerca Scryfall (solo set ammessi, tutte le stampe, a pagine).
 - `app/cards/mazzi.py` — mazzi salvati (tabella `mazzi`), formato testo «4 Nome carta» con riga «Sideboard»,
   analisi: regole Swedish, carte sconosciute, cosa il motore non sa ancora giocare, colori senza fonti, curva.
 - `app/cards/immagini.py` — immagini scaricate da Scryfall alla prima richiesta (`/api/immagini/{nome}`), cache in

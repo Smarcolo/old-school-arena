@@ -85,3 +85,14 @@ def test_sideboard_via_api():
     assert r["incontro"]["liste"]["mazzo"]["Giant Growth"] == 2
     p2 = client.post(f"/api/partite/{id_}/prossima").json()
     assert p2["incontro"]["numero"] == 2 and p2["incontro"]["liste"] is None
+
+
+def test_avversaria_automatica_dai_tornei():
+    from app.api.main import conn_carte
+    from app.cards import mazzi
+    mazzi.salva(conn_carte, "TC 1° Rossi · Torneo di prova", {"Mountain": 24, "Gray Ogre": 16}, {}, origine="tcdecks",
+                info={"torneo": "Torneo di prova", "posizione": 1, "giocatore": "", "url": ""})
+    p = client.post("/api/partite", json={}).json()
+    assert p["incontro"]["mazzo_avversaria"] == "TC 1° Rossi · Torneo di prova"
+    assert any("L'avversaria gioca" in e for e in p["eventi"])
+    mazzi.elimina(conn_carte, "TC 1° Rossi · Torneo di prova")

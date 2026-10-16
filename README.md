@@ -6,6 +6,14 @@ Gioca a Magic Old School 93/94 (regole Swedish) sul tuo PC contro un'avversaria 
 1. Installa Python 3.11 o superiore (spunta "Add Python to PATH").
 2. Fai doppio clic su `avvia.bat`. La prima volta installa tutto, poi apre il browser su http://127.0.0.1:8000.
 
+## Primo avvio: carte e mazzi dei tornei
+Nell'editor dei mazzi («Mazzi» in alto):
+1. «Importa carte da Scryfall»: scarica tutte le carte dei set ammessi (pochi secondi, serve internet).
+2. «Aggiorna mazzi da TCDecks»: scarica la top 8 degli ultimi 3 tornei Old School (circa un minuto).
+Da quel momento, con l'avversaria su «Automatico», ogni incontro è contro uno di quei mazzi, scelto a caso tra quelli
+che il motore sa giocare. Se l'elenco dei tornei non si legge, incolla l'indirizzo di un singolo mazzo TCDecks.
+Le carte di quei mazzi che il motore non conosce ancora le trovi segnalate nell'analisi del mazzo.
+
 ## Avvio su Mac/Linux
 ```
 python3 -m venv .venv && . .venv/bin/activate

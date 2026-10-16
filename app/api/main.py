@@ -1,4 +1,5 @@
 """API FastAPI e server del frontend statico. Avvio: uvicorn app.api.main:app"""
+import random
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -6,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.cards import database, immagini, mazzi
+from app.cards import database, immagini, mazzi, scryfall, tcdecks
 from app.cards.regole_swedish import carica_regole
 from app.engine import combattimento, mana
 from app.engine.eventi import Evento
@@ -46,9 +47,12 @@ class RichiestaComando(BaseModel):
     testo: str
 
 
+AUTOMATICO = "auto"  # l'avversaria sceglie un mazzo dalla top 8 dei tornei (TCDecks)
+
+
 class RichiestaPartita(BaseModel):
     mazzo: str = MAZZO_UMANO_PREDEFINITO
-    mazzo_avversaria: str = MAZZO_AI_PREDEFINITO
+    mazzo_avversaria: str = AUTOMATICO
 
 
 class TestoMazzo(BaseModel):
@@ -180,14 +184,18 @@ def crea_partita(richiesta: RichiestaPartita | None = None) -> dict:
     """Crea un incontro al meglio di tre e ne avvia la prima partita."""
     richiesta = richiesta or RichiestaPartita()
     regole = carica_regole()
+    mazzo_ai = richiesta.mazzo_avversaria
+    if mazzo_ai == AUTOMATICO:
+        mazzo_ai = mazzi.scegli_mazzo_avversaria(conn_carte, random.Random()) or MAZZO_AI_PREDEFINITO
     inc = Incontro(
         [UMANO, AI],
-        {UMANO: _carica_lista(richiesta.mazzo), AI: _carica_lista(richiesta.mazzo_avversaria)},
+        {UMANO: _carica_lista(richiesta.mazzo), AI: _carica_lista(mazzo_ai)},
         lambda lista: database.mazzo_da_lista(conn_carte, lista),
         opzioni={"mana_burn": regole.mana_burn, "mulligan": regole.mulligan == "london"},
         scelte_manuali={UMANO})
     partite[inc.id] = inc
-    richieste_mazzo[inc.id] = richiesta.mazzo_avversaria
+    richieste_mazzo[inc.id] = mazzo_ai
+    inc.partita.registro.aggiungi(Evento(1, "inizio", AI, "mazzo", f"L'avversaria gioca «{mazzo_ai}»"))
     avanza(inc.partita, UMANO, AI)
     return vista_incontro(inc)
 
@@ -286,6 +294,33 @@ def elimina_mazzo(nome: str) -> dict:
     if not mazzi.elimina(conn_carte, nome):
         raise HTTPException(404, "mazzo non trovato")
     return {"ok": True}
+
+
+@app.post("/api/carte/importa")
+def importa_carte() -> dict:
+    """Scarica da Scryfall le carte dei set ammessi (serve internet)."""
+    try:
+        n = scryfall.importa(conn_carte)
+    except Exception as e:
+        raise HTTPException(502, f"Scryfall non raggiungibile: {e}")
+    return {"importate": n}
+
+
+@app.post("/api/tcdecks/aggiorna")
+def aggiorna_tcdecks(tornei: int = 3) -> dict:
+    """Scarica la top 8 degli ultimi tornei Old School da TCDecks (serve internet; ci vuole circa un minuto)."""
+    res = tcdecks.importa(conn_carte, tornei=min(tornei, 10))
+    return {"salvati": res.salvati, "errori": res.errori, "carte_sconosciute": sorted(res.carte_sconosciute)}
+
+
+class IndirizzoMazzo(BaseModel):
+    url: str
+
+
+@app.post("/api/tcdecks/mazzo")
+def importa_mazzo_tcdecks(corpo: IndirizzoMazzo) -> dict:
+    res = tcdecks.importa_url(conn_carte, corpo.url)
+    return {"salvati": res.salvati, "errori": res.errori, "carte_sconosciute": sorted(res.carte_sconosciute)}
 
 
 @app.get("/api/immagini/{nome}")

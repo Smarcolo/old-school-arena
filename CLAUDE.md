@@ -52,6 +52,11 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   Disenchant, Fireball, Mind Twist, Demonic Tutor, Balance, Wrath...). I tipi di bersaglio sono in
   `effetti._tipi()` (creatura, magia in pila «pila:<id>», carta nel tuo cimitero «cimitero:<id>», terra, ...).
   Costi con X: `OggettoPila.x`, `mana.con_x`, comando «gioca fireball x=5 su avversaria».
+  Più bersagli: `Effetto.max_bersagli` (0 = quanti si vuole) e `costo_per_bersaglio`; il costo totale è
+  `validazione.costo_di_lancio`. Fireball divide X per difetto al lancio; comando «su avversaria e orso».
+  Disintegrate: `Carta.disintegrata` (fino a fine turno) → niente rigenerazione e `distruggi` la rimuove dal gioco.
+  Balance: un passo alla volta (`continua_balance`); l'umano sceglie con Scelta "scegli" e `seguito`
+  (`carte_implementate.SEGUITI`), che fa riprendere l'effetto dopo ogni carta scelta.
 - Mana (`engine/mana.py`): `FonteMana` con colori a scelta, quantità, sacrificio (Black Lotus), danno (City of Brass);
   terre doppie dai tipi base. `piano_pagamento` ritorna [(fonte, colore)].
 - AI (`ai/avversaria.py`): gioca subito Mox/Sol Ring/Lotus; con Counterspell/Mana Drain in mano tiene {U}{U}
@@ -67,10 +72,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   simultanei; poi la fase finisce. Più bloccanti sullo stesso attaccante: danno letale a ciascuno in ordine, il resto
   all'ultimo. Un attaccante bloccato non colpisce il giocatore (salvo travolgere).
 - Parole chiave lette dal testo Oracle (`stato.parole_chiave_da_testo`, `Carta.ha("flying")`): volare, raggiungere,
-  passaterre, difensore, cautela, rapidità, travolgere, attacca per primo (due passi di danno senza priorità in mezzo),
+  passaterre, difensore, cautela, rapidità, travolgere, attacca per primo (due passi di danno, con priorità in mezzo),
   protezione da un colore o dagli artefatti. Colori di una carta = simboli colorati del costo (`Carta.colori`); `Carta.protetta_da(fonte)`
   vale per bersagli (`bersaglio_legale(..., fonte)`), danni (prevenuti in `infliggi_danno` e in combattimento) e blocchi.
-  Mancano: banding, protezione, abilità innescate.
 - Abilità attivate (`engine/abilita.py`): riconosce dal testo Oracle «{costo}: <nome> gets +X/+Y until end of turn.»
   e «{costo}: <nome> deals N damage to any target / target creature / target player.». Vanno in pila
   (`OggettoPila.abilita`); la carta resta in campo. Una riga con frasi in più (es. Dragon Whelp) NON è riconosciuta:
@@ -90,7 +94,7 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   da `statici.aggiorna` dentro `azioni_di_stato` (che ora ripete i controlli finché qualcosa cambia).
   Abilità di un'aura su «Enchanted creature» (Firebreathing): `AbilitaAttivata.su_incantata`.
 - Regole di singole carte (`engine/speciali.py`): Moat, Ali from Cairo, Juggernaut, Kird Ape/Sedge Troll,
-  Sengir Vampire (segnalino subito, senza pila), Triskelion. Segnalini +1/+1 (`Carta.segnalini`), animazione
+  Sengir Vampire (innesco in pila, effetto «segnalino_su_se»), Triskelion. Segnalini +1/+1 (`Carta.segnalini`), animazione
   (`Carta.animata`, Mishra's Factory), danni tracciati per fonte (`danneggiata_da`), `danni_a_giocatore` /
   `danni_a_creatura` (Hypnotic Specter, Ali). Scelte tra carte: `azioni.scegli_o_decidi` (Scelta "scegli" per
   l'umano, `avversaria.scelta_automatica` per l'AI): The Abyss, Erhnam Djinn, Disrupting Scepter.

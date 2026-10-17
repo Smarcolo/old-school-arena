@@ -109,6 +109,8 @@ def test_sengir_vampire(p):
     passano(p)
     combattimento.dichiara_bloccanti(p, "B", [(volante, sengir)])
     passano(p)
+    assert sengir.segnalini == 0 and p.pila[-1].innesco.effetto == "segnalino_su_se"  # l'innesco va in pila
+    passano(p)
     assert sengir.segnalini == 1 and sengir.forza_attuale == 5
 
 

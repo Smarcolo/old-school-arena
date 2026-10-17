@@ -117,7 +117,7 @@ def mind_twist(p: Partita, nome: str, carta: Carta):
 
 
 def danni_x(p: Partita, nome: str, carta: Carta):
-    """Fireball / Psionic Blast: alla faccia se è letale, altrimenti sulla creatura migliore che muore."""
+    """Fireball / Disintegrate / Psionic Blast: alla faccia se è letale, altrimenti sulla creatura migliore che muore."""
     avv = p.avversario_di(nome)
     faccia = f"giocatore:{avv.nome}"
     if carta.nome == "Psionic Blast":
@@ -131,9 +131,25 @@ def danni_x(p: Partita, nome: str, carta: Carta):
     x = _x_massimo(p, nome, carta, [faccia])
     if x >= avv.vita:
         return [faccia], x
+    if carta.nome == "Fireball" and _mia_principale(p, nome) and (due := _due_creature_che_muoiono(p, nome, carta)):
+        return due
     if _mia_principale(p, nome) and (c := _creatura_che_muore(p, nome, carta, x)):
         return [f"carta:{c.id}"], c.costituzione_attuale - c.danni
     return None
+
+
+def _due_creature_che_muoiono(p: Partita, nome: str, carta: Carta):
+    """Fireball divisa: le due creature avversarie migliori che muoiono entrambe con X // 2 danni a testa."""
+    candidate = sorted((c for c in p.avversario_di(nome)[Zona.CAMPO] if c.is_creatura and c.forza_attuale >= 2
+                        and bersaglio_legale(p, "qualsiasi", f"carta:{c.id}", carta)),
+                       key=lambda c: (c.forza_attuale, c.costituzione_attuale), reverse=True)[:2]
+    if len(candidate) < 2:
+        return None
+    bersagli = [f"carta:{c.id}" for c in candidate]
+    x = 2 * max(c.costituzione_attuale - c.danni for c in candidate)
+    if x <= 0 or puo_lanciare(p, nome, carta, bersagli, x) is not None:
+        return None
+    return bersagli, x
 
 
 def _creatura_che_muore(p: Partita, nome: str, fonte: Carta, danni: int) -> Carta | None:
@@ -163,7 +179,7 @@ POLITICHE = {
     "Sinkhole": distruggi_permanente, "Ice Storm": distruggi_permanente,
     "Ancestral Recall": pescate, "Braingeyser": pescate, "Timetwister": pescate, "Wheel of Fortune": pescate,
     "Time Walk": tutor_e_turni, "Demonic Tutor": tutor_e_turni, "Regrowth": tutor_e_turni,
-    "Mind Twist": mind_twist, "Fireball": danni_x, "Psionic Blast": danni_x,
+    "Mind Twist": mind_twist, "Fireball": danni_x, "Disintegrate": danni_x, "Psionic Blast": danni_x,
     "Wrath of God": spazza, "Armageddon": spazza,
 }
 

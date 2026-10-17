@@ -1,7 +1,7 @@
 """Effetti delle carte implementate (istantanei e stregonerie), dal loro testo Oracle.
 Importato da azioni.py così il registro è sempre pieno. Le semplificazioni sono scritte nel commento della carta."""
 from app.engine import mana
-from app.engine.effetti import effetto
+from app.engine.effetti import bersaglio_legale, effetto
 from app.engine.stato import Carta, Giocatore, OggettoPila
 from app.engine.zone import Zona
 
@@ -45,10 +45,23 @@ def psionic_blast(partita, oggetto):
     _az().modifica_vita(partita, oggetto.controllore, -2, "(Psionic Blast)")
 
 
-@effetto("Fireball", bersaglio="qualsiasi")
+@effetto("Fireball", bersaglio="qualsiasi", max_bersagli=0, costo_per_bersaglio="{1}")
 def fireball(partita, oggetto):
-    """X danni a un bersaglio. Semplificazione: la divisione tra più bersagli (pagando {1} in più) non c'è."""
-    _az().infliggi_danno(partita, oggetto.carta, oggetto.bersagli[0], oggetto.x)
+    """X danni divisi in parti uguali (per difetto) tra i bersagli; costa {1} in più per ogni bersaglio oltre il
+    primo. La divisione si fa al lancio: se un bersaglio non è più valido, la sua parte va persa."""
+    parte = oggetto.x // len(oggetto.bersagli)
+    for rif in oggetto.bersagli:
+        if bersaglio_legale(partita, "qualsiasi", rif, oggetto.carta):
+            _az().infliggi_danno(partita, oggetto.carta, rif, parte)
+
+
+@effetto("Disintegrate", bersaglio="qualsiasi")
+def disintegrate(partita, oggetto):
+    """X danni. Se il bersaglio è una creatura, in questo turno non può rigenerare e, se muore, è rimossa dal gioco."""
+    rif = oggetto.bersagli[0]
+    if rif.startswith("carta:") and (t := partita.trova_in_campo(rif.removeprefix("carta:"))):
+        t[1].disintegrata = True
+    _az().infliggi_danno(partita, oggetto.carta, rif, oggetto.x)
 
 
 def _danni_a_tutti(partita, oggetto, filtro_volare: bool):
@@ -243,22 +256,42 @@ def dark_ritual(partita, oggetto):
 
 # --- Balance -----------------------------------------------------------------------------------
 
+PASSI_BALANCE = [  # (zona, quali carte, azione, cosa chiedere)
+    (Zona.CAMPO, lambda c: c.is_terra, "distruggi", "una terra da sacrificare"),
+    (Zona.MANO, lambda c: True, "scarta", "una carta da scartare"),
+    (Zona.CAMPO, lambda c: c.is_creatura, "distruggi", "una creatura da sacrificare"),
+]
+
+
 @effetto("Balance")
 def balance(partita, oggetto):
-    """Terre, carte in mano e creature scendono al numero del giocatore che ne ha meno.
-    Semplificazione: le scelte sono automatiche (si tengono le carte di valore più alto) per entrambi i giocatori."""
-    for zona, condizione, azione in (
-            (Zona.CAMPO, lambda c: c.is_terra, "sacrifica"),
-            (Zona.MANO, lambda c: True, "scarta"),
-            (Zona.CAMPO, lambda c: c.is_creatura, "sacrifica")):
+    """Terre, poi carte in mano, poi creature scendono al numero del giocatore che ne ha meno. Chi è in
+    scelte_manuali sceglie una carta alla volta (Scelta "scegli" con seguito); per l'AI si tengono le migliori."""
+    continua_balance(partita, 0)
+
+
+def continua_balance(partita, passo: int) -> None:
+    """Riprende Balance dal passo indicato. Il minimo si può ricalcolare dopo ogni carta tolta: chi ce l'ha non
+    perde niente e gli altri scendono solo fino a lì."""
+    attivo = partita.giocatore_attivo.nome
+    for indice in range(passo, len(PASSI_BALANCE)):
+        zona, condizione, azione, cosa = PASSI_BALANCE[indice]
         quante = {g.nome: [c for c in g[zona] if condizione(c)] for g in partita.giocatori}
         minimo = min(len(v) for v in quante.values())
-        for nome, carte in quante.items():
-            for c in sorted(carte, key=valore_carta)[:len(carte) - minimo]:
-                if azione == "scarta":
-                    _az().scarta(partita, nome, c, "(Balance)")
-                else:
-                    _az().distruggi(partita, c, "(Balance: sacrificata)", rigenerabile=False)
+        for nome in sorted(quante, key=lambda n: n != attivo):
+            carte = quante[nome]
+            da_togliere = len(carte) - minimo
+            if da_togliere <= 0:
+                continue
+            if nome in partita.scelte_manuali and minimo > 0:
+                _az().scegli_o_decidi(partita, nome, "Balance", azione, carte,
+                                      f"Balance: scegli {cosa} (ancora {da_togliere})", seguito=("balance", indice))
+                return
+            for c in sorted(carte, key=valore_carta)[:da_togliere]:
+                _az()._applica_scelta(partita, nome, azione, c, "Balance")
+
+
+SEGUITI = {"balance": continua_balance}  # scelte che, una volta fatte, riprendono un effetto a metà
 
 
 # --- Creature e potenziamenti ------------------------------------------------------------------

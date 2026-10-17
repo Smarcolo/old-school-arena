@@ -128,6 +128,29 @@ def test_attacca_per_primo_in_difesa(p):
     assert azioni.trova_in_zona(p, "B", Zona.CAMPO, "arcieri")
 
 
+def test_priorita_tra_i_due_passi_di_danno(p):
+    """Dopo i danni di «attacca per primo» i giocatori hanno priorità: B finisce l'attaccante con un Bolt
+    prima che colpisca nel passo normale."""
+    arcieri = metti(p, "A", cr("Arcieri", 2, 1, "First strike"))
+    orco = metti(p, "A", cr("Orco", 3, 3))
+    muro = metti(p, "B", cr("Muro", 0, 4))
+    metti(p, "B", terra("Mountain"))
+    al_blocco(p, arcieri, orco)
+    combattimento.dichiara_bloccanti(p, "B", [(muro, orco)])
+    azioni.passa_priorita(p, "A")
+    azioni.passa_priorita(p, "B")
+    assert p.giocatore("B").vita == 18 and not p.combattimento.danni_inflitti  # solo gli arcieri hanno colpito
+    azioni.passa_priorita(p, "A")
+    bolt = Carta("Lightning Bolt", "Instant", "{R}")
+    p.giocatore("B")[Zona.MANO].append(bolt)
+    azioni.lancia(p, "B", bolt, [f"carta:{orco.id}"])
+    azioni.passa_priorita(p, "B")
+    azioni.passa_priorita(p, "A")  # il Bolt si risolve: l'orco ha 3 danni e muore
+    azioni.passa_priorita(p, "A")
+    azioni.passa_priorita(p, "B")  # passo normale: l'orco non c'è più, gli arcieri non colpiscono due volte
+    assert p.combattimento.danni_inflitti and p.giocatore("B").vita == 18 and muro.danni == 0
+
+
 def test_ai_attacca_in_volo_sopra_i_bloccanti_di_terra(p):
     roc = metti(p, "A", cr("Roc", 3, 3, "Flying"))
     metti(p, "B", cr("Wurm", 6, 4))

@@ -12,14 +12,16 @@ from dataclasses import dataclass
 class Effetto:
     funzione: Callable
     bersaglio: str | None = None
+    max_bersagli: int = 1  # 0 = quanti se ne vuole (Fireball)
+    costo_per_bersaglio: str = ""  # mana in più per ogni bersaglio oltre il primo
 
 
 EFFETTI: dict[str, Effetto] = {}
 
 
-def effetto(nome: str, bersaglio: str | None = None):
+def effetto(nome: str, bersaglio: str | None = None, max_bersagli: int = 1, costo_per_bersaglio: str = ""):
     def registra(funzione: Callable) -> Callable:
-        EFFETTI[nome] = Effetto(funzione, bersaglio)
+        EFFETTI[nome] = Effetto(funzione, bersaglio, max_bersagli, costo_per_bersaglio)
         return funzione
     return registra
 

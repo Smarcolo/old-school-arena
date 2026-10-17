@@ -26,7 +26,10 @@ python -m uvicorn app.api.main:app
   quali carte mettere in fondo al mazzo (oppure i pulsanti e un clic sulle carte).
 - `gioca <carta>`: gioca una terra o lancia una magia (paga il costo tappando le terre da solo).
 - `gioca fireball x=5 su avversaria`: per le magie con X (dall'interfaccia ti viene chiesto il valore).
-- `gioca counterspell su <magia in pila>`, `gioca regrowth su <carta nel tuo cimitero>`, `scelgo <carta>` per Demonic Tutor.
+  Fireball su più bersagli: `gioca fireball x=6 su avversaria e grizzly bears` (X diviso in parti uguali per
+  difetto, {1} in più per ogni bersaglio oltre il primo).
+- `gioca counterspell su <magia in pila>`, `gioca regrowth su <carta nel tuo cimitero>`, `scelgo <carta>` per Demonic Tutor
+  e per Balance (scegli una per una le terre, le carte in mano e le creature da perdere).
 - `gioca <carta> su <bersaglio>`: per le magie con bersaglio, es. `gioca giant growth su grizzly bears`,
   `gioca lightning bolt su avversaria`. Dall'interfaccia: clicchi la magia, poi il bersaglio.
 - `attiva <carta> [su <bersaglio>]`: usa un'abilità della carta, es. `attiva shivan dragon`,
@@ -74,7 +77,7 @@ riapertura li ritrovi nel menu in alto accanto a «Riprendi» (✕ elimina il sa
 - Istantanei con bersaglio: Lightning Bolt e Giant Growth, anche in risposta l'uno all'altro.
 - Le carte fondamentali del 93/94: Power 9 (Black Lotus, Mox, Ancestral Recall, Time Walk, Timetwister), Sol Ring,
   terre doppie, City of Brass, Strip Mine, Library of Alexandria, Swords to Plowshares, Terror, Counterspell,
-  Mana Drain, Disenchant, Shatter, Fireball, Psionic Blast, Braingeyser, Mind Twist, Demonic Tutor, Regrowth,
+  Mana Drain, Disenchant, Shatter, Fireball, Disintegrate, Psionic Blast, Braingeyser, Mind Twist, Demonic Tutor, Regrowth,
   Wheel of Fortune, Balance, Wrath of God, Armageddon, Dark Ritual, Red/Blue Elemental Blast, Icy Manipulator, Atog,
   Mishra's Factory, Moat, The Abyss, Hypnotic Specter, Sengir Vampire, Erhnam Djinn, Kird Ape, Sedge Troll,
   Disrupting Scepter, Su-Chi, Triskelion, Juggernaut, Ali from Cairo.
@@ -85,7 +88,8 @@ riapertura li ritrovi nel menu in alto accanto a «Riprendi» (✕ elimina il sa
   Force of Nature (con la scelta «paga o subisci»), effetti quando una creatura entra in campo.
 - Incantesimi: aure sulle creature (Holy Strength, Unholy Strength, Giant Strength, Firebreathing, Flight) e
   globali (Crusade, Bad Moon). Si lanciano come le magie con bersaglio: clic sull'aura, poi sulla creatura.
-- Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo,
+- Abilità: volare, raggiungere, passaterre, difensore, cautela, rapidità, travolgere, attacca per primo (dopo i suoi
+  danni puoi ancora rispondere prima dei danni normali),
   protezione da un colore (White Knight, Black Knight) e dagli artefatti, banding (Benalish Hero, Timber Wolves:
   quando tocca a te dividere i danni la partita si ferma e scegli tu; l'avversaria sceglie da sola).
 - Editor dei mazzi con analisi e mazzi salvati.

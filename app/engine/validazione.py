@@ -127,19 +127,41 @@ def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta, bersagli: 
         return f"{carta.nome}: questo tipo di aura non è ancora gestito"
     if bersagli is not None:  # None = controlla solo se è lanciabile, senza ancora il bersaglio
         tipo = tipo_bersaglio(carta)
-        if tipo and len(bersagli) != 1:
+        massimo = max_bersagli(carta)
+        if tipo and not bersagli:
             return f"{carta.nome} ha bisogno di un bersaglio ({NOMI_BERSAGLI[tipo]})"
-        if tipo and not bersaglio_legale(partita, tipo, bersagli[0], carta):
-            return _motivo_bersaglio(partita, bersagli[0], carta, f"bersaglio non valido per {carta.nome}: serve {NOMI_BERSAGLI[tipo]}")
+        if tipo and massimo and len(bersagli) > massimo:
+            return f"{carta.nome} ha un solo bersaglio" if massimo == 1 else f"{carta.nome} ha al massimo {massimo} bersagli"
+        if len(set(bersagli)) != len(bersagli):
+            return "lo stesso bersaglio non si può scegliere due volte"
+        for rif in bersagli if tipo else []:
+            if not bersaglio_legale(partita, tipo, rif, carta):
+                return _motivo_bersaglio(partita, rif, carta, f"bersaglio non valido per {carta.nome}: serve {NOMI_BERSAGLI[tipo]}")
         if not tipo and bersagli:
             return f"{carta.nome} non ha bersagli"
     if x < 0:
         return "X non può essere negativo"
-    costo = mana.con_x(mana.analizza_costo(carta.costo), x)
+    costo = costo_di_lancio(carta, x, len(bersagli or []))
     if mana.piano_pagamento(g.riserva, fonti_di_mana(partita, nome_giocatore), costo) is None:
         con = f" con X={x}" if "X" in carta.costo else ""
-        return f"non hai abbastanza mana per {carta.nome} ({carta.costo}{con})"
+        extra = f" per {len(bersagli)} bersagli" if bersagli and len(bersagli) > 1 else ""
+        return f"non hai abbastanza mana per {carta.nome} ({carta.costo}{con}{extra})"
     return None
+
+
+def max_bersagli(carta: Carta) -> int:
+    effetto = EFFETTI.get(carta.nome)
+    return effetto.max_bersagli if effetto else 1
+
+
+def costo_di_lancio(carta: Carta, x: int = 0, n_bersagli: int = 1) -> dict[str, int]:
+    """Costo con X scelto, più l'eventuale costo per ogni bersaglio oltre il primo (Fireball)."""
+    costo = mana.con_x(mana.analizza_costo(carta.costo), x)
+    effetto = EFFETTI.get(carta.nome)
+    if effetto and effetto.costo_per_bersaglio and n_bersagli > 1:
+        for colore, q in mana.analizza_costo(effetto.costo_per_bersaglio).items():
+            costo[colore] = costo.get(colore, 0) + q * (n_bersagli - 1)
+    return costo
 
 
 def puo_passare(partita: Partita, nome_giocatore: str) -> str | None:

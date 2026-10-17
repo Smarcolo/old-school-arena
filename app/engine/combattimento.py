@@ -13,7 +13,7 @@ Banding: si attacca in banda (creature con banding più al massimo una senza); c
 banda. Se in un blocco c'è una creatura con banding, i danni della creatura avversaria li divide chi controlla quella
 con banding, non chi controlla la creatura che li infligge. Per i giocatori in `Partita.scelte_manuali` la partita si
 ferma con una Scelta di tipo "danni" (`assegna_danni`); per gli altri la divisione è automatica (`_assorbitore`).
-Con «attacca per primo» ci sono due passi di danno di fila, senza priorità in mezzo (semplificazione).
+Con «attacca per primo» ci sono due passi di danno, e tra l'uno e l'altro i giocatori hanno priorità.
 """
 from app.engine.stato import Carta, Combattimento, Fase, Partita, Scelta
 from app.engine.validazione import AzioneIllegale
@@ -329,17 +329,23 @@ def _passo_di_danno(partita: Partita, passo: str | None) -> None:
 def infliggi_danni(partita: Partita) -> None:
     """Danni simultanei. L'attaccante bloccato dà a ogni bloccante, in ordine, il danno letale prima di passare
     al successivo; l'ultimo prende il resto, salvo travolgere (il resto va al giocatore). Un attaccante bloccato
-    senza travolgere non colpisce il giocatore, anche se i bloccanti sono già morti."""
+    senza travolgere non colpisce il giocatore, anche se i bloccanti sono già morti.
+    Con «attacca per primo» i passi sono due e tra l'uno e l'altro i giocatori hanno priorità: dopo il primo
+    si esce, e il doppio passaggio successivo fa il passo normale."""
     comb = partita.combattimento
     coinvolte = attaccanti_in_campo(partita) + [t[1] for i in comb.bloccanti() if (t := partita.trova_in_campo(i))]
-    passi = ["primo", "normale"] if any(c.ha("first strike") for c in coinvolte) else [None]
-    for passo in passi:
+    doppio = "primo" in comb.passi_fatti or any(c.ha("first strike") for c in coinvolte)
+    for passo in ["primo", "normale"] if doppio else [None]:
         if (passo or "unico") in comb.passi_fatti:
             continue
         if not _chiedi_o_decidi(partita, passo):
             return  # si riprende da assegna_danni
         _passo_di_danno(partita, passo)
         comb.passi_fatti.add(passo or "unico")
+        if passo == "primo" and not partita.vincitore:
+            partita.priorita = partita.attivo  # priorità prima del passo di danno normale
+            partita.passaggi = 0
+            return
         if partita.vincitore:
             break
     comb.danni_inflitti = True

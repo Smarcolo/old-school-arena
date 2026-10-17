@@ -5,7 +5,7 @@ import re
 from app.engine import azioni, combattimento, mana, mulligan
 from app.engine.abilita import analizza_abilita
 from app.engine.stato import Partita
-from app.engine.validazione import AzioneIllegale
+from app.engine.validazione import AzioneIllegale, max_bersagli
 from app.engine.zone import Zona
 
 COLORI_PAROLE = {"bianco": "W", "blu": "U", "nero": "B", "rosso": "R", "verde": "G", "incolore": "C"}
@@ -13,9 +13,9 @@ GIOCATORI_IO = {"me", "io", "me stesso", "tu"}
 GIOCATORI_AVVERSARIO = {"avversaria", "avversario", "lei", "faccia", "lui"}
 
 
-def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
+def trova_bersaglio(partita: Partita, giocatore: str, testo: str, esclusi: tuple[str, ...] = ()) -> str | None:
     """Da testo libero a riferimento: nome di un giocatore, «me»/«avversaria», nome o id di una creatura
-    in campo (con più omonime preferisce quelle dell'avversario)."""
+    in campo (con più omonime preferisce quelle dell'avversario). `esclusi`: riferimenti già scelti (più bersagli)."""
     t = testo.strip().lower()
     if t in GIOCATORI_IO:
         return f"giocatore:{giocatore}"
@@ -27,7 +27,7 @@ def trova_bersaglio(partita: Partita, giocatore: str, testo: str) -> str | None:
     ordine = [partita.avversario_di(giocatore), partita.giocatore(giocatore)]
     for g in ordine:
         for c in g[Zona.CAMPO]:
-            if c.id == t or c.nome.lower() == t:
+            if (c.id == t or c.nome.lower() == t) and f"carta:{c.id}" not in esclusi:
                 return f"carta:{c.id}"
     # magie in pila (prima quelle dell'avversario, dalla cima), poi il tuo cimitero (Regrowth)
     for o in sorted(reversed(partita.pila), key=lambda o: o.controllore == giocatore):
@@ -149,10 +149,13 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
                     return f"Hai giocato {carta.nome}."
                 bersagli = []
                 if cmd.bersaglio:
-                    rif = trova_bersaglio(partita, giocatore, cmd.bersaglio)
-                    if rif is None:
-                        return f"Non trovo il bersaglio «{cmd.bersaglio}»."
-                    bersagli = [rif]
+                    # più bersagli (Fireball): «su avversaria e orso», «su a, b e c»
+                    testi = re.split(r"\s*,\s*|\s+e\s+", cmd.bersaglio) if max_bersagli(carta) != 1 else [cmd.bersaglio]
+                    for testo in testi:
+                        rif = trova_bersaglio(partita, giocatore, testo, tuple(bersagli))
+                        if rif is None:
+                            return f"Non trovo il bersaglio «{testo}»."
+                        bersagli.append(rif)
                 azioni.lancia(partita, giocatore, carta, bersagli, cmd.x)
                 return f"Hai lanciato {carta.nome}: è in pila. Scrivi «passa» per farla risolvere."
             case "attiva":

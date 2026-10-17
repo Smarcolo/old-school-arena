@@ -52,6 +52,7 @@
   {"nome": "Disenchant", "tipo": "Instant", "costo": "{1}{W}", "testo": "Destroy target artifact or enchantment."},
   {"nome": "Shatter", "tipo": "Instant", "costo": "{1}{R}", "testo": "Destroy target artifact."},
   {"nome": "Fireball", "tipo": "Sorcery", "costo": "{X}{R}", "testo": "This spell costs {1} more to cast for each target beyond the first.\nFireball deals X damage divided evenly, rounded down, among any number of targets."},
+  {"nome": "Disintegrate", "tipo": "Sorcery", "costo": "{X}{R}", "testo": "Disintegrate deals X damage to any target. If it's a creature, it can't be regenerated this turn, and if it would die this turn, exile it instead."},
   {"nome": "Psionic Blast", "tipo": "Instant", "costo": "{2}{U}", "testo": "Psionic Blast deals 4 damage to any target and 2 damage to you."},
   {"nome": "Earthquake", "tipo": "Sorcery", "costo": "{X}{R}", "testo": "Earthquake deals X damage to each creature without flying and each player."},
   {"nome": "Hurricane", "tipo": "Sorcery", "costo": "{X}{G}", "testo": "Hurricane deals X damage to each creature with flying and each player."},

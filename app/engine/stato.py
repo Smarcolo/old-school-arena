@@ -68,6 +68,7 @@ class Carta:
     animata: tuple | None = None  # (forza, costituzione, tipo) fino a fine turno, es. Mishra's Factory
     danneggiata_da: set[str] = field(default_factory=set)  # id delle fonti che l'hanno danneggiata in questo turno
     passaforeste_fino_al_turno: int = 0  # Erhnam Djinn
+    disintegrata: bool = False  # Disintegrate: fino a fine turno niente rigenerazione e, se muore, rimossa dal gioco
     statico_forza: int = 0  # da aure e incantesimi globali, ricalcolati da statici.aggiorna
     statico_costituzione: int = 0
     parole_extra: set[str] = field(default_factory=set)
@@ -120,6 +121,7 @@ class Carta:
         self.danni = self.bonus_forza = self.bonus_costituzione = self.scudi_rigenerazione = 0
         self.animata = None
         self.danneggiata_da = set()
+        self.disintegrata = False
 
     @property
     def is_istantaneo(self) -> bool:

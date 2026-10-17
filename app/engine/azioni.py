@@ -3,10 +3,10 @@ from app.engine import carte_implementate  # noqa: F401  registra gli effetti de
 from app.engine import mana, speciali, statici
 from app.engine.effetti import EFFETTI
 from app.engine.eventi import Evento
-from app.engine.inneschi import analizza_inneschi
+from app.engine.inneschi import Innesco, analizza_inneschi
 from app.engine.stato import ORDINE_FASI, Carta, Fase, OggettoPila, Partita, Scelta
 from app.engine.effetti import bersaglio_legale
-from app.engine.validazione import (AzioneIllegale, da_sacrificare, fonti_di_mana, puo_attivare,
+from app.engine.validazione import (AzioneIllegale, costo_di_lancio, da_sacrificare, fonti_di_mana, puo_attivare,
                                     puo_giocare_terra, puo_lanciare, puo_passare, puo_tappare)
 from app.engine.zone import Zona
 
@@ -110,6 +110,10 @@ def _risolvi_innesco(partita: Partita, oggetto: OggettoPila) -> None:
             pesca(partita, quel_giocatore)
         case "pesca_tu":
             pesca(partita, chi)
+        case "segnalino_su_se":
+            if in_campo:
+                carta.segnalini += 1
+                _log(partita, chi, "segnalino", f"{carta.nome} prende un segnalino +1/+1", carta=carta.id)
         case "sacrifica":
             if in_campo:
                 distruggi(partita, carta, "(sacrificata)", rigenerabile=False)
@@ -212,14 +216,14 @@ def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] |
     _verifica(puo_lanciare(partita, giocatore, carta, bersagli, x))
     carta.proprietario = carta.proprietario or giocatore
     g = partita.giocatore(giocatore)
-    costo = mana.con_x(mana.analizza_costo(carta.costo), x)
+    costo = costo_di_lancio(carta, x, len(bersagli))
     for fonte, colore in mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore), costo):
         tappa(partita, giocatore, fonte.carta, colore)
     g.riserva = mana.paga(g.riserva, costo)
     g[Zona.MANO].remove(carta)
     partita.pila.append(OggettoPila(carta, giocatore, bersagli, x=x))
     partita.passaggi = 0
-    su = f" su {descrivi_bersaglio(partita, bersagli[0])}" if bersagli else ""
+    su = " su " + " e ".join(descrivi_bersaglio(partita, b) for b in bersagli) if bersagli else ""
     con_x = f" (X={x})" if "X" in carta.costo else ""
     _log(partita, giocatore, "lancia", f"{giocatore} lancia {carta.nome}{con_x}{su}", carta=carta.id)
 
@@ -343,7 +347,7 @@ def risolvi_pila(partita: Partita) -> None:
         _entra_in_campo(partita, chi, carta)
     else:
         effetto = EFFETTI[carta.nome]
-        if effetto.bersaglio and not bersaglio_legale(partita, effetto.bersaglio, oggetto.bersagli[0], carta):
+        if effetto.bersaglio and not any(bersaglio_legale(partita, effetto.bersaglio, b, carta) for b in oggetto.bersagli):
             _log(partita, chi, "neutralizzata", f"{carta.nome} non ha più un bersaglio valido e non ha effetto")
         else:
             effetto.funzione(partita, oggetto)
@@ -416,8 +420,11 @@ def distruggi(partita: Partita, carta: Carta, motivo: str = "", rigenerabile: bo
     if not trovato:
         return
     controllore, _ = trovato
-    if rigenerabile and carta.scudi_rigenerazione > 0:
+    if rigenerabile and carta.scudi_rigenerazione > 0 and not carta.disintegrata:
         _rigenera(partita, controllore.nome, carta)
+        return
+    if carta.disintegrata:  # non muore: viene rimossa dal gioco (niente inneschi «quando muore»)
+        rimuovi_dal_gioco(partita, carta, motivo)
         return
     danneggiata_da = set(carta.danneggiata_da)
     controllore[Zona.CAMPO].remove(carta)
@@ -428,10 +435,11 @@ def distruggi(partita: Partita, carta: Carta, motivo: str = "", rigenerabile: bo
     partita.giocatore(carta.proprietario or controllore.nome)[Zona.CIMITERO].append(carta)
     _log(partita, controllore.nome, "muore", f"{carta.nome} va al cimitero {motivo}".strip(), carta=carta.id)
     if carta.is_creatura:
-        for id_fonte in danneggiata_da:  # Sengir Vampire (semplificato: il segnalino arriva subito, senza pila)
+        for id_fonte in danneggiata_da:  # Sengir Vampire: l'innesco va in pila
             if (t := partita.trova_in_campo(id_fonte)) and speciali.cresce_quando_muore_un_danneggiato(t[1]):
-                t[1].segnalini += 1
-                _log(partita, t[0].nome, "segnalino", f"{t[1].nome} prende un segnalino +1/+1")
+                _metti_innesco(partita, t[0].nome, t[1], Innesco(
+                    f"una creatura danneggiata da {t[1].nome} è morta: prende un segnalino +1/+1", "muore", "ogni",
+                    "segnalino_su_se"))
         for innesco in analizza_inneschi(carta):
             if innesco.momento == "muore":
                 _metti_innesco(partita, controllore.nome, carta, innesco)
@@ -539,9 +547,11 @@ def _applica_scelta(partita: Partita, giocatore: str, azione: str, carta: Carta,
     azioni_di_stato(partita)
 
 
-def scegli_o_decidi(partita: Partita, giocatore: str, fonte: str, azione: str, candidate: list[Carta], testo: str) -> None:
+def scegli_o_decidi(partita: Partita, giocatore: str, fonte: str, azione: str, candidate: list[Carta], testo: str,
+                    seguito: tuple | None = None) -> None:
     """Una scelta tra carte: chi è in scelte_manuali risponde con «scelgo» (Scelta "scegli"); per gli altri decide
-    l'AI (avversaria.scelta_automatica). Con una sola candidata non si chiede niente."""
+    l'AI (avversaria.scelta_automatica). Con una sola candidata non si chiede niente. `seguito` = (nome in
+    carte_implementate.SEGUITI, argomenti...): l'effetto da riprendere dopo la scelta (Balance)."""
     if not candidate:
         _log(partita, giocatore, "nulla", f"{fonte}: nessuna carta da scegliere")
         return
@@ -549,9 +559,16 @@ def scegli_o_decidi(partita: Partita, giocatore: str, fonte: str, azione: str, c
         from app.ai.avversaria import scelta_automatica
         carta = candidate[0] if len(candidate) == 1 else scelta_automatica(partita, giocatore, azione, candidate)
         _applica_scelta(partita, giocatore, azione, carta, fonte)
+        _riprendi(partita, seguito)
         return
     partita.scelta = Scelta(giocatore, testo=testo, tipo="scegli",
-                            dati={"carte": {c.id: c.nome for c in candidate}, "fonte": fonte, "azione": azione})
+                            dati={"carte": {c.id: c.nome for c in candidate}, "fonte": fonte, "azione": azione,
+                                  "seguito": seguito})
+
+
+def _riprendi(partita: Partita, seguito: tuple | None) -> None:
+    if seguito:
+        carte_implementate.SEGUITI[seguito[0]](partita, *seguito[1:])
 
 
 def rispondi_scegli(partita: Partita, giocatore: str, id_carta: str) -> None:
@@ -565,6 +582,7 @@ def rispondi_scegli(partita: Partita, giocatore: str, id_carta: str) -> None:
     carta = next(c for g in partita.giocatori for z in (Zona.CAMPO, Zona.MANO) for c in g[z] if c.id == id_carta)
     partita.scelta = None
     _applica_scelta(partita, giocatore, scelta.dati["azione"], carta, scelta.dati["fonte"])
+    _riprendi(partita, scelta.dati.get("seguito"))
     partita.priorita = partita.attivo
     partita.passaggi = 0
 

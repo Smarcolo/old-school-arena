@@ -84,7 +84,7 @@ def da_rigenerare(partita: Partita, nome: str) -> tuple[Carta, object] | None:
             minacciate = [c for c in partita.giocatore(nome)[Zona.CAMPO]
                           if c.id in in_combattimento and _vita(c) <= _danni_in_combattimento(partita, c)]
     for c in minacciate:
-        if c in partita.giocatore(nome)[Zona.CAMPO] and not c.scudi_rigenerazione:
+        if c in partita.giocatore(nome)[Zona.CAMPO] and not c.scudi_rigenerazione and not c.disintegrata:
             if ab := _rigenerazione_pronta(partita, nome, c):
                 return c, ab
     return None

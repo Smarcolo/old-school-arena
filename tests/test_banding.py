@@ -160,8 +160,10 @@ def test_divisione_manuale_in_difesa_con_attacca_per_primo(p):
     passano(p)
     assert p.scelta.giocatore == "B" and p.scelta.dati["nome_fonte"] == "Arcieri"
     esegui(p, "B", analizza("danni su muro"))
-    # primo passo: 2 danni sul muro; secondo passo: l'eroe (1/1) infligge 1 danno agli arcieri, che muoiono
+    # primo passo: 2 danni sul muro; poi priorità; secondo passo: l'eroe (1/1) infligge 1 danno agli arcieri
     assert muro.danni == 2 and e in p.giocatore("B")[Zona.CAMPO]
+    assert not azioni.trova_in_zona(p, "A", Zona.CIMITERO, "arcieri")
+    passano(p)
     assert azioni.trova_in_zona(p, "A", Zona.CIMITERO, "arcieri")
 
 

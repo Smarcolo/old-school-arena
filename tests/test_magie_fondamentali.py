@@ -18,7 +18,7 @@ DATI = {
     "Mind Twist": ("Sorcery", "{X}{B}"), "Demonic Tutor": ("Sorcery", "{1}{B}"), "Regrowth": ("Sorcery", "{1}{G}"),
     "Wrath of God": ("Sorcery", "{2}{W}{W}"), "Balance": ("Sorcery", "{1}{W}"), "Dark Ritual": ("Instant", "{B}"),
     "Red Elemental Blast": ("Instant", "{R}"), "Shatter": ("Instant", "{1}{R}"), "Lightning Bolt": ("Instant", "{R}"),
-    "Unsummon": ("Instant", "{U}"),
+    "Unsummon": ("Instant", "{U}"), "Disintegrate": ("Sorcery", "{X}{R}"),
 }
 MULTI = "Land — Plains Island Swamp Mountain Forest"  # terra di prova che produce ogni colore
 
@@ -149,6 +149,87 @@ def test_fireball_x_troppo_alto(p):
         azioni.lancia(p, "A", in_mano(p, "A", "Fireball"), ["giocatore:B"], x=9)
 
 
+def test_fireball_diviso_tra_piu_bersagli(p):
+    orso, lupo = cr("Orso", 2, 2), cr("Lupo", 3, 3)
+    p.giocatore("B")[Zona.CAMPO].extend([orso, lupo])
+    # X=5 + {R} + {1} per ognuno dei 2 bersagli in più = 8 mana; 5 // 3 = 1 danno a testa
+    azioni.lancia(p, "A", in_mano(p, "A", "Fireball"), ["giocatore:B", f"carta:{orso.id}", f"carta:{lupo.id}"], x=5)
+    assert sum(c.tappata for c in p.giocatore("A")[Zona.CAMPO]) == 8
+    risolvi(p)
+    assert p.giocatore("B").vita == 19 and orso.danni == 1 and lupo.danni == 1
+
+
+def test_fireball_due_bersagli_e_uno_sparisce(p):
+    orso, lupo = cr("Orso", 2, 2), cr("Lupo", 3, 3)
+    p.giocatore("B")[Zona.CAMPO].extend([orso, lupo])
+    azioni.lancia(p, "A", in_mano(p, "A", "Fireball"), [f"carta:{orso.id}", f"carta:{lupo.id}"], x=6)
+    azioni.torna_in_mano(p, orso)
+    risolvi(p)
+    assert lupo in p.giocatore("B")[Zona.CIMITERO]  # 3 danni: la parte dell'orso va persa, non si ridivide
+
+
+def test_fireball_piu_bersagli_costa_di_piu(p):
+    orso = cr("Orso", 2, 2)
+    p.giocatore("B")[Zona.CAMPO].append(orso)
+    with pytest.raises(AzioneIllegale, match="2 bersagli"):
+        azioni.lancia(p, "A", in_mano(p, "A", "Fireball"), ["giocatore:B", f"carta:{orso.id}"], x=7)
+    with pytest.raises(AzioneIllegale, match="due volte"):
+        azioni.lancia(p, "A", in_mano(p, "A", "Fireball"), ["giocatore:B", "giocatore:B"], x=2)
+
+
+def test_fireball_comando_con_piu_bersagli(p):
+    orso1, orso2 = cr("Grizzly Bears", 2, 2), cr("Grizzly Bears", 2, 2)
+    p.giocatore("B")[Zona.CAMPO].extend([orso1, orso2])
+    in_mano(p, "A", "Fireball")
+    esegui(p, "A", analizza("gioca fireball x=4 su grizzly bears e grizzly bears"))
+    assert p.pila[-1].bersagli == [f"carta:{orso1.id}", f"carta:{orso2.id}"]
+    risolvi(p)
+    assert orso1 in p.giocatore("B")[Zona.CIMITERO] and orso2 in p.giocatore("B")[Zona.CIMITERO]
+
+
+def test_bolt_ha_un_solo_bersaglio(p):
+    orso = cr("Orso", 2, 2)
+    p.giocatore("B")[Zona.CAMPO].append(orso)
+    with pytest.raises(AzioneIllegale, match="un solo bersaglio"):
+        azioni.lancia(p, "A", in_mano(p, "A", "Lightning Bolt"), ["giocatore:B", f"carta:{orso.id}"])
+
+
+def test_ai_fireball_divisa_su_due_creature(p):
+    orsi = [cr("Orso", 2, 2), cr("Lupo", 3, 2)]
+    p.giocatore("A")[Zona.CAMPO].extend(orsi)
+    p.giocatore("B")[Zona.MANO][:] = [magia("Fireball")]
+    p.attivo = p.priorita = 1  # turno di B
+    p.fase = Fase.PRINCIPALE_1
+    bersagli, x = politiche.danni_x(p, "B", p.giocatore("B")[Zona.MANO][0])
+    assert sorted(bersagli) == sorted(f"carta:{c.id}" for c in orsi) and x == 4
+
+
+def test_disintegrate_niente_rigenerazione_e_rimossa(p):
+    s = cr("Scheletro", 1, 1, "{B}", "{B}: Regenerate Scheletro.")
+    s.scudi_rigenerazione = 1
+    p.giocatore("B")[Zona.CAMPO].append(s)
+    azioni.lancia(p, "A", in_mano(p, "A", "Disintegrate"), [f"carta:{s.id}"], x=1)
+    risolvi(p)
+    assert s in p.giocatore("B")[Zona.RIMOSSE] and not s.disintegrata
+
+
+def test_disintegrate_vale_tutto_il_turno(p):
+    orso = cr("Orso", 2, 2)
+    p.giocatore("B")[Zona.CAMPO].append(orso)
+    azioni.lancia(p, "A", in_mano(p, "A", "Disintegrate"), [f"carta:{orso.id}"], x=1)
+    risolvi(p)
+    assert orso in p.giocatore("B")[Zona.CAMPO] and orso.disintegrata
+    azioni.lancia(p, "A", in_mano(p, "A", "Lightning Bolt"), [f"carta:{orso.id}"])
+    risolvi(p)
+    assert orso in p.giocatore("B")[Zona.RIMOSSE]
+
+
+def test_disintegrate_al_giocatore(p):
+    azioni.lancia(p, "A", in_mano(p, "A", "Disintegrate"), ["giocatore:B"], x=4)
+    risolvi(p)
+    assert p.giocatore("B").vita == 16
+
+
 def test_psionic_blast(p):
     azioni.lancia(p, "A", in_mano(p, "A", "Psionic Blast"), ["giocatore:B"])
     risolvi(p)
@@ -223,6 +304,32 @@ def test_wrath_of_god_e_balance(p):
     azioni.lancia(p, "A", in_mano(p, "A", "Wrath of God"), [])
     risolvi(p)
     assert not any(c.is_creatura for g in p.giocatori for c in g[Zona.CAMPO])
+
+
+def test_balance_con_scelte_manuali(p):
+    """B (umano) ha più terre e più creature: sceglie lui cosa sacrificare, una carta alla volta, e Balance
+    riprende da dove era rimasta."""
+    p.scelte_manuali = {"B"}
+    a, b = p.giocatore("A"), p.giocatore("B")
+    b[Zona.CAMPO].append(terra())  # B: 9 terre, A: 8
+    orsi = [cr("Orso1", 2, 2), cr("Orso2", 2, 2), cr("Orso3", 2, 2)]
+    b[Zona.CAMPO].extend(orsi)
+    a[Zona.CAMPO].append(cr("Mia", 2, 2))
+    a[Zona.MANO].clear()
+    b[Zona.MANO][:] = [cr("InMano", 1, 1)]
+    azioni.lancia(p, "A", in_mano(p, "A", "Balance"), [])
+    risolvi(p)
+    assert p.scelta and p.scelta.giocatore == "B" and "terra" in p.scelta.testo
+    terra_b = next(c for c in b[Zona.CAMPO] if c.is_terra)
+    azioni.rispondi_scegli(p, "B", terra_b.id)
+    assert terra_b in b[Zona.CIMITERO]
+    # A ha 0 carte in mano: B scarta tutto senza scegliere; poi le creature, da 3 a 1, due scelte
+    assert b[Zona.MANO] == [] and "creatura" in p.scelta.testo and "ancora 2" in p.scelta.testo
+    azioni.rispondi_scegli(p, "B", orsi[0].id)
+    assert "ancora 1" in p.scelta.testo
+    azioni.rispondi_scegli(p, "B", orsi[2].id)
+    assert p.scelta is None and [c for c in b[Zona.CAMPO] if c.is_creatura] == [orsi[1]]
+    assert sum(c.is_terra for c in b[Zona.CAMPO]) == 8
 
 
 def test_dark_ritual_e_reb(p):

@@ -102,6 +102,9 @@ def suggerimento(partita: Partita, umano: str) -> str:
         return f"{cima.descrizione} è in pila: passa per farla risolvere."
     comb = partita.combattimento
     if comb and comb.bloccanti_dichiarati and not comb.danni_inflitti and comb.attaccanti:
+        if "primo" in comb.passi_fatti:
+            return ("Danni di «attacca per primo» fatti: puoi lanciare un istantaneo o attivare un'abilità "
+                    "prima dei danni normali, o passare.")
         return "Blocchi fatti: puoi lanciare un istantaneo o attivare un'abilità prima dei danni, o passare."
     return ""
 

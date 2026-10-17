@@ -140,6 +140,71 @@ def importa(conn, tornei: int = 3, per_torneo: int = 8, get=httpx.get, pausa: fl
     return res
 
 
+@dataclass
+class TopOtto:
+    torneo: str
+    mazzi: list[tuple[VoceMazzo, dict[str, int], dict[str, int]]] = field(default_factory=list)
+    errori: list[str] = field(default_factory=list)
+    carte_sconosciute: set[str] = field(default_factory=set)
+
+
+def carica_torneo(conn, nome: str = "", get=httpx.get, pausa: float = 1.0) -> TopOtto:
+    """La top 8 di un torneo cercato per nome tra quelli della pagina del formato (vuoto = il più recente).
+    I mazzi vengono anche salvati (origine "tcdecks"). Senza rete usa quelli già salvati di quel torneo."""
+    def scarica(url: str) -> str:
+        risposta = get(url, headers=HEADERS, timeout=30, follow_redirects=True)
+        risposta.raise_for_status()
+        time.sleep(pausa)
+        return risposta.text
+
+    try:
+        tornei = tornei_recenti(scarica(FORMATO))
+    except Exception as e:
+        return _top_otto_salvata(conn, nome, f"TCDecks non raggiungibile ({e})")
+    cercato = nome.strip().lower()
+    torneo = next((t for t in tornei if cercato in t.nome.lower()), None) if cercato else (tornei[0] if tornei else None)
+    if torneo is None:
+        return _top_otto_salvata(conn, nome, f"torneo «{nome}» non trovato tra gli ultimi su TCDecks")
+    risultato = TopOtto(torneo.nome)
+    try:
+        voci = mazzi_del_torneo(scarica(f"{BASE}deck.php?id={torneo.id}"), torneo.id, 8)
+    except Exception as e:
+        risultato.errori.append(f"pagina del torneo non leggibile: {e}")
+        return risultato
+    for voce in voci:
+        try:
+            mazzo, side = lista_dal_mazzo(scarica(f"{BASE}deck.php?id={torneo.id}&iddeck={voce.iddeck}"))
+        except Exception as e:
+            risultato.errori.append(f"{voce.nome}: {e}")
+            continue
+        if not 40 <= sum(mazzo.values()) <= 100:
+            risultato.errori.append(f"{voce.nome}: lista non letta ({sum(mazzo.values())} carte)")
+            continue
+        analisi = mazzi.analizza(conn, mazzo, side)
+        risultato.carte_sconosciute |= {p.removeprefix("carta sconosciuta: ") for p in analisi["problemi"]
+                                        if p.startswith("carta sconosciuta")}
+        mazzi.salva(conn, f"TC {voce.posizione}° {voce.nome} · {torneo.nome}"[:120], mazzo, side, origine=ORIGINE,
+                    info={"torneo": torneo.nome, "posizione": voce.posizione, "giocatore": voce.giocatore,
+                          "url": f"{BASE}deck.php?id={torneo.id}&iddeck={voce.iddeck}"})
+        risultato.mazzi.append((voce, mazzo, side))
+    return risultato
+
+
+def _top_otto_salvata(conn, nome: str, motivo: str) -> TopOtto:
+    cercato = nome.strip().lower()
+    salvati = [v for v in mazzi.elenco(conn, ORIGINE) if v["info"].get("posizione")
+               and (not cercato or cercato in v["info"].get("torneo", "").lower())]
+    if not salvati:
+        return TopOtto(nome, errori=[motivo + "; e non ci sono mazzi salvati di quel torneo"])
+    torneo = salvati[0]["info"]["torneo"]
+    risultato = TopOtto(torneo, errori=[motivo + f"; uso i mazzi già salvati di «{torneo}»"])
+    for v in sorted((v for v in salvati if v["info"]["torneo"] == torneo), key=lambda v: v["info"]["posizione"])[:8]:
+        mazzo, side = mazzi.leggi(conn, v["nome"])
+        nome_mazzo = v["nome"].split(" · ")[0].split("° ", 1)[-1]
+        risultato.mazzi.append((VoceMazzo("", nome_mazzo, v["info"]["posizione"], v["info"].get("giocatore", "")), mazzo, side))
+    return risultato
+
+
 def importa_url(conn, url: str, get=httpx.get) -> Resoconto:
     """Un solo mazzo, dall'indirizzo della sua pagina su TCDecks (deck.php?id=...&iddeck=...)."""
     res = Resoconto()

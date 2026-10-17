@@ -19,6 +19,7 @@ from app.engine.zone import Zona
 from app.judge.giudice import Giudice
 from app.ai.sideboard import scegli_cambi
 from app.incontro import Incontro, Lista
+from app.torneo import Partecipante, Torneo
 from app.regia import avanza, esegui_comando
 
 UMANO = "Tu"
@@ -34,6 +35,8 @@ MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 2, "Uthden Troll": 2, "H
 app = FastAPI(title="Old School Arena")
 partite: dict[str, Incontro] = {}  # incontri al meglio di tre, per id
 richieste_mazzo: dict[str, str] = {}  # id incontro -> nome del mazzo dell'avversaria
+tornei: dict[str, Torneo] = {}
+torneo_di: dict[str, str] = {}  # id incontro -> id torneo
 conn_carte = database.connetti()
 database.carica_carte_base(conn_carte)  # idempotente: aggiorna le carte di prova se il JSON cambia
 MAZZO_UMANO_PREDEFINITO = "Verde (prova)"
@@ -175,6 +178,7 @@ def vista_incontro(inc: Incontro) -> dict:
         "numero": inc.numero, "vittorie": inc.vittorie, "esiti": inc.esiti, "lancio_moneta": inc.lancio_moneta,
         "vincitore": inc.vincitore, "prossima_possibile": bool(inc.partita.vincitore and not inc.vincitore),
         "mazzo_avversaria": richieste_mazzo.get(inc.id, ""),
+        "torneo": torneo_di.get(inc.id),
         "liste": ({"mazzo": inc.liste[UMANO].mazzo, "sideboard": inc.liste[UMANO].sideboard}
                   if inc.partita.vincitore and not inc.vincitore else None)}}
 
@@ -216,6 +220,8 @@ def comando(id_partita: str, richiesta: RichiestaComando) -> dict:
     inc = _incontro(id_partita)
     messaggio = esegui_comando(inc.partita, UMANO, AI, richiesta.testo, giudice)
     inc.registra_esito()
+    if inc.vincitore and inc.id in torneo_di:
+        tornei[torneo_di[inc.id]].registra_incontro(inc)
     return {"messaggio": messaggio, "partita": vista_incontro(inc)}
 
 
@@ -321,6 +327,97 @@ class IndirizzoMazzo(BaseModel):
 def importa_mazzo_tcdecks(corpo: IndirizzoMazzo) -> dict:
     res = tcdecks.importa_url(conn_carte, corpo.url)
     return {"salvati": res.salvati, "errori": res.errori, "carte_sconosciute": sorted(res.carte_sconosciute)}
+
+
+class RichiestaTorneo(BaseModel):
+    torneo: str = ""  # nome (o parte del nome) del torneo su TCDecks; vuoto = il più recente
+    mazzo: str = MAZZO_UMANO_PREDEFINITO  # il tuo mazzo
+    posto: int = 8  # il piazzamento del torneo vero che prendi tu
+
+
+TERRE_PER_COLORE = {"W": "Plains", "U": "Island", "B": "Swamp", "R": "Mountain", "G": "Forest"}
+
+
+def _lista_giocabile(mazzo: dict[str, int], sideboard: dict[str, int]) -> tuple[Lista, int]:
+    """Carte sconosciute al database sostituite da terre base del colore più presente nel mazzo."""
+    colori: dict[str, int] = {}
+    noti: dict[str, int] = {}
+    sostituite = 0
+    for nome, q in mazzo.items():
+        carta = database.cerca(conn_carte, nome)
+        if carta is None:
+            sostituite += q
+            continue
+        noti[carta.nome] = noti.get(carta.nome, 0) + q
+        for c in carta.colori:
+            colori[c] = colori.get(c, 0) + q
+    if sostituite:
+        terra = TERRE_PER_COLORE[max(colori, key=colori.get)] if colori else "Plains"
+        noti[terra] = noti.get(terra, 0) + sostituite
+    side = {n: q for n, q in sideboard.items() if database.cerca(conn_carte, n)}
+    return Lista(noti, side), sostituite
+
+
+@app.post("/api/tornei")
+def crea_torneo(richiesta: RichiestaTorneo) -> dict:
+    """Top 8 di un torneo vero da TCDecks con il tuo mazzo al posto di uno dei piazzati (serve internet la
+    prima volta; poi bastano i mazzi salvati)."""
+    if not 1 <= richiesta.posto <= 8:
+        raise HTTPException(400, "il posto va da 1 a 8")
+    tuo = _carica_lista(richiesta.mazzo)
+    top = tcdecks.carica_torneo(conn_carte, richiesta.torneo)
+    per_posto = {voce.posizione: (voce, mazzo, side) for voce, mazzo, side in top.mazzi}
+    mancanti = [p for p in range(1, 9) if p != richiesta.posto and p not in per_posto]
+    if mancanti:
+        raise HTTPException(502, f"top 8 di «{top.torneo}» incompleta (mancano i posti {mancanti}). " + "; ".join(top.errori))
+    partecipanti, avvisi = [], list(top.errori)
+    for posto in range(1, 9):
+        if posto == richiesta.posto:
+            partecipanti.append(Partecipante(posto, richiesta.mazzo, "", tuo, umano=True))
+            continue
+        voce, mazzo, side = per_posto[posto]
+        lista, sostituite = _lista_giocabile(mazzo, side)
+        if sostituite:
+            avvisi.append(f"{voce.nome}: {sostituite} carte sconosciute sostituite da terre base")
+        partecipanti.append(Partecipante(posto, voce.nome, voce.giocatore, lista))
+    regole = carica_regole()
+    nomi = {n for p in partecipanti for n in list(p.lista.mazzo) + list(p.lista.sideboard)}
+    t = Torneo(top.torneo, partecipanti, lambda lista: database.mazzo_da_lista(conn_carte, lista),
+               opzioni={"mana_burn": regole.mana_burn, "mulligan": regole.mulligan == "london"},
+               info_carte={n: c for n in nomi if (c := database.cerca(conn_carte, n))})
+    tornei[t.id] = t
+    return {**t.stato(), "avvisi": avvisi}
+
+
+def _torneo(id_torneo: str) -> Torneo:
+    if id_torneo not in tornei:
+        raise HTTPException(404, "torneo non trovato")
+    return tornei[id_torneo]
+
+
+@app.get("/api/tornei/{id_torneo}")
+def leggi_torneo(id_torneo: str) -> dict:
+    return _torneo(id_torneo).stato()
+
+
+@app.post("/api/tornei/{id_torneo}/gioca")
+def gioca_incontro_torneo(id_torneo: str) -> dict:
+    """Crea (o riprende) il tuo incontro del turno in corso e lo restituisce come una partita normale."""
+    t = _torneo(id_torneo)
+    try:
+        inc = t.crea_incontro_umano({UMANO})
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    if inc.id not in partite:
+        sfida = t.sfida_umano()
+        avversario = sfida.b if sfida.a.umano else sfida.a
+        partite[inc.id] = inc
+        torneo_di[inc.id] = t.id
+        richieste_mazzo[inc.id] = avversario.etichetta
+        inc.partita.registro.aggiungi(Evento(1, "inizio", AI, "mazzo",
+                                             f"{t.fase} di {t.nome}: l'avversaria gioca {avversario.etichetta}"))
+        avanza(inc.partita, UMANO, AI)
+    return vista_incontro(inc)
 
 
 @app.get("/api/immagini/{nome}")

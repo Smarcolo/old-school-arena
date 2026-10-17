@@ -164,7 +164,8 @@ function disegnaBarraCombattimento() {
       ? `Incontro finito: vince ${inc.vincitore} (${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}).`
       : `Partita ${inc.numero} vinta da ${partita.vincitore}. Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}.`;
     barra.replaceChildren(el("span", { textContent: fine }),
-      ...(inc.prossima_possibile ? [bottone("Sideboard", apriSideboard), bottone(`Partita ${inc.numero + 1}`, prossimaPartita)] : []));
+      ...(inc.prossima_possibile ? [bottone("Sideboard", apriSideboard), bottone(`Partita ${inc.numero + 1}`, prossimaPartita)] : []),
+      ...(inc.torneo && inc.vincitore ? [bottone("Torna al torneo", () => { location.href = `torneo.html?id=${inc.torneo}`; })] : []));
     return;
   }
   barra.hidden = !partita.richiesta;
@@ -289,6 +290,25 @@ async function caricaMazzi() {
     ...opzioni(""));
 }
 caricaMazzi();
+
+function attivaComandi() {
+  $("testo").disabled = false;
+  $("comando").querySelectorAll("button").forEach((b) => (b.disabled = false));
+}
+
+// Apertura di un incontro esistente (es. dal torneo): index.html?incontro=<id>
+(async () => {
+  const id = new URLSearchParams(location.search).get("incontro");
+  if (!id) return;
+  try {
+    partita = await api(`/api/partite/${id}`);
+    attivaComandi();
+    avvisa(partita.richiesta === "mulligan" ? `Incontro del torneo contro ${partita.incontro.mazzo_avversaria}: tieni la mano o fai mulligan.` : "Incontro ripreso.");
+    disegna();
+  } catch (e) {
+    avvisa("Incontro non trovato: " + e.message);
+  }
+})();
 
 $("nuova").onclick = async () => {
   try {

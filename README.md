@@ -51,6 +51,14 @@ sideboard), cerchi le carte e le aggiungi con un clic. L'analisi dice se il mazz
 caricate, quali carte il motore non sa ancora giocare e se mancano fonti di mana per qualche colore.
 Prima di «Nuovo incontro» scegli il tuo mazzo e quello dell'avversaria.
 
+## Torneo (top 8)
+Dalla pagina «Torneo»: scrivi il nome di un torneo di TCDecks (per esempio «Plague 5»; vuoto = il più recente),
+scegli il tuo mazzo e quale piazzato sostituisci (di default l'8°). L'app carica i 7 mazzi veri della top 8 e fa
+quarti, semifinali e finale al meglio di tre: gli incontri tra gli altri si giocano da soli, i tuoi li giochi tu
+(«Gioca il tuo incontro»). Se vieni eliminato, il resto del torneo si simula fino al vincitore.
+Senza internet usa i mazzi di quel torneo già scaricati. Le carte che il database non conosce vengono sostituite
+da terre base (lo dice l'avviso): importa prima le carte da Scryfall.
+
 ## Incontri
 Si gioca al meglio di tre: nella prima partita chi inizia si decide con il lancio della moneta, nelle successive
 inizia chi ha perso. A fine partita il pulsante «Partita 2» (o 3) avvia la successiva; `concedo` abbandona la partita.

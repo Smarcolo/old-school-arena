@@ -1,7 +1,7 @@
 :root { --sfondo: #1d2b22; --tavolo: #2a3d30; --testo: #efe8d8; --carta: #f4ecd8; --inchiostro: #2a2118; --accento: #c9a24a; }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: var(--sfondo); color: var(--testo); }
-header { display: flex; gap: 1rem; align-items: center; padding: .75rem 1rem; border-bottom: 1px solid #0004; }
+header { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; padding: .75rem 1rem; border-bottom: 1px solid #0004; }
 header h1 { font-size: 1.3rem; margin: 0; color: var(--accento); }
 #info { flex: 1; opacity: .85; }
 main { align-items: start; display: grid; grid-template-columns: 1fr 280px; grid-template-rows: min-content min-content 1fr; gap: 1rem; padding: 1rem; }
@@ -67,3 +67,14 @@ textarea { font: .95rem/1.4 ui-monospace, Consolas, monospace; padding: .5rem; b
 .riga-side button { padding: .1rem .5rem; }
 .cambio { color: var(--accento); font-size: .8rem; }
 @media (max-width: 700px) { .colonne { grid-template-columns: 1fr; } }
+.torneo { grid-template-columns: 300px 1fr; grid-template-rows: auto; }
+.turni { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: center; }
+.turno h3 { font-size: .9rem; margin: 0 0 .5rem; }
+.sfida { background: #0003; border-radius: 6px; padding: .4rem .6rem; margin-bottom: .6rem; font-size: .85rem; }
+.sfida.tua { outline: 2px solid var(--accento); }
+.concorrente { padding: .1rem 0; }
+.concorrente.vince { font-weight: bold; color: var(--accento); }
+.concorrente.perde { opacity: .5; text-decoration: line-through; }
+.punteggio { font-size: .75rem; opacity: .8; }
+.campione { font-size: 1.1rem; color: var(--accento); font-weight: bold; }
+@media (max-width: 900px) { .torneo, .turni { grid-template-columns: 1fr; } }

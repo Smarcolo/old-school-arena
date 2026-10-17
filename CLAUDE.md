@@ -29,6 +29,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/incontro.py` — incontro al meglio di tre: prima partita a moneta, poi inizia chi ha perso; mazzi nuovi
   a ogni partita dalle `Lista` (mazzo + sideboard) dell'incontro; `cambia_sideboard` (scambi uno per uno, solo tra
   le partite); `viste` = carte giocate da ciascuno. L'AI fa la sua sideboard in `ai/sideboard.py`. L'API tiene gli incontri (`partite: dict[id, Incontro]`), `/api/partite/{id}/prossima`.
+- `app/torneo.py` — top 8 simulata: 7 mazzi veri di un torneo (tcdecks.carica_torneo, per nome; senza rete i mazzi
+  salvati) + il mazzo dell'umano al posto scelto; tabellone 1-8, 4-5, 2-7, 3-6; incontri AI contro AI giocati da
+  `app/simulazione.py` (gioca_da_sola / gioca_incontro_da_solo); l'incontro dell'umano è un Incontro normale.
+  Pagina `/torneo.html`; il tavolo riapre un incontro con `index.html?incontro=<id>`.
 - `app/api/main.py` — FastAPI; serve anche il frontend statico in `app/web/`.
 - `data/` — database, cache immagini, bulk Scryfall: generati, non versionati (vedi `.gitignore`).
 

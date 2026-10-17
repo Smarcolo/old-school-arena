@@ -64,17 +64,23 @@ class Carta:
     bonus_costituzione: int = 0
     scudi_rigenerazione: int = 0  # fino a fine turno
     attaccata_a: str | None = None  # per le aure: id della creatura incantata
+    segnalini: int = 0  # segnalini +1/+1 (restano finché la carta è in campo)
+    animata: tuple | None = None  # (forza, costituzione, tipo) fino a fine turno, es. Mishra's Factory
+    danneggiata_da: set[str] = field(default_factory=set)  # id delle fonti che l'hanno danneggiata in questo turno
+    passaforeste_fino_al_turno: int = 0  # Erhnam Djinn
     statico_forza: int = 0  # da aure e incantesimi globali, ricalcolati da statici.aggiorna
     statico_costituzione: int = 0
     parole_extra: set[str] = field(default_factory=set)
 
     @property
     def forza_attuale(self) -> int:
-        return (self.forza or 0) + self.bonus_forza + self.statico_forza
+        base = self.animata[0] if self.animata else (self.forza or 0)
+        return base + self.bonus_forza + self.statico_forza + self.segnalini
 
     @property
     def costituzione_attuale(self) -> int:
-        return (self.costituzione or 0) + self.bonus_costituzione + self.statico_costituzione
+        base = self.animata[1] if self.animata else (self.costituzione or 0)
+        return base + self.bonus_costituzione + self.statico_costituzione + self.segnalini
 
     @property
     def is_aura(self) -> bool:
@@ -110,8 +116,10 @@ class Carta:
         return [p[:-4].capitalize() for p in self.parole() if _PASSATERRE.match(p)]
 
     def azzera_stato_in_campo(self) -> None:
-        """Quando lascia il campo o a fine turno: niente danni né bonus."""
+        """A fine turno (e quando lascia il campo): niente danni, bonus, scudi, animazioni."""
         self.danni = self.bonus_forza = self.bonus_costituzione = self.scudi_rigenerazione = 0
+        self.animata = None
+        self.danneggiata_da = set()
 
     @property
     def is_istantaneo(self) -> bool:
@@ -127,7 +135,11 @@ class Carta:
 
     @property
     def is_creatura(self) -> bool:
-        return "Creature" in self.tipo
+        return "Creature" in self.tipo or self.animata is not None
+
+    @property
+    def tipo_attuale(self) -> str:
+        return f"{self.tipo} {self.animata[2]}" if self.animata else self.tipo
 
 
 @dataclass

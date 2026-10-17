@@ -85,6 +85,8 @@ def suggerimento(partita: Partita, umano: str) -> str:
     if partita.scelta and partita.scelta.giocatore == umano:
         if partita.scelta.tipo == "cerca":
             return f"{partita.scelta.dati['fonte']}: scegli una carta dal grimorio con «scelgo <carta>»."
+        if partita.scelta.tipo == "scegli":
+            return f"{partita.scelta.testo}: «scelgo <carta>»."
         if partita.scelta.tipo == "danni":
             return f"Banding: {partita.scelta.testo}. «danni su <creatura>» o «danni 2 su <creatura>, 1 su <altra>»."
         return f"Scegli: {partita.scelta.testo} «paga» o «non pago»."

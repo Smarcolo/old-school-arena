@@ -15,13 +15,17 @@ from dataclasses import dataclass
 
 from app.engine.stato import Carta
 
-_RIGA = re.compile(r"^(?P<costo>(?:\{[^}]+\}|Sacrifice [^:,]+)(?:, (?:\{[^}]+\}|Sacrifice [^:,]+))*):\s*(?P<effetto>.+)$")
+_PARTE = r"(?:\{[^}]+\}|Sacrifice [^:,]+|Remove a \+1/\+1 counter from [^:,]+)"
+_RIGA = re.compile(rf"^(?P<costo>{_PARTE}(?:, {_PARTE})*):\s*(?P<effetto>.+)$")
 _POMPA = re.compile(r"^(?P<nome>.+) gets (?P<f>[+-]\d+)/(?P<c>[+-]\d+) until end of turn\.$")
 _DANNO = re.compile(r"^(?P<nome>.+) deals (?P<n>\d+) damage to (?P<bersaglio>any target|target creature|target player)\.$")
 _RIGENERA = re.compile(r"^Regenerate (?P<nome>.+)\.$")
 _DISTRUGGI = re.compile(r"^Destroy target (?P<cosa>land|artifact|creature|artifact or enchantment)\.$")
 _PESCA = re.compile(r"^Draw a card\.(?P<sette> Activate only if you have exactly seven cards in your hand\.)?$")
 _TAPPA = re.compile(r"^Tap target artifact, creature, or land\.$")
+_ANIMA = re.compile(r"^(?P<nome>.+) becomes an? (?P<f>\d+)/(?P<c>\d+) (?P<tipi>[A-Za-z\- ]+?) creature until end of turn\. It's still a land\.$")
+_POMPA_BERSAGLIO = re.compile(r"^Target Assembly-Worker creature gets (?P<f>[+-]\d+)/(?P<c>[+-]\d+) until end of turn\.$")
+_SCARTA = re.compile(r"^Target player discards a card\.(?P<turno> Activate only during your turn\.)?$")
 _BERSAGLI = {"any target": "qualsiasi", "target creature": "creatura", "target player": "giocatore"}
 _DISTRUGGIBILI = {"land": "terra", "artifact": "artefatto", "creature": "creatura",
                   "artifact or enchantment": "artefatto_o_incantesimo"}
@@ -42,6 +46,9 @@ class AbilitaAttivata:
     sacrifica_se: bool = False  # «Sacrifice NAME» nel costo
     sacrifica_tipo: str = ""  # "artefatto" / "creatura" per «Sacrifice an artifact / a creature»
     solo_con_sette: bool = False  # Library of Alexandria
+    solo_nel_tuo_turno: bool = False  # Disrupting Scepter
+    togli_segnalino: bool = False  # «Remove a +1/+1 counter from NAME» (Triskelion)
+    tipo_animato: str = ""  # per «anima»: es. "Artifact Creature — Assembly-Worker"
 
 
 def _di_se_stessa(nome_nel_testo: str, carta: Carta) -> bool:
@@ -58,13 +65,16 @@ def analizza_abilita(carta: Carta) -> list[AbilitaAttivata]:
         parti = [p.strip() for p in m["costo"].split(",")]
         simboli = [p for p in parti if p.startswith("{")]
         sacrifici = [p.removeprefix("Sacrifice ").strip() for p in parti if p.startswith("Sacrifice ")]
+        togli_segnalino = any(p.startswith("Remove a +1/+1 counter from ") and _di_se_stessa(p.removeprefix(
+            "Remove a +1/+1 counter from "), carta) for p in parti)
         sacrifica_se = any(_di_se_stessa(s, carta) for s in sacrifici)
         sacrifica_tipo = next(({"an artifact": "artefatto", "a creature": "creatura"}[s] for s in sacrifici
                                if s in ("an artifact", "a creature")), "")
         if len(sacrifici) != int(sacrifica_se) + int(bool(sacrifica_tipo)):
             continue  # un sacrificio che non sappiamo pagare
         base = dict(indice=len(trovate), testo=riga, costo_mana="".join(s for s in simboli if s != "{T}"),
-                    tappa="{T}" in simboli, sacrifica_se=sacrifica_se, sacrifica_tipo=sacrifica_tipo)
+                    tappa="{T}" in simboli, sacrifica_se=sacrifica_se, sacrifica_tipo=sacrifica_tipo,
+                    togli_segnalino=togli_segnalino)
         effetto = m["effetto"].strip()
         if (p := _POMPA.match(effetto)) and _di_se_stessa(p["nome"], carta):
             trovate.append(AbilitaAttivata(**base, tipo="pompa", forza=int(p["f"]), costituzione=int(p["c"])))
@@ -80,6 +90,16 @@ def analizza_abilita(carta: Carta) -> list[AbilitaAttivata]:
             trovate.append(AbilitaAttivata(**base, tipo="pesca", solo_con_sette=bool(pe["sette"])))
         elif _TAPPA.match(effetto):
             trovate.append(AbilitaAttivata(**base, tipo="tappa", bersaglio="artefatto_creatura_o_terra"))
+        elif (an := _ANIMA.match(effetto)) and _di_se_stessa(an["nome"], carta):
+            tipi = an["tipi"].split()
+            sottotipo = " ".join(t for t in tipi if t not in ("artifact", "Artifact"))
+            tipo = ("Artifact " if any(t.lower() == "artifact" for t in tipi) else "") + f"Creature — {sottotipo}"
+            trovate.append(AbilitaAttivata(**base, tipo="anima", forza=int(an["f"]), costituzione=int(an["c"]), tipo_animato=tipo))
+        elif pb := _POMPA_BERSAGLIO.match(effetto):
+            trovate.append(AbilitaAttivata(**base, tipo="pompa_bersaglio", forza=int(pb["f"]), costituzione=int(pb["c"]),
+                                           bersaglio="assembly_worker"))
+        elif sc := _SCARTA.match(effetto):
+            trovate.append(AbilitaAttivata(**base, tipo="scarta", bersaglio="giocatore", solo_nel_tuo_turno=bool(sc["turno"])))
     return trovate
 
 

@@ -229,14 +229,17 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
                 return "Carte messe in fondo al mazzo."
             case "scelgo":
                 scelta = partita.scelta
-                if scelta is None or scelta.tipo != "cerca":
+                if scelta is None or scelta.tipo not in ("cerca", "scegli"):
                     return "Ora non c'è da scegliere una carta."
                 t = cmd.argomento.strip().lower()
                 id_ = next((i for i, n in scelta.dati["carte"].items() if i == t or n.lower() == t), None)
                 if id_ is None:
-                    return f"«{cmd.argomento}» non è nel tuo grimorio."
-                azioni.rispondi_cerca(partita, giocatore, id_)
-                return "Carta presa e grimorio rimescolato."
+                    return f"«{cmd.argomento}» non è tra le carte che puoi scegliere."
+                if scelta.tipo == "cerca":
+                    azioni.rispondi_cerca(partita, giocatore, id_)
+                    return "Carta presa e grimorio rimescolato."
+                azioni.rispondi_scegli(partita, giocatore, id_)
+                return "Fatto."
             case "danni":
                 return _dividi_danni(partita, giocatore, cmd.argomento)
             case "paga" | "nonpago":

@@ -63,14 +63,16 @@ def _tipi():
         "creatura": ("una creatura", lambda p, o, f: in_campo(p, o) and o.is_creatura),
         "giocatore": ("un giocatore", lambda p, o, f: isinstance(o, Giocatore)),
         "creatura_non_nera_non_artefatto": ("una creatura non nera e non artefatto", lambda p, o, f: in_campo(p, o)
-                                            and o.is_creatura and "B" not in o.colori and "Artifact" not in o.tipo),
-        "artefatto": ("un artefatto", lambda p, o, f: in_campo(p, o) and "Artifact" in o.tipo),
+                                            and o.is_creatura and "B" not in o.colori and "Artifact" not in o.tipo_attuale),
+        "artefatto": ("un artefatto", lambda p, o, f: in_campo(p, o) and "Artifact" in o.tipo_attuale),
         "artefatto_o_incantesimo": ("un artefatto o un incantesimo", lambda p, o, f: in_campo(p, o)
                                     and ("Artifact" in o.tipo or "Enchantment" in o.tipo)),
         "terra": ("una terra", lambda p, o, f: in_campo(p, o) and o.is_terra),
         "permanente": ("un permanente", lambda p, o, f: in_campo(p, o)),
         "artefatto_creatura_o_terra": ("un artefatto, una creatura o una terra", lambda p, o, f: in_campo(p, o)
                                        and ("Artifact" in o.tipo or o.is_creatura or o.is_terra)),
+        "assembly_worker": ("una creatura Assembly-Worker", lambda p, o, f: in_campo(p, o) and o.is_creatura
+                            and "Assembly-Worker" in o.tipo_attuale),
         "magia": ("una magia in pila", lambda p, o, f: isinstance(o, OggettoPila) and o.abilita is None and o.innesco is None),
         "blu": ("una magia o un permanente blu", _di_colore("U")),
         "rosso": ("una magia o un permanente rosso", _di_colore("R")),

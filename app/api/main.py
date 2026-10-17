@@ -126,7 +126,7 @@ def _vista_scelta(p: Partita) -> dict | None:
     s = p.scelta
     if s is None or s.giocatore != UMANO:
         return None
-    if s.tipo == "cerca":
+    if s.tipo in ("cerca", "scegli"):
         return {"tipo": "cerca", "testo": s.testo, "fonte": s.dati["fonte"],
                 "carte": [{"id": i, "nome": n} for i, n in s.dati["carte"].items()]}
     if s.tipo == "danni":

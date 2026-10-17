@@ -96,5 +96,18 @@
   {"nome": "Tropical Island", "tipo": "Land — Forest Island", "costo": "", "testo": "({T}: Add {G} or {U}.)"},
   {"nome": "Atog", "tipo": "Creature — Atog", "costo": "{1}{R}", "testo": "Sacrifice an artifact: Atog gets +2/+2 until end of turn.", "forza": 1, "costituzione": 2},
   {"nome": "Savannah Lions", "tipo": "Creature — Cat", "costo": "{W}", "testo": "", "forza": 2, "costituzione": 1},
-  {"nome": "Mahamoti Djinn", "tipo": "Creature — Djinn", "costo": "{4}{U}{U}", "testo": "Flying", "forza": 5, "costituzione": 6}
+  {"nome": "Mahamoti Djinn", "tipo": "Creature — Djinn", "costo": "{4}{U}{U}", "testo": "Flying", "forza": 5, "costituzione": 6},
+  {"nome": "Moat", "tipo": "Enchantment", "costo": "{2}{W}{W}", "testo": "Creatures without flying can't attack."},
+  {"nome": "The Abyss", "tipo": "World Enchantment", "costo": "{3}{B}", "testo": "At the beginning of each player's upkeep, destroy target nonartifact creature that player controls of their choice. It can't be regenerated."},
+  {"nome": "Hypnotic Specter", "tipo": "Creature — Specter", "costo": "{1}{B}{B}", "testo": "Flying\nWhenever Hypnotic Specter deals damage to an opponent, that player discards a card at random.", "forza": 2, "costituzione": 2},
+  {"nome": "Sengir Vampire", "tipo": "Creature — Vampire", "costo": "{3}{B}{B}", "testo": "Flying\nWhenever a creature dealt damage by Sengir Vampire this turn dies, put a +1/+1 counter on Sengir Vampire.", "forza": 4, "costituzione": 4},
+  {"nome": "Erhnam Djinn", "tipo": "Creature — Djinn", "costo": "{3}{G}", "testo": "At the beginning of your upkeep, target non-Wall creature an opponent controls gains forestwalk until your next upkeep.", "forza": 4, "costituzione": 5},
+  {"nome": "Mishra's Factory", "tipo": "Land", "costo": "", "testo": "{T}: Add {C}.\n{1}: Mishra's Factory becomes a 2/2 Assembly-Worker artifact creature until end of turn. It's still a land.\n{T}: Target Assembly-Worker creature gets +1/+1 until end of turn."},
+  {"nome": "Kird Ape", "tipo": "Creature — Ape", "costo": "{R}", "testo": "Kird Ape gets +1/+2 as long as you control a Forest.", "forza": 1, "costituzione": 1},
+  {"nome": "Sedge Troll", "tipo": "Creature — Troll", "costo": "{2}{R}", "testo": "Sedge Troll gets +1/+1 as long as you control a Swamp.\n{B}: Regenerate Sedge Troll.", "forza": 2, "costituzione": 2},
+  {"nome": "Disrupting Scepter", "tipo": "Artifact", "costo": "{3}", "testo": "{3}, {T}: Target player discards a card. Activate only during your turn."},
+  {"nome": "Su-Chi", "tipo": "Artifact Creature — Construct", "costo": "{4}", "testo": "When Su-Chi dies, add {C}{C}{C}{C}.", "forza": 4, "costituzione": 4},
+  {"nome": "Triskelion", "tipo": "Artifact Creature — Construct", "costo": "{6}", "testo": "Triskelion enters the battlefield with three +1/+1 counters on it.\nRemove a +1/+1 counter from Triskelion: It deals 1 damage to any target.", "forza": 1, "costituzione": 1},
+  {"nome": "Juggernaut", "tipo": "Artifact Creature — Juggernaut", "costo": "{4}", "testo": "Juggernaut attacks each combat if able.\nJuggernaut can't be blocked by Walls.", "forza": 5, "costituzione": 3},
+  {"nome": "Ali from Cairo", "tipo": "Creature — Human", "costo": "{2}{R}{R}", "testo": "Damage that would reduce your life total to less than 1 reduces it to 1 instead.", "forza": 0, "costituzione": 1}
 ]

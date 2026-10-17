@@ -155,8 +155,26 @@ def decidi_mulligan(partita: Partita, nome: str) -> None:
     mulligan.metti_in_fondo(partita, nome, via)
 
 
+def scelta_automatica(partita: Partita, nome: str, azione: str, candidate: list[Carta]) -> Carta:
+    """Scelte tra carte fatte dall'AI: sacrifica/scarta la meno preziosa; con Erhnam Djinn dà passa-foreste alla
+    creatura avversaria più debole."""
+    from app.engine.carte_implementate import valore_carta
+    if azione == "passaforeste":
+        return min(candidate, key=lambda c: (c.forza_attuale, c.costituzione_attuale))
+    return min(candidate, key=valore_carta)
+
+
 def decidi_scelta(partita: Partita, nome: str) -> None:
     """«Paga o subisci»: paga se può. (Le divisioni del banding l'AI le fa in automatico, senza Scelta.)"""
+    if partita.scelta.tipo in ("scegli", "cerca"):
+        candidate = [c for g in partita.giocatori for z in (Zona.CAMPO, Zona.MANO, Zona.GRIMORIO) for c in g[z]
+                     if c.id in partita.scelta.dati["carte"]]
+        if partita.scelta.tipo == "cerca":
+            from app.engine.carte_implementate import scegli_migliore
+            azioni.rispondi_cerca(partita, nome, scegli_migliore(candidate).id)
+        else:
+            azioni.rispondi_scegli(partita, nome, scelta_automatica(partita, nome, partita.scelta.dati["azione"], candidate).id)
+        return
     if partita.scelta.tipo == "danni":
         from app.engine.combattimento import _assorbitore
         dati = partita.scelta.dati

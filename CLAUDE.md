@@ -81,6 +81,11 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   (`Carta.attaccata_a`); i bonus statici vanno in `statico_forza/statico_costituzione/parole_extra`, ricalcolati
   da `statici.aggiorna` dentro `azioni_di_stato` (che ora ripete i controlli finché qualcosa cambia).
   Abilità di un'aura su «Enchanted creature» (Firebreathing): `AbilitaAttivata.su_incantata`.
+- Regole di singole carte (`engine/speciali.py`): Moat, Ali from Cairo, Juggernaut, Kird Ape/Sedge Troll,
+  Sengir Vampire (segnalino subito, senza pila), Triskelion. Segnalini +1/+1 (`Carta.segnalini`), animazione
+  (`Carta.animata`, Mishra's Factory), danni tracciati per fonte (`danneggiata_da`), `danni_a_giocatore` /
+  `danni_a_creatura` (Hypnotic Specter, Ali). Scelte tra carte: `azioni.scegli_o_decidi` (Scelta "scegli" per
+  l'umano, `avversaria.scelta_automatica` per l'AI): The Abyss, Erhnam Djinn, Disrupting Scepter.
 - Abilità innescate (`engine/inneschi.py`): mantenimento / pescata / fase finale / entrata in campo, con le frasi
   elencate nel docstring. `azioni.metti_inneschi` le mette in pila a inizio fase (prima quelle dell'attivo).
   «that player» = chi era di turno quando è scattata (`OggettoPila.giocatore_del_turno`).

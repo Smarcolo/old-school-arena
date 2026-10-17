@@ -57,17 +57,24 @@ def analizza_statici(carta: Carta) -> list[EffettoStatico]:
 
 
 def riga_capita(carta: Carta, riga: str) -> bool:
+    from app.engine import speciali
     riga = riga.strip()
     if riga.lower() == "enchant creature" and "Aura" in carta.tipo:
+        return True
+    if speciali.riga_capita(carta, riga):
         return True
     return any(e.testo == riga for e in analizza_statici(carta))
 
 
 def aggiorna(partita: Partita) -> None:
+    from app.engine import speciali
     creature = [c for g in partita.giocatori for c in g[Zona.CAMPO] if c.is_creatura]
-    for c in creature:
-        c.statico_forza = c.statico_costituzione = 0
-        c.parole_extra = set()
+    for g in partita.giocatori:
+        for c in g[Zona.CAMPO]:
+            if not c.is_creatura:
+                continue
+            c.statico_forza, c.statico_costituzione = speciali.bonus_condizionale(partita, g.nome, c)
+            c.parole_extra = {"forestwalk"} if c.passaforeste_fino_al_turno > partita.turno else set()
     for g in partita.giocatori:
         for incantesimo in g[Zona.CAMPO]:
             for e in analizza_statici(incantesimo):

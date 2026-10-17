@@ -35,7 +35,7 @@ _MOMENTI = [
 @dataclass
 class Innesco:
     testo: str
-    momento: str  # "mantenimento", "pescata", "finale", "entra"
+    momento: str  # "mantenimento", "pescata", "finale", "entra", "muore", "danno_avversario"
     chi: str  # di chi deve essere il turno: "tuo", "avversario", "ogni" ("tuo" anche per «entra»)
     effetto: str
     n: int = 0
@@ -57,6 +57,10 @@ def _effetti(nome: str) -> list[tuple[re.Pattern, str]]:
         (re.compile(r"^that player draws an additional card$", re.I), "pesca_quel_giocatore"),
         (re.compile(r"^(?:you )?draws? a card$", re.I), "pesca_tu"),
         (re.compile(rf"^sacrifice {n}$", re.I), "sacrifica"),
+        (re.compile(r"^destroy target nonartifact creature that player controls of their choice\. It can't be regenerated$", re.I), "abisso"),
+        (re.compile(r"^target non-Wall creature an opponent controls gains forestwalk until your next upkeep$", re.I), "erhnam"),
+        (re.compile(r"^that player discards a card at random$", re.I), "scarta_caso"),
+        (re.compile(r"^add ((?:\{C\})+)$", re.I), "aggiungi_incolore"),
     ]
 
 
@@ -65,7 +69,9 @@ def _effetto(nome: str, testo: str) -> tuple[str, int, str] | None:
         if m := regex.match(testo):
             gruppi = m.groups()
             numero = next((int(g) for g in gruppi if g and g.isdigit()), 0)
-            costo = next((g for g in gruppi if g and g.startswith("{")), "")
+            if tipo == "aggiungi_incolore":
+                numero = gruppi[0].count("{C}")
+            costo = next((g for g in gruppi if g and g.startswith("{")), "") if tipo != "aggiungi_incolore" else ""
             return tipo, numero, costo
     return None
 
@@ -79,6 +85,14 @@ def analizza_inneschi(carta: Carta) -> list[Innesco]:
         if m := re.match(rf"^When {nome} enters the battlefield, (.+)$", corpo, re.I):
             if e := _effetto(carta.nome, m.group(1)):
                 trovati.append(Innesco(riga, "entra", "tuo", *e))
+            continue
+        if m := re.match(rf"^When {nome} dies, (.+)$", corpo, re.I):
+            if e := _effetto(carta.nome, m.group(1)):
+                trovati.append(Innesco(riga, "muore", "tuo", *e))
+            continue
+        if m := re.match(rf"^Whenever {nome} deals damage to an opponent, (.+)$", corpo, re.I):
+            if e := _effetto(carta.nome, m.group(1)):
+                trovati.append(Innesco(riga, "danno_avversario", "tuo", *e))
             continue
         m = re.match(r"^At the beginning of (.+?), (?:if (.+?) is untapped, )?(.+)$", corpo, re.I)
         if not m:

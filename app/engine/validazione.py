@@ -156,8 +156,12 @@ def puo_attivare(partita: Partita, nome_giocatore: str, carta: Carta, abilita, b
         return motivo
     if carta not in partita.giocatore(nome_giocatore)[Zona.CAMPO]:
         return f"{carta.nome} non è sul tuo campo di battaglia"
+    if abilita.solo_nel_tuo_turno and partita.giocatore_attivo.nome != nome_giocatore:
+        return f"{carta.nome}: si attiva solo nel tuo turno"
     if abilita.tappa and (motivo := puo_tappare(partita, nome_giocatore, carta)):
         return motivo
+    if abilita.togli_segnalino and carta.segnalini < 1:
+        return f"{carta.nome} non ha segnalini +1/+1 da togliere"
     if abilita.solo_con_sette and len(partita.giocatore(nome_giocatore)[Zona.MANO]) != 7:
         return f"{carta.nome}: si attiva solo con esattamente sette carte in mano"
     if abilita.sacrifica_tipo and not da_sacrificare(partita, nome_giocatore, carta, abilita.sacrifica_tipo):

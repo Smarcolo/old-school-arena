@@ -180,8 +180,8 @@ function disegnaBarraCombattimento() {
   } else if (partita.richiesta === "scelta" && partita.scelta.tipo === "cerca") {
     const sc = partita.scelta;
     const scelta = el("select", {}, ...sc.carte.map((c) => el("option", { value: c.id, textContent: c.nome })));
-    barra.replaceChildren(el("span", { textContent: `${sc.fonte}: scegli una carta dal grimorio.` }), scelta,
-      bottone("Prendi", () => invia(`scelgo ${scelta.value}`)));
+    barra.replaceChildren(el("span", { textContent: sc.testo ? sc.testo.charAt(0).toUpperCase() + sc.testo.slice(1) + "." : `${sc.fonte}: scegli una carta.` }), scelta,
+      bottone("Scegli", () => invia(`scelgo ${scelta.value}`)));
   } else if (partita.richiesta === "scelta" && partita.scelta.tipo === "danni") {
     const sc = partita.scelta;
     barra.replaceChildren(

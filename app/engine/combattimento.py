@@ -32,6 +32,9 @@ def puo_attaccare(partita: Partita, giocatore: str, carta: Carta) -> str | None:
         return f"{carta.nome} è tappata"
     if carta.ha("defender"):
         return f"{carta.nome} non può attaccare (difensore)"
+    from app.engine import speciali
+    if not carta.ha("flying") and speciali.moat_in_campo(partita):
+        return f"{carta.nome} non può attaccare: c'è Moat e non ha volare"
     if partita.ha_debolezza_da_evocazione(carta):
         return f"{carta.nome} è entrata in questo turno e non può attaccare"
     return None
@@ -48,6 +51,9 @@ def puo_bloccare(partita: Partita, giocatore: str, carta: Carta) -> str | None:
 def puo_bloccare_contro(partita: Partita, giocatore: str, bloccante: Carta, attaccante: Carta) -> str | None:
     if motivo := puo_bloccare(partita, giocatore, bloccante):
         return motivo
+    from app.engine import speciali
+    if speciali.non_bloccabile_da_muri(attaccante) and "Wall" in bloccante.tipo_attuale:
+        return f"{attaccante.nome} non può essere bloccato dai muri"
     if attaccante.protetta_da(bloccante):
         return f"{attaccante.nome} ha protezione dal colore di {bloccante.nome}: non può bloccarla"
     if attaccante.ha("flying") and not (bloccante.ha("flying") or bloccante.ha("reach")):
@@ -117,6 +123,10 @@ def dichiara_attaccanti(partita: Partita, giocatore: str, attaccanti: list[Carta
     for c in attaccanti:
         if motivo := puo_attaccare(partita, giocatore, c):
             raise AzioneIllegale(motivo)
+    from app.engine import speciali
+    obbligati = [c for c in possibili_attaccanti(partita, giocatore) if speciali.deve_attaccare(c) and c not in attaccanti]
+    if obbligati:  # «attacks each combat if able» (Juggernaut): attaccano comunque
+        attaccanti = list(attaccanti) + obbligati
     bande_id = _valida_bande(attaccanti, bande or [])
     for c in attaccanti:
         if not c.ha("vigilance"):
@@ -308,15 +318,11 @@ def _passo_di_danno(partita: Partita, passo: str | None) -> None:
         else:
             danni_creature.append((b, bloccati[0], b.forza_attuale))
 
+    from app.engine.azioni import danni_a_creatura, danni_a_giocatore
     for fonte, bersaglio, n in danni_creature:
-        if n > 0 and bersaglio.protetta_da(fonte):
-            _log(partita, fonte.proprietario, "prevenuto", f"{bersaglio.nome} ha protezione: niente danni da {fonte.nome}")
-        elif n > 0:
-            bersaglio.danni += n
-            _log(partita, fonte.proprietario, "danno", f"{fonte.nome} infligge {n} danni a {bersaglio.nome}")
+        danni_a_creatura(partita, fonte, bersaglio, n)
     for fonte, n in danni_giocatore:
-        if n > 0:
-            modifica_vita(partita, difensore, -n, f"(attacco di {fonte.nome})")
+        danni_a_giocatore(partita, fonte, difensore, n)
     azioni_di_stato(partita)
 
 

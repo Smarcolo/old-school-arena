@@ -1,6 +1,6 @@
 """Azioni che modificano lo stato. Validano, applicano e scrivono sempre nel registro eventi."""
 from app.engine import carte_implementate  # noqa: F401  registra gli effetti delle carte
-from app.engine import mana, statici
+from app.engine import mana, speciali, statici
 from app.engine.effetti import EFFETTI
 from app.engine.eventi import Evento
 from app.engine.inneschi import analizza_inneschi
@@ -50,6 +50,7 @@ def _entra_in_campo(partita: Partita, giocatore: str, carta: Carta) -> None:
     carta.entrata_nel_turno = partita.turno
     carta.tappata = False
     partita.giocatore(giocatore)[Zona.CAMPO].append(carta)
+    carta.segnalini = speciali.segnalini_iniziali(carta)
     statici.aggiorna(partita)
     for innesco in analizza_inneschi(carta):
         if innesco.momento == "entra":
@@ -90,7 +91,7 @@ def _risolvi_innesco(partita: Partita, oggetto: OggettoPila) -> None:
     mano = len(partita.giocatore(quel_giocatore)[Zona.MANO])
     match inn.effetto:
         case "danno_te":
-            modifica_vita(partita, chi, -inn.n, f"(danni da {carta.nome})")
+            modifica_vita(partita, chi, -inn.n, f"(danni da {carta.nome})", danno=True)
         case "perdi_vita":
             modifica_vita(partita, chi, -inn.n, f"({carta.nome})")
         case "guadagna_vita":
@@ -98,7 +99,7 @@ def _risolvi_innesco(partita: Partita, oggetto: OggettoPila) -> None:
         case "danno_mano_meno" | "danno_meno_mano":
             x = max(0, mano - inn.n if inn.effetto == "danno_mano_meno" else inn.n - mano)
             if x:
-                modifica_vita(partita, quel_giocatore, -x, f"(danni da {carta.nome})")
+                modifica_vita(partita, quel_giocatore, -x, f"(danni da {carta.nome})", danno=True)
             else:
                 _log(partita, chi, "risolve", f"{carta.nome} non infligge danni")
         case "vita_mano_meno":
@@ -112,6 +113,21 @@ def _risolvi_innesco(partita: Partita, oggetto: OggettoPila) -> None:
         case "sacrifica":
             if in_campo:
                 distruggi(partita, carta, "(sacrificata)", rigenerabile=False)
+        case "scarta_caso":
+            scarta_a_caso(partita, quel_giocatore, 1, f"({carta.nome})")
+        case "aggiungi_incolore":
+            aggiungi_mana(partita, chi, "C", inn.n, f"({carta.nome})")
+        case "abisso":
+            creature = [c for c in partita.giocatore(quel_giocatore)[Zona.CAMPO]
+                        if c.is_creatura and "Artifact" not in c.tipo_attuale]
+            scegli_o_decidi(partita, quel_giocatore, carta.nome, "distruggi", creature,
+                            f"{carta.nome}: scegli una tua creatura non artefatto da distruggere")
+        case "erhnam":
+            avversario = partita.avversario_di(chi).nome
+            creature = [c for c in partita.giocatore(avversario)[Zona.CAMPO]
+                        if c.is_creatura and "Wall" not in c.tipo_attuale and not c.protetta_da(carta)]
+            scegli_o_decidi(partita, chi, carta.nome, "passaforeste", creature,
+                            f"{carta.nome}: scegli una creatura avversaria che ottiene passa-foreste")
         case "sacrifica_salvo_paga" | "danno_te_salvo_paga":
             if inn.effetto == "sacrifica_salvo_paga" and not in_campo:
                 return
@@ -142,7 +158,7 @@ def rispondi_scelta(partita: Partita, giocatore: str, paga: bool) -> None:
         if oggetto.innesco.effetto == "sacrifica_salvo_paga":
             distruggi(partita, oggetto.carta, "(sacrificata)", rigenerabile=False)
         else:
-            modifica_vita(partita, giocatore, -oggetto.innesco.n, f"(danni da {oggetto.carta.nome})")
+            modifica_vita(partita, giocatore, -oggetto.innesco.n, f"(danni da {oggetto.carta.nome})", danno=True)
     partita.scelta = None
     azioni_di_stato(partita)
     partita.priorita = partita.attivo
@@ -221,8 +237,11 @@ def attiva(partita: Partita, giocatore: str, carta: Carta, abilita, bersagli: li
         sacrificio = sacrificio or min(possibili, key=lambda c: (mana.valore(c.costo), c is carta))
     g = partita.giocatore(giocatore)
     costo = mana.analizza_costo(abilita.costo_mana)
-    fonti = fonti_di_mana(partita, giocatore, carta if abilita.tappa else None)
-    for fonte, colore in mana.piano_pagamento(g.riserva, fonti, costo):
+    # prima prova senza tappare la carta stessa (es. Mishra's Factory che si anima per attaccare)
+    piano = mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore, carta), costo)
+    if piano is None:
+        piano = mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore, carta if abilita.tappa else None), costo)
+    for fonte, colore in piano:
         tappa(partita, giocatore, fonte.carta, colore)
     g.riserva = mana.paga(g.riserva, costo)
     if abilita.tappa:
@@ -231,6 +250,9 @@ def attiva(partita: Partita, giocatore: str, carta: Carta, abilita, bersagli: li
         distruggi(partita, sacrificio, f"(sacrificata per {carta.nome})", rigenerabile=False)
     if abilita.sacrifica_se:
         distruggi(partita, carta, "(sacrificata)", rigenerabile=False)
+    if abilita.togli_segnalino:
+        carta.segnalini -= 1
+        azioni_di_stato(partita)
     partita.pila.append(OggettoPila(carta, giocatore, bersagli, abilita=abilita))
     partita.passaggi = 0
     su = f" su {descrivi_bersaglio(partita, bersagli[0])}" if bersagli else ""
@@ -262,6 +284,21 @@ def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
         _log(partita, chi, "risolve", f"{creatura.nome} prende {ab.forza:+d}/{ab.costituzione:+d} fino a fine turno")
     elif ab.tipo == "danno":
         infliggi_danno(partita, fonte, oggetto.bersagli[0], ab.danni)
+    elif ab.tipo == "anima":
+        if not partita.trova_in_campo(fonte.id):
+            return
+        fonte.animata = (ab.forza, ab.costituzione, ab.tipo_animato)
+        _log(partita, chi, "anima", f"{fonte.nome} diventa una creatura {ab.forza}/{ab.costituzione} fino a fine turno")
+        statici.aggiorna(partita)
+    elif ab.tipo == "pompa_bersaglio":
+        creatura = partita.risolvi_bersaglio(oggetto.bersagli[0])
+        creatura.bonus_forza += ab.forza
+        creatura.bonus_costituzione += ab.costituzione
+        _log(partita, chi, "risolve", f"{creatura.nome} prende {ab.forza:+d}/{ab.costituzione:+d} fino a fine turno")
+    elif ab.tipo == "scarta":
+        bersaglio = partita.risolvi_bersaglio(oggetto.bersagli[0])
+        mano = list(bersaglio[Zona.MANO])
+        scegli_o_decidi(partita, bersaglio.nome, fonte.nome, "scarta", mano, f"{fonte.nome}: scegli una carta da scartare")
     elif ab.tipo == "distruggi":
         distruggi(partita, partita.risolvi_bersaglio(oggetto.bersagli[0]), f"({fonte.nome})")
     elif ab.tipo == "pesca":
@@ -317,15 +354,41 @@ def risolvi_pila(partita: Partita) -> None:
     partita.passaggi = 0
 
 
+def danni_a_giocatore(partita: Partita, fonte: Carta, giocatore: str, quantita: int) -> None:
+    """Danni a un giocatore, con gli inneschi «Whenever NAME deals damage to an opponent» (Hypnotic Specter)."""
+    if quantita <= 0:
+        return
+    modifica_vita(partita, giocatore, -quantita, f"(danni da {fonte.nome})", danno=True)
+    trovato = partita.trova_in_campo(fonte.id)
+    if trovato and trovato[0].nome != giocatore:
+        for innesco in analizza_inneschi(fonte):
+            if innesco.momento == "danno_avversario":
+                partita.pila.append(OggettoPila(fonte, trovato[0].nome, innesco=innesco, giocatore_del_turno=giocatore))
+                partita.passaggi = 0
+                _log(partita, trovato[0].nome, "innesco", f"Si innesca {fonte.nome}: {innesco.testo}", carta=fonte.id)
+
+
+def danni_a_creatura(partita: Partita, fonte: Carta, creatura: Carta, quantita: int) -> None:
+    if quantita <= 0:
+        return
+    if creatura.protetta_da(fonte):
+        _log(partita, fonte.proprietario, "prevenuto", f"{creatura.nome} ha protezione: niente danni da {fonte.nome}")
+        return
+    creatura.danni += quantita
+    creatura.danneggiata_da.add(fonte.id)
+    _log(partita, fonte.proprietario, "danno", f"{fonte.nome} infligge {quantita} danni a {creatura.nome}")
+
+
 def infliggi_danno(partita: Partita, fonte: Carta, rif: str, quantita: int) -> None:
     bersaglio = partita.risolvi_bersaglio(rif)
     if isinstance(bersaglio, Carta) and bersaglio.protetta_da(fonte):
         _log(partita, fonte.proprietario, "prevenuto", f"{bersaglio.nome} ha protezione: niente danni da {fonte.nome}")
     elif isinstance(bersaglio, Carta):
         bersaglio.danni += quantita
+        bersaglio.danneggiata_da.add(fonte.id)
         _log(partita, fonte.proprietario, "danno", f"{fonte.nome} infligge {quantita} danni a {bersaglio.nome}")
     elif bersaglio is not None:
-        modifica_vita(partita, bersaglio.nome, -quantita, f"(danni da {fonte.nome})")
+        danni_a_giocatore(partita, fonte, bersaglio.nome, quantita)
 
 
 def _rigenera(partita: Partita, controllore: str, carta: Carta) -> None:
@@ -356,12 +419,22 @@ def distruggi(partita: Partita, carta: Carta, motivo: str = "", rigenerabile: bo
     if rigenerabile and carta.scudi_rigenerazione > 0:
         _rigenera(partita, controllore.nome, carta)
         return
+    danneggiata_da = set(carta.danneggiata_da)
     controllore[Zona.CAMPO].remove(carta)
     carta.azzera_stato_in_campo()
     carta.tappata = False
     carta.attaccata_a = None
+    carta.segnalini = 0
     partita.giocatore(carta.proprietario or controllore.nome)[Zona.CIMITERO].append(carta)
     _log(partita, controllore.nome, "muore", f"{carta.nome} va al cimitero {motivo}".strip(), carta=carta.id)
+    if carta.is_creatura:
+        for id_fonte in danneggiata_da:  # Sengir Vampire (semplificato: il segnalino arriva subito, senza pila)
+            if (t := partita.trova_in_campo(id_fonte)) and speciali.cresce_quando_muore_un_danneggiato(t[1]):
+                t[1].segnalini += 1
+                _log(partita, t[0].nome, "segnalino", f"{t[1].nome} prende un segnalino +1/+1")
+        for innesco in analizza_inneschi(carta):
+            if innesco.momento == "muore":
+                _metti_innesco(partita, controllore.nome, carta, innesco)
 
 
 # --- Spostamenti di carte usati dagli effetti ---------------------------------------------------
@@ -375,6 +448,7 @@ def _lascia_il_campo(partita: Partita, carta: Carta) -> str | None:
     carta.azzera_stato_in_campo()
     carta.tappata = False
     carta.attaccata_a = None
+    carta.segnalini = 0
     return trovato[0].nome
 
 
@@ -453,6 +527,48 @@ def _prendi_dal_grimorio(partita: Partita, giocatore: str, carta: Carta, fonte: 
     _log(partita, giocatore, "cerca", f"{giocatore} prende una carta dal grimorio con {fonte} e rimescola")
 
 
+def _applica_scelta(partita: Partita, giocatore: str, azione: str, carta: Carta, fonte: str) -> None:
+    if azione == "distruggi":
+        distruggi(partita, carta, f"({fonte})", rigenerabile=False)
+    elif azione == "passaforeste":
+        carta.passaforeste_fino_al_turno = partita.turno + 2  # fino al prossimo mantenimento di chi l'ha scelto
+        _log(partita, giocatore, "passaforeste", f"{carta.nome} ha passa-foreste fino al prossimo mantenimento di {giocatore}")
+        statici.aggiorna(partita)
+    elif azione == "scarta":
+        scarta(partita, giocatore, carta, f"({fonte})")
+    azioni_di_stato(partita)
+
+
+def scegli_o_decidi(partita: Partita, giocatore: str, fonte: str, azione: str, candidate: list[Carta], testo: str) -> None:
+    """Una scelta tra carte: chi è in scelte_manuali risponde con «scelgo» (Scelta "scegli"); per gli altri decide
+    l'AI (avversaria.scelta_automatica). Con una sola candidata non si chiede niente."""
+    if not candidate:
+        _log(partita, giocatore, "nulla", f"{fonte}: nessuna carta da scegliere")
+        return
+    if len(candidate) == 1 or giocatore not in partita.scelte_manuali:
+        from app.ai.avversaria import scelta_automatica
+        carta = candidate[0] if len(candidate) == 1 else scelta_automatica(partita, giocatore, azione, candidate)
+        _applica_scelta(partita, giocatore, azione, carta, fonte)
+        return
+    partita.scelta = Scelta(giocatore, testo=testo, tipo="scegli",
+                            dati={"carte": {c.id: c.nome for c in candidate}, "fonte": fonte, "azione": azione})
+
+
+def rispondi_scegli(partita: Partita, giocatore: str, id_carta: str) -> None:
+    scelta = partita.scelta
+    if scelta is None or scelta.tipo != "scegli":
+        raise AzioneIllegale("ora non c'è da scegliere una carta")
+    if scelta.giocatore != giocatore:
+        raise AzioneIllegale(f"tocca a {scelta.giocatore} scegliere")
+    if id_carta not in scelta.dati["carte"]:
+        raise AzioneIllegale("non puoi scegliere quella carta")
+    carta = next(c for g in partita.giocatori for z in (Zona.CAMPO, Zona.MANO) for c in g[z] if c.id == id_carta)
+    partita.scelta = None
+    _applica_scelta(partita, giocatore, scelta.dati["azione"], carta, scelta.dati["fonte"])
+    partita.priorita = partita.attivo
+    partita.passaggi = 0
+
+
 def rispondi_cerca(partita: Partita, giocatore: str, id_carta: str) -> None:
     scelta = partita.scelta
     if scelta is None or scelta.tipo != "cerca":
@@ -520,8 +636,12 @@ def concedi(partita: Partita, giocatore: str) -> None:
     _log(partita, giocatore, "sconfitta", f"{giocatore} concede la partita")
 
 
-def modifica_vita(partita: Partita, giocatore: str, delta: int, motivo: str = "") -> None:
+def modifica_vita(partita: Partita, giocatore: str, delta: int, motivo: str = "", danno: bool = False) -> None:
+    """danno=True per i danni veri (Ali from Cairo li ferma a 1 punto vita), False per perdite e guadagni di vita."""
     g = partita.giocatore(giocatore)
+    if danno and delta < 0 and g.vita >= 1 and g.vita + delta < 1 and speciali.ali_protegge(partita, giocatore):
+        delta = 1 - g.vita
+        motivo = (motivo + " (Ali from Cairo: resta a 1)").strip()
     g.vita += delta
     _log(partita, giocatore, "vita", f"{giocatore} {delta:+d} vita ({g.vita}) {motivo}".strip())
     if g.vita <= 0 and not partita.vincitore:
@@ -573,6 +693,7 @@ def passa_fase(partita: Partita) -> None:
     partita.fase = Fase.STAP
     g = partita.giocatore_attivo
     g.terre_giocate_nel_turno = 0
+    statici.aggiorna(partita)  # effetti che scadono a un certo turno (Erhnam Djinn)
     _log(partita, g.nome, "turno", f"Turno {partita.turno} di {g.nome}")
     _automatismi_fase(partita)
 

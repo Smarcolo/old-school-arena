@@ -72,7 +72,9 @@ Anche l'avversaria fa la sua sideboard, in base alle carte che le hai fatto vede
 - Le carte fondamentali del 93/94: Power 9 (Black Lotus, Mox, Ancestral Recall, Time Walk, Timetwister), Sol Ring,
   terre doppie, City of Brass, Strip Mine, Library of Alexandria, Swords to Plowshares, Terror, Counterspell,
   Mana Drain, Disenchant, Shatter, Fireball, Psionic Blast, Braingeyser, Mind Twist, Demonic Tutor, Regrowth,
-  Wheel of Fortune, Balance, Wrath of God, Armageddon, Dark Ritual, Red/Blue Elemental Blast, Icy Manipulator, Atog.
+  Wheel of Fortune, Balance, Wrath of God, Armageddon, Dark Ritual, Red/Blue Elemental Blast, Icy Manipulator, Atog,
+  Mishra's Factory, Moat, The Abyss, Hypnotic Specter, Sengir Vampire, Erhnam Djinn, Kird Ape, Sedge Troll,
+  Disrupting Scepter, Su-Chi, Triskelion, Juggernaut, Ali from Cairo.
 - Combattimento: attacchi, blocchi (anche più creature sullo stesso attaccante), danni, Giant Growth dopo i blocchi.
 - Abilità attivate semplici: pompaggio (Shivan Dragon, Frozen Shade), danno (Prodigal Sorcerer) e rigenerazione
   (Drudge Skeletons, Uthden Troll, Will-o'-the-Wisp): lo scudo vale fino a fine turno e compare sulla carta.

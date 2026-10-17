@@ -4,7 +4,6 @@ from fastapi.testclient import TestClient
 from app.api import main
 from app.cards import database, mazzi, tcdecks
 from app.engine import azioni
-from app.engine.stato import Carta
 from app.incontro import Lista
 from app.simulazione import gioca_da_sola
 from app.torneo import Partecipante, Torneo

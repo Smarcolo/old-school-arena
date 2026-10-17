@@ -27,8 +27,9 @@ def parole_chiave_da_testo(testo: str) -> set[str]:
     """Una riga del testo Oracle fatta solo di parole chiave (es. "Flying, vigilance") le attiva tutte."""
     trovate: set[str] = set()
     for riga in testo.lower().splitlines():
+        riga = re.sub(r"\s*\([^)]*\)", "", riga).strip()  # testo di promemoria: «Banding (Any creatures ...)»
         parti = [p.strip() for p in riga.split(",")]
-        if parti and all(p in PAROLE_CHIAVE or _PASSATERRE.match(p) or _PROTEZIONE.match(p) for p in parti):
+        if riga and all(p in PAROLE_CHIAVE or _PASSATERRE.match(p) or _PROTEZIONE.match(p) for p in parti):
             trovate.update(parti)
     return trovate
 
@@ -106,7 +107,7 @@ class Carta:
     @property
     def caratteristiche_protezione(self) -> set[str]:
         """Ciò da cui una protezione può proteggere contro questa carta: i suoi colori, più "A" se è un artefatto."""
-        return self.colori | ({"A"} if "Artifact" in self.tipo else set())
+        return self.colori | ({"A"} if "Artifact" in self.tipo_attuale else set())
 
     def protetta_da(self, fonte: "Carta | None") -> bool:
         return fonte is not None and bool(self.protezioni & fonte.caratteristiche_protezione)
@@ -122,6 +123,16 @@ class Carta:
         self.animata = None
         self.danneggiata_da = set()
         self.disintegrata = False
+
+    def lascia_il_campo(self) -> None:
+        """Una carta che lascia il campo diventa un oggetto nuovo: niente di quello che aveva in campo resta."""
+        self.azzera_stato_in_campo()
+        self.tappata = False
+        self.attaccata_a = None
+        self.segnalini = 0
+        self.passaforeste_fino_al_turno = 0
+        self.statico_forza = self.statico_costituzione = 0
+        self.parole_extra = set()
 
     @property
     def is_istantaneo(self) -> bool:
@@ -144,6 +155,9 @@ class Carta:
         return f"{self.tipo} {self.animata[2]}" if self.animata else self.tipo
 
 
+PAREGGIO = "Pareggio"  # valore di Partita.vincitore quando perdono tutti insieme
+
+
 @dataclass
 class Giocatore:
     nome: str
@@ -151,6 +165,7 @@ class Giocatore:
     zone: dict[Zona, list[Carta]] = field(default_factory=lambda: {z: [] for z in Zona if z != Zona.PILA})
     terre_giocate_nel_turno: int = 0
     riserva: dict[str, int] = field(default_factory=lambda: dict.fromkeys("WUBRGC", 0))
+    pescato_da_vuoto: bool = False  # ha dovuto pescare da un grimorio vuoto: perde al prossimo controllo
 
     def __getitem__(self, zona: Zona) -> list[Carta]:
         return self.zone[zona]
@@ -225,7 +240,7 @@ class Partita:
     scelte_manuali: set[str] = field(default_factory=set)  # chi decide a mano le divisioni del banding
     mulligan: dict | None = None  # nome -> StatoMulligan durante i mulligan iniziali (engine/mulligan.py)
     turni_extra: list[str] = field(default_factory=list)  # Time Walk: chi gioca un turno in più
-    mana_ritardato: list[tuple[str, int]] = field(default_factory=list)  # Mana Drain: (chi, quanto) alla sua prossima fase principale
+    mana_ritardato: list[tuple] = field(default_factory=list)  # Mana Drain: (chi, quanto, turno, fase) alla sua prossima fase principale
     rng: random.Random = field(default_factory=random.Random, repr=False)
 
     @property
@@ -286,7 +301,7 @@ def nuova_partita(mazzi: dict[str, list[Carta]], mano_iniziale: int = 7, seed: i
         for c in carte:
             c.proprietario = nome
         g[Zona.GRIMORIO].extend(carte)
-        for _ in range(mano_iniziale):
+        for _ in range(min(mano_iniziale, len(g[Zona.GRIMORIO]))):
             g[Zona.MANO].append(g[Zona.GRIMORIO].pop())
         giocatori.append(g)
     partita = Partita(giocatori=giocatori, mana_burn=mana_burn, rng=rng)

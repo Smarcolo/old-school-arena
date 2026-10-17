@@ -4,7 +4,7 @@ from app.ai.avversaria import agisci
 from app.commands.esegui import esegui
 from app.commands.parser import analizza
 from app.engine import azioni
-from app.engine.stato import Carta, Fase, nuova_partita
+from app.engine.stato import Carta, nuova_partita
 from app.engine.validazione import AzioneIllegale
 from app.engine.zone import Zona
 

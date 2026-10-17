@@ -1,6 +1,6 @@
 import pytest
 
-from app.ai.avversaria import agisci, scegli_attaccanti
+from app.ai.avversaria import scegli_attaccanti
 from app.cards import mazzi
 from app.commands.esegui import esegui
 from app.commands.parser import analizza

@@ -4,7 +4,7 @@ from app.engine import mana, speciali, statici
 from app.engine.effetti import EFFETTI
 from app.engine.eventi import Evento
 from app.engine.inneschi import Innesco, analizza_inneschi
-from app.engine.stato import ORDINE_FASI, Carta, Fase, OggettoPila, Partita, Scelta
+from app.engine.stato import ORDINE_FASI, PAREGGIO, Carta, Fase, OggettoPila, Partita, Scelta
 from app.engine.effetti import bersaglio_legale
 from app.engine.validazione import (AzioneIllegale, costo_di_lancio, da_sacrificare, fonti_di_mana, puo_attivare,
                                     puo_giocare_terra, puo_lanciare, puo_passare, puo_tappare)
@@ -35,9 +35,10 @@ def pesca(partita: Partita, giocatore: str, quante: int = 1) -> list[Carta]:
     pescate = []
     for _ in range(quante):
         if not g[Zona.GRIMORIO]:
-            # 93/94: chi deve pescare da un grimorio vuoto perde.
-            partita.vincitore = partita.avversario_di(giocatore).nome
-            _log(partita, giocatore, "sconfitta", f"{giocatore} non può pescare: grimorio vuoto")
+            # 93/94: chi deve pescare da un grimorio vuoto perde (al controllo successivo, vedi controlla_sconfitte)
+            if not g.pescato_da_vuoto:
+                _log(partita, giocatore, "grimorio_vuoto", f"{giocatore} non può pescare: grimorio vuoto")
+            g.pescato_da_vuoto = True
             break
         carta = g[Zona.GRIMORIO].pop()
         g[Zona.MANO].append(carta)
@@ -144,6 +145,8 @@ def rispondi_scelta(partita: Partita, giocatore: str, paga: bool) -> None:
     scelta = partita.scelta
     if scelta is None:
         raise AzioneIllegale("non c'è nessuna scelta in sospeso")
+    if scelta.tipo != "paga":
+        raise AzioneIllegale("ora non c'è niente da pagare: " + (scelta.testo or "c'è un'altra scelta in sospeso"))
     if scelta.giocatore != giocatore:
         raise AzioneIllegale(f"tocca a {scelta.giocatore} scegliere")
     g = partita.giocatore(giocatore)
@@ -206,7 +209,8 @@ def tappa(partita: Partita, giocatore: str, carta: Carta, colore: str | None = N
     if fonte.sacrifica:
         distruggi(partita, carta, "(sacrificata)", rigenerabile=False)
     if fonte.danno:
-        modifica_vita(partita, giocatore, -fonte.danno, f"(danni da {carta.nome})")
+        modifica_vita(partita, giocatore, -fonte.danno, f"(danni da {carta.nome})", danno=True)
+        controlla_sconfitte(partita)
 
 
 def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] | None = None, x: int = 0) -> None:
@@ -428,10 +432,7 @@ def distruggi(partita: Partita, carta: Carta, motivo: str = "", rigenerabile: bo
         return
     danneggiata_da = set(carta.danneggiata_da)
     controllore[Zona.CAMPO].remove(carta)
-    carta.azzera_stato_in_campo()
-    carta.tappata = False
-    carta.attaccata_a = None
-    carta.segnalini = 0
+    carta.lascia_il_campo()
     partita.giocatore(carta.proprietario or controllore.nome)[Zona.CIMITERO].append(carta)
     _log(partita, controllore.nome, "muore", f"{carta.nome} va al cimitero {motivo}".strip(), carta=carta.id)
     if carta.is_creatura:
@@ -453,10 +454,7 @@ def _lascia_il_campo(partita: Partita, carta: Carta) -> str | None:
     if not trovato:
         return None
     trovato[0][Zona.CAMPO].remove(carta)
-    carta.azzera_stato_in_campo()
-    carta.tappata = False
-    carta.attaccata_a = None
-    carta.segnalini = 0
+    carta.lascia_il_campo()
     return trovato[0].nome
 
 
@@ -608,7 +606,8 @@ def azioni_di_stato(partita: Partita) -> None:
     for _ in range(20):
         statici.aggiorna(partita)
         if not _un_giro_di_controlli(partita):
-            return
+            break
+    controlla_sconfitte(partita)
 
 
 def _un_giro_di_controlli(partita: Partita) -> bool:
@@ -617,7 +616,7 @@ def _un_giro_di_controlli(partita: Partita) -> bool:
         for c in list(g[Zona.CAMPO]):
             if c.is_aura:
                 trovato = partita.trova_in_campo(c.attaccata_a) if c.attaccata_a else None
-                if trovato is None or trovato[1].protetta_da(c):
+                if trovato is None or not trovato[1].is_creatura or trovato[1].protetta_da(c):
                     distruggi(partita, c, "(non incanta più una creatura valida)", rigenerabile=False)
                     cambiato = True
     statici.aggiorna(partita)
@@ -635,6 +634,7 @@ def _un_giro_di_controlli(partita: Partita) -> bool:
 
 def passa_priorita(partita: Partita, giocatore: str) -> None:
     """Quando entrambi passano di fila: si risolve la cima della pila, o se è vuota si va alla fase successiva."""
+    controlla_sconfitte(partita)
     _verifica(puo_passare(partita, giocatore))
     partita.passaggi += 1
     if partita.passaggi < 2:
@@ -662,9 +662,24 @@ def modifica_vita(partita: Partita, giocatore: str, delta: int, motivo: str = ""
         motivo = (motivo + " (Ali from Cairo: resta a 1)").strip()
     g.vita += delta
     _log(partita, giocatore, "vita", f"{giocatore} {delta:+d} vita ({g.vita}) {motivo}".strip())
-    if g.vita <= 0 and not partita.vincitore:
-        partita.vincitore = partita.avversario_di(giocatore).nome
-        _log(partita, giocatore, "sconfitta", f"{giocatore} è a {g.vita} punti vita")
+
+
+def controlla_sconfitte(partita: Partita) -> None:
+    """Azione di stato: perde chi è a 0 o meno punti vita o ha pescato da un grimorio vuoto. Si controlla dopo
+    l'effetto intero, non a metà: se perdono tutti insieme (Earthquake, Timetwister) la partita è pari."""
+    if partita.vincitore:
+        return
+    perdenti = [g for g in partita.giocatori if g.vita <= 0 or g.pescato_da_vuoto]
+    for g in perdenti:
+        motivo = f"è a {g.vita} punti vita" if g.vita <= 0 else "ha dovuto pescare da un grimorio vuoto"
+        _log(partita, g.nome, "sconfitta", f"{g.nome} {motivo}")
+    if len(perdenti) == len(partita.giocatori):
+        partita.vincitore = PAREGGIO
+        _log(partita, perdenti[0].nome, "pareggio", "Perdono entrambi: la partita è pari")
+    elif perdenti:
+        partita.vincitore = partita.avversario_di(perdenti[0].nome).nome
+    if partita.vincitore:
+        partita.scelta = None
 
 
 def svuota_riserve(partita: Partita) -> None:
@@ -686,6 +701,7 @@ def passa_fase(partita: Partita) -> None:
     if partita.scelta:
         raise AzioneIllegale("c'è una scelta in sospeso")
     svuota_riserve(partita)
+    controlla_sconfitte(partita)
     if partita.vincitore:
         return
     partita.priorita = partita.attivo
@@ -711,7 +727,7 @@ def passa_fase(partita: Partita) -> None:
     partita.fase = Fase.STAP
     g = partita.giocatore_attivo
     g.terre_giocate_nel_turno = 0
-    statici.aggiorna(partita)  # effetti che scadono a un certo turno (Erhnam Djinn)
+    azioni_di_stato(partita)  # effetti che scadono a un certo turno (Erhnam Djinn), aure su una Factory tornata terra
     _log(partita, g.nome, "turno", f"Turno {partita.turno} di {g.nome}")
     _automatismi_fase(partita)
 
@@ -726,12 +742,14 @@ def _automatismi_fase(partita: Partita) -> None:
         metti_inneschi(partita, "mantenimento")
     elif partita.fase == Fase.PESCATA:
         pesca(partita, g.nome)
+        controlla_sconfitte(partita)
         if not partita.vincitore:
             metti_inneschi(partita, "pescata")
-    elif partita.fase == Fase.PRINCIPALE_1:
-        for chi, quanto in [m for m in partita.mana_ritardato if m[0] == g.nome]:
-            partita.mana_ritardato.remove((chi, quanto))
-            aggiungi_mana(partita, chi, "C", quanto, "(Mana Drain)")
+    elif partita.fase in (Fase.PRINCIPALE_1, Fase.PRINCIPALE_2):
+        # Mana Drain: alla prossima fase principale di chi l'ha lanciata (la 2 dello stesso turno, se era nella 1)
+        for m in [m for m in partita.mana_ritardato if m[0] == g.nome and tuple(m[2:]) != (partita.turno, partita.fase)]:
+            partita.mana_ritardato.remove(m)
+            aggiungi_mana(partita, m[0], "C", m[1], "(Mana Drain)")
     elif partita.fase == Fase.FINALE:
         metti_inneschi(partita, "finale")
     elif partita.fase == Fase.COMBATTIMENTO:

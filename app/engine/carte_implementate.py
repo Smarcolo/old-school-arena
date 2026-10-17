@@ -2,7 +2,7 @@
 Importato da azioni.py così il registro è sempre pieno. Le semplificazioni sono scritte nel commento della carta."""
 from app.engine import mana
 from app.engine.effetti import bersaglio_legale, effetto
-from app.engine.stato import Carta, Giocatore, OggettoPila
+from app.engine.stato import Carta, OggettoPila
 from app.engine.zone import Zona
 
 # Priorità quando un effetto deve scegliere una carta da solo (Demonic Tutor dell'AI, scelte automatiche)
@@ -42,7 +42,7 @@ def lightning_bolt(partita, oggetto):
 def psionic_blast(partita, oggetto):
     """Psionic Blast deals 4 damage to any target and 2 damage to you."""
     _az().infliggi_danno(partita, oggetto.carta, oggetto.bersagli[0], 4)
-    _az().modifica_vita(partita, oggetto.controllore, -2, "(Psionic Blast)")
+    _az().infliggi_danno(partita, oggetto.carta, f"giocatore:{oggetto.controllore}", 2)
 
 
 @effetto("Fireball", bersaglio="qualsiasi", max_bersagli=0, costo_per_bersaglio="{1}")
@@ -70,7 +70,7 @@ def _danni_a_tutti(partita, oggetto, filtro_volare: bool):
             if c.is_creatura and c.ha("flying") == filtro_volare:
                 _az().infliggi_danno(partita, oggetto.carta, f"carta:{c.id}", oggetto.x)
     for g in partita.giocatori:
-        _az().modifica_vita(partita, g.nome, -oggetto.x, f"({oggetto.carta.nome})")
+        _az().infliggi_danno(partita, oggetto.carta, f"giocatore:{g.nome}", oggetto.x)
 
 
 @effetto("Earthquake")
@@ -171,7 +171,7 @@ def mana_drain(partita, oggetto):
     magia = _bersaglio(partita, oggetto)
     _az().neutralizza(partita, magia, "Mana Drain")
     if (valore := mana.valore(magia.carta.costo)) > 0:
-        partita.mana_ritardato.append((oggetto.controllore, valore))
+        partita.mana_ritardato.append((oggetto.controllore, valore, partita.turno, partita.fase))
 
 
 def _elemental_blast(colore_nome):

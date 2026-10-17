@@ -271,7 +271,7 @@ def assegna_danni(partita: Partita, giocatore: str, ripartizione: dict[str, int]
 
 
 def _passo_di_danno(partita: Partita, passo: str | None) -> None:
-    from app.engine.azioni import azioni_di_stato, modifica_vita
+    from app.engine.azioni import azioni_di_stato
     comb = partita.combattimento
     difensore = partita.avversario_di(partita.giocatore_attivo.nome).nome
     danni_creature: list[tuple[Carta, Carta, int]] = []  # (fonte, bersaglio, danni)
@@ -359,6 +359,13 @@ def dopo_doppio_passaggio(partita: Partita) -> bool:
     comb = partita.combattimento
     if partita.fase != Fase.COMBATTIMENTO or comb is None:
         return False
+    if not comb.attaccanti_dichiarati and not partita.pila:
+        from app.engine import speciali
+        attivo = partita.giocatore_attivo.nome
+        if any(speciali.deve_attaccare(c) for c in possibili_attaccanti(partita, attivo)):
+            partita.priorita = partita.attivo  # Juggernaut attacca anche se il giocatore passa senza dichiarare
+            dichiara_attaccanti(partita, attivo, [])
+            return True
     if comb.attaccanti and not comb.bloccanti_dichiarati:
         inizia_blocchi(partita)
         return True

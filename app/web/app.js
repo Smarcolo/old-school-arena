@@ -162,7 +162,9 @@ function disegnaBarraCombattimento() {
     barra.hidden = false;
     const fine = inc.vincitore
       ? `Incontro finito: vince ${inc.vincitore} (${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}).`
-      : `Partita ${inc.numero} vinta da ${partita.vincitore}. Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}.`;
+      : partita.vincitore === "Pareggio"
+        ? `Partita ${inc.numero} finita pari (non conta). Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}.`
+        : `Partita ${inc.numero} vinta da ${partita.vincitore}. Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}.`;
     barra.replaceChildren(el("span", { textContent: fine }),
       ...(inc.prossima_possibile ? [bottone("Sideboard", apriSideboard), bottone(`Partita ${inc.numero + 1}`, prossimaPartita)] : []),
       ...(inc.torneo && inc.vincitore ? [bottone("Torna al torneo", () => { location.href = `torneo.html?id=${inc.torneo}`; })] : []));
@@ -255,7 +257,7 @@ function disegna() {
   const inc = partita.incontro;
   const punteggio = inc ? `Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]} · partita ${inc.numero} · ` : "";
   $("info").textContent = punteggio + (partita.vincitore
-    ? `Partita finita: vince ${partita.vincitore}`
+    ? (partita.vincitore === "Pareggio" ? "Partita finita pari" : `Partita finita: vince ${partita.vincitore}`)
     : `Turno ${partita.turno} · ${partita.fase} · tocca a ${partita.attivo}`);
   disegnaGiocatore($("avversaria"), partita.giocatori[1], false);
   disegnaGiocatore($("tu"), partita.giocatori[0], true);

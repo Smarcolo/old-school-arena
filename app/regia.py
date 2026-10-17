@@ -5,7 +5,7 @@ from app.commands.esegui import esegui
 from app.commands.parser import analizza
 from app.engine import azioni, combattimento, mulligan
 from app.engine.abilita import analizza_abilita
-from app.engine.stato import Partita
+from app.engine.stato import PAREGGIO, Partita
 from app.engine.validazione import FASI_PRINCIPALI, puo_attivare, puo_lanciare
 from app.engine.zone import Zona
 
@@ -75,7 +75,7 @@ def avanza(partita: Partita, umano: str, ai: str, fino_a_fine_turno: bool = Fals
 def suggerimento(partita: Partita, umano: str) -> str:
     """Cosa può fare l'umano adesso, detto in una riga."""
     if partita.vincitore:
-        return f"Partita finita: vince {partita.vincitore}."
+        return "Partita finita pari." if partita.vincitore == PAREGGIO else f"Partita finita: vince {partita.vincitore}."
     if partita.mulligan and not partita.mulligan[umano].finito:
         stato = partita.mulligan[umano]
         if stato.tenuta:

@@ -1,7 +1,7 @@
 import pytest
 
 from app.engine import azioni
-from app.engine.stato import Carta, Fase, nuova_partita
+from app.engine.stato import PAREGGIO, Carta, Fase, nuova_partita
 from app.engine.validazione import AzioneIllegale
 from app.engine.zone import Zona
 
@@ -48,7 +48,23 @@ def test_grimorio_vuoto_fa_perdere():
 
 def test_vita_a_zero(partita):
     azioni.modifica_vita(partita, "B", -20)
+    azioni.azioni_di_stato(partita)  # la sconfitta è un'azione di stato
     assert partita.vincitore == "A"
+
+
+def test_perdono_entrambi_pareggio(partita):
+    azioni.modifica_vita(partita, "A", -20)
+    azioni.modifica_vita(partita, "B", -25)
+    azioni.azioni_di_stato(partita)
+    assert partita.vincitore == PAREGGIO
+
+
+def test_grimorio_vuoto_per_entrambi_pareggio(partita):
+    for g in partita.giocatori:
+        g[Zona.GRIMORIO].clear()
+        azioni.pesca(partita, g.nome)
+    azioni.azioni_di_stato(partita)
+    assert partita.vincitore == PAREGGIO
 
 
 def test_registro_eventi(partita):

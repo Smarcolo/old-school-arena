@@ -118,25 +118,33 @@ def paga(riserva: dict[str, int], costo: dict[str, int]) -> dict[str, int] | Non
 def piano_pagamento(riserva: dict[str, int], fonti: list[FonteMana], costo: dict[str, int]) -> list[tuple[FonteMana, str]] | None:
     """Sceglie quali fonti usare (e per quale colore) per pagare il costo, usando prima la riserva.
     Per i colori usa prima le fonti meno flessibili; Lotus, City of Brass e creature solo se servono.
-    None se il costo non è pagabile."""
-    simulata = dict(riserva)
-    disponibili = sorted(fonti, key=lambda f: f.costo_d_uso)
-    scelte: list[tuple[FonteMana, str]] = []
+    Se una scelta porta a un vicolo cieco (Tundra e Plateau per {W}{U}) torna indietro e prova un'altra fonte;
+    tra fonti identiche ne prova una sola. None se il costo non è pagabile."""
 
-    def usa(fonte: FonteMana, colore: str) -> None:
-        disponibili.remove(fonte)
-        scelte.append((fonte, colore))
-        simulata[colore] = simulata.get(colore, 0) + fonte.quantita
+    def generico(simulata: dict[str, int], disponibili: list[FonteMana]) -> list[tuple[FonteMana, str]] | None:
+        simulata, scelte = dict(simulata), []
+        for fonte in disponibili:
+            if paga(simulata, costo) is not None:
+                break
+            colore = "C" if "C" in fonte.colori else fonte.colori[0]
+            scelte.append((fonte, colore))
+            simulata[colore] = simulata.get(colore, 0) + fonte.quantita
+        return scelte if paga(simulata, costo) is not None else None
 
-    for colore in COLORI:
-        while simulata.get(colore, 0) < costo.get(colore, 0):
-            fonte = next((f for f in disponibili if colore in f.colori), None)
-            if fonte is None:
-                return None
-            usa(fonte, colore)
-    while paga(simulata, costo) is None:
-        if not disponibili:
-            return None
-        fonte = disponibili[0]
-        usa(fonte, "C" if "C" in fonte.colori else fonte.colori[0])
-    return scelte
+    def cerca(simulata: dict[str, int], disponibili: list[FonteMana]) -> list[tuple[FonteMana, str]] | None:
+        colore = next((c for c in COLORI if simulata.get(c, 0) < costo.get(c, 0)), None)
+        if colore is None:
+            return generico(simulata, disponibili)
+        provate = set()
+        for fonte in disponibili:
+            firma = (fonte.colori, fonte.quantita, fonte.costo_d_uso)
+            if colore not in fonte.colori or firma in provate:
+                continue
+            provate.add(firma)
+            resto = cerca({**simulata, colore: simulata.get(colore, 0) + fonte.quantita},
+                          [f for f in disponibili if f is not fonte])
+            if resto is not None:
+                return [(fonte, colore)] + resto
+        return None
+
+    return cerca(dict(riserva), sorted(fonti, key=lambda f: f.costo_d_uso))

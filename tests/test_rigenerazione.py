@@ -4,7 +4,7 @@ from app.ai.avversaria import agisci, scegli_bloccanti
 from app.cards import mazzi
 from app.engine import azioni, combattimento
 from app.engine.abilita import analizza_abilita
-from app.engine.stato import Carta, Fase, nuova_partita
+from app.engine.stato import Carta, nuova_partita
 from app.engine.zone import Zona
 
 

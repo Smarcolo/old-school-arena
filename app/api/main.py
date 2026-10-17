@@ -13,7 +13,7 @@ from app.engine import combattimento, mana
 from app.engine.eventi import Evento
 from app.engine.abilita import analizza_abilita
 from app.engine.azioni import descrivi_bersaglio
-from app.engine.stato import NOMI_COLORI, PAROLE_CHIAVE, PROTEZIONI_INGLESE, Partita, nuova_partita, parole_chiave_da_testo
+from app.engine.stato import NOMI_COLORI, PAROLE_CHIAVE, PROTEZIONI_INGLESE, Partita
 from app.engine.validazione import tipo_bersaglio
 from app.engine.zone import Zona
 from app.judge.giudice import Giudice
@@ -171,10 +171,6 @@ def _carica_lista(nome: str) -> Lista:
         raise HTTPException(400, f"il mazzo «{nome}» non si può usare: " + "; ".join(motivi))
     sideboard = {n: q for n, q in analisi["sideboard"].items() if database.cerca(conn_carte, n)}
     return Lista(analisi["mazzo"], sideboard)
-
-
-def _carica_mazzo(nome: str) -> list:
-    return database.mazzo_da_lista(conn_carte, _carica_lista(nome).mazzo)
 
 
 def vista_incontro(inc: Incontro) -> dict:

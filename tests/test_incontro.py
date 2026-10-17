@@ -3,7 +3,7 @@ from collections import Counter
 
 from app.ai.sideboard import scegli_cambi
 from app.engine import azioni
-from app.engine.stato import Carta
+from app.engine.stato import PAREGGIO, Carta
 from app.engine.zone import Zona
 from app.incontro import Incontro, Lista
 
@@ -87,3 +87,15 @@ def test_sideboard_dell_avversaria():
     entra, esce = scegli_cambi({"Red Elemental Blast": 2, "Disenchant": 2}, {"Mountain": 17, "Gray Ogre": 2, "Hill Giant": 2},
                                viste, info)
     assert entra == {"Red Elemental Blast": 2} and esce == {"Gray Ogre": 2}
+
+
+def test_partita_pari_non_conta_e_ricomincia_lo_stesso():
+    inc = nuovo(seed=4)
+    primo = inc.primo
+    for g in inc.partita.giocatori:
+        g.vita = 0
+    azioni.azioni_di_stato(inc.partita)
+    inc.registra_esito()
+    assert inc.partita.vincitore == PAREGGIO and sum(inc.vittorie.values()) == 0
+    inc.prossima()
+    assert inc.numero == 2 and inc.primo == primo

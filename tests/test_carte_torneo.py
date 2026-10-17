@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 
-from app.ai.avversaria import agisci
 from app.cards import mazzi
 from app.commands.esegui import esegui
 from app.commands.parser import analizza
@@ -204,6 +203,7 @@ def test_ali_from_cairo(p):
     azioni.danni_a_giocatore(p, cr("Fonte", 1, 1, "{R}"), "A", 10)
     assert p.giocatore("A").vita == 1 and not p.vincitore
     azioni.modifica_vita(p, "A", -5, "(perdita di vita, non danni)")
+    azioni.azioni_di_stato(p)
     assert p.vincitore == "B"
 
 

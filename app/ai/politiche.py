@@ -4,7 +4,7 @@ from app.engine import mana
 from app.engine.abilita import analizza_abilita
 from app.engine.carte_implementate import CARTE_MIGLIORI, valore_carta
 from app.engine.effetti import bersaglio_legale
-from app.engine.stato import Carta, Fase, OggettoPila, Partita
+from app.engine.stato import Carta, Fase, Partita
 from app.engine.validazione import FASI_PRINCIPALI, puo_attivare, puo_lanciare
 from app.engine.zone import Zona
 

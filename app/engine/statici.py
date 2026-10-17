@@ -71,7 +71,9 @@ def aggiorna(partita: Partita) -> None:
     creature = [c for g in partita.giocatori for c in g[Zona.CAMPO] if c.is_creatura]
     for g in partita.giocatori:
         for c in g[Zona.CAMPO]:
-            if not c.is_creatura:
+            if not c.is_creatura:  # anche una Mishra's Factory tornata terra perde i bonus di prima
+                c.statico_forza = c.statico_costituzione = 0
+                c.parole_extra = set()
                 continue
             c.statico_forza, c.statico_costituzione = speciali.bonus_condizionale(partita, g.nome, c)
             c.parole_extra = {"forestwalk"} if c.passaforeste_fino_al_turno > partita.turno else set()
@@ -80,7 +82,7 @@ def aggiorna(partita: Partita) -> None:
             for e in analizza_statici(incantesimo):
                 if e.tipo == "aura":
                     trovato = partita.trova_in_campo(incantesimo.attaccata_a) if incantesimo.attaccata_a else None
-                    bersagli = [trovato[1]] if trovato else []
+                    bersagli = [trovato[1]] if trovato and trovato[1].is_creatura else []
                 else:
                     bersagli = [c for c in creature if e.colore in c.colori]
                 for c in bersagli:

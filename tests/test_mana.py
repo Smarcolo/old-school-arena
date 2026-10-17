@@ -1,7 +1,7 @@
 import pytest
 
 from app.engine import azioni
-from app.engine.mana import FonteMana, analizza_costo, con_x, mana_prodotto, paga, piano_pagamento, riga_di_mana
+from app.engine.mana import analizza_costo, con_x, mana_prodotto, paga, piano_pagamento, riga_di_mana
 from app.engine.stato import Carta, nuova_partita
 from app.engine.validazione import AzioneIllegale
 from app.engine.zone import Zona

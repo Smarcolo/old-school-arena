@@ -159,7 +159,7 @@ def test_ai_attacca_in_volo_sopra_i_bloccanti_di_terra(p):
 
 def test_ai_non_blocca_un_volatore_con_creature_di_terra(p):
     roc = metti(p, "A", cr("Roc", 3, 3, "Flying"))
-    orso = metti(p, "B", cr("Orso", 2, 2))
+    metti(p, "B", cr("Orso", 2, 2))
     combattimento.inizia(p)
     p.fase = Fase.COMBATTIMENTO
     p.combattimento.attaccanti = [roc.id]

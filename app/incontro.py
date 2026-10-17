@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from app.engine.eventi import Evento
-from app.engine.stato import Carta, Partita, nuova_partita
+from app.engine.stato import PAREGGIO, Carta, Partita, nuova_partita
 from app.engine.zone import Zona
 
 PARTITE_PER_VINCERE = 2
@@ -37,6 +37,7 @@ class Incontro:
     viste: dict[str, Counter] = field(default_factory=dict)  # carte giocate da ciascuno, viste dall'avversario
     avversaria: str = ""  # nome del mazzo dell'avversaria, per l'interfaccia e i salvataggi
     torneo: str = ""  # id del torneo di cui fa parte, se c'è
+    primo: str = ""  # chi ha iniziato la partita in corso
 
     def __post_init__(self) -> None:
         self.rng = random.Random(self.seed)
@@ -47,6 +48,7 @@ class Incontro:
 
     def _nuova_partita(self, primo: str, motivo: str) -> None:
         self.numero += 1
+        self.primo = primo
         mazzi = {g: self.costruisci(self.liste[g].mazzo) for g in self.giocatori}
         self.partita = nuova_partita(mazzi, primo=primo, seed=self.rng.randrange(10**9), **self.opzioni)
         self.partita.scelte_manuali = set(self.scelte_manuali)
@@ -62,7 +64,8 @@ class Incontro:
         p = self.partita
         if p and p.vincitore and len(self.esiti) < self.numero:
             self.esiti.append(p.vincitore)
-            self.vittorie[p.vincitore] += 1
+            if p.vincitore != PAREGGIO:  # una partita pari non conta: se ne gioca un'altra
+                self.vittorie[p.vincitore] += 1
             for g in p.giocatori:
                 for zona in (Zona.CAMPO, Zona.CIMITERO, Zona.RIMOSSE):
                     self.viste[g.nome].update(c.nome for c in g[zona] if c.proprietario in ("", g.nome))
@@ -92,5 +95,8 @@ class Incontro:
             raise ValueError("la partita in corso non è ancora finita")
         if self.vincitore:
             raise ValueError(f"l'incontro è finito: ha vinto {self.vincitore}")
+        if self.esiti[-1] == PAREGGIO:
+            self._nuova_partita(self.primo, f"La partita precedente è finita pari: inizia di nuovo {self.primo}")
+            return
         perdente = next(g for g in self.giocatori if g != self.esiti[-1])
         self._nuova_partita(perdente, f"Inizia {perdente}, che ha perso la partita precedente")

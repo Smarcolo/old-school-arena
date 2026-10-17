@@ -111,10 +111,24 @@ def test_mana_drain_da_mana_alla_prossima_principale(p):
     azioni.passa_priorita(p, "A")
     azioni.lancia(p, "B", in_mano(p, "B", "Mana Drain"), [f"pila:{p.pila[-1].id}"])
     risolvi(p)
-    assert gigante in p.giocatore("A")[Zona.CIMITERO] and p.mana_ritardato == [("B", 4)]
+    assert gigante in p.giocatore("A")[Zona.CIMITERO] and [m[:2] for m in p.mana_ritardato] == [("B", 4)]
     while not (p.giocatore_attivo.nome == "B" and p.fase == Fase.PRINCIPALE_1):
         azioni.passa_fase(p)
     assert p.giocatore("B").riserva["C"] == 4
+
+
+def test_mana_drain_nella_tua_principale_1_arriva_nella_2(p):
+    p.attivo = 1  # turno di B, fase principale 1; A lancia un Bolt
+    p.priorita = 0
+    p.fase = Fase.PRINCIPALE_1
+    azioni.lancia(p, "A", in_mano(p, "A", "Lightning Bolt"), ["giocatore:B"])
+    azioni.passa_priorita(p, "A")
+    azioni.lancia(p, "B", in_mano(p, "B", "Mana Drain"), [f"pila:{p.pila[-1].id}"])
+    risolvi(p)
+    turno = p.turno
+    while p.fase != Fase.PRINCIPALE_2:
+        azioni.passa_fase(p)
+    assert p.turno == turno and p.giocatore("B").riserva["C"] == 1
 
 
 def test_ancestral_recall(p):

@@ -71,6 +71,10 @@ def puo_giocare_terra(partita: Partita, nome_giocatore: str, carta: Carta) -> st
 
 def puo_tappare(partita: Partita, nome_giocatore: str, carta: Carta) -> str | None:
     g = partita.giocatore(nome_giocatore)
+    # il mana si produce quando hai la priorità o quando devi pagare una scelta tua («paga»)
+    if not (partita.scelta and partita.scelta.giocatore == nome_giocatore and not partita.vincitore):
+        if motivo := _priorita(partita, nome_giocatore):
+            return motivo
     if carta not in g[Zona.CAMPO]:
         return f"{carta.nome} non è sul tuo campo di battaglia"
     if carta.tappata:
@@ -202,5 +206,5 @@ def puo_attivare(partita: Partita, nome_giocatore: str, carta: Carta, abilita, b
 def da_sacrificare(partita: Partita, nome_giocatore: str, fonte: Carta, tipo: str) -> list[Carta]:
     """Permanenti che si possono sacrificare per un costo «Sacrifice an artifact / a creature»."""
     def adatto(c: Carta) -> bool:
-        return ("Artifact" in c.tipo) if tipo == "artefatto" else c.is_creatura
+        return ("Artifact" in c.tipo_attuale) if tipo == "artefatto" else c.is_creatura
     return [c for c in partita.giocatore(nome_giocatore)[Zona.CAMPO] if adatto(c)]

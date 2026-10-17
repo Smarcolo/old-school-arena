@@ -291,6 +291,32 @@ async function caricaMazzi() {
 }
 caricaMazzi();
 
+// Incontri e tornei salvati (il server li salva dopo ogni mossa e li ricarica all'avvio)
+async function caricaSalvati() {
+  const salvati = await api("/api/salvataggi");
+  $("riquadro-salvati").hidden = !salvati.length;
+  $("salvati").replaceChildren(...salvati.map((s) => {
+    const o = el("option", { value: s.id,
+      textContent: `${s.tipo === "torneo" ? "🏆 " : ""}${s.descrizione} · ${s.aggiornato.replace("T", " ").slice(0, 16)}` });
+    o.dataset.tipo = s.tipo;
+    return o;
+  }));
+}
+caricaSalvati();
+
+$("riprendi").onclick = () => {
+  const scelta = $("salvati").selectedOptions[0];
+  if (!scelta) return;
+  location.href = scelta.dataset.tipo === "torneo" ? `torneo.html?id=${scelta.value}` : `index.html?incontro=${scelta.value}`;
+};
+
+$("elimina-salvato").onclick = async () => {
+  const scelta = $("salvati").selectedOptions[0];
+  if (!scelta || !confirm(`Eliminare «${scelta.textContent}»?`)) return;
+  await api(`/api/salvataggi/${scelta.value}`, { method: "DELETE" });
+  caricaSalvati();
+};
+
 function attivaComandi() {
   $("testo").disabled = false;
   $("comando").querySelectorAll("button").forEach((b) => (b.disabled = false));
@@ -303,7 +329,8 @@ function attivaComandi() {
   try {
     partita = await api(`/api/partite/${id}`);
     attivaComandi();
-    avvisa(partita.richiesta === "mulligan" ? `Incontro del torneo contro ${partita.incontro.mazzo_avversaria}: tieni la mano o fai mulligan.` : "Incontro ripreso.");
+    const contro = `${partita.incontro.torneo ? "Incontro del torneo" : "Incontro"} contro ${partita.incontro.mazzo_avversaria}`;
+    avvisa(partita.richiesta === "mulligan" ? `${contro}: tieni la mano o fai mulligan.` : `${contro} ripreso.`);
     disegna();
   } catch (e) {
     avvisa("Incontro non trovato: " + e.message);

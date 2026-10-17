@@ -35,6 +35,8 @@ class Incontro:
     lancio_moneta: str = ""
     numero: int = 0  # numero della partita in corso (1, 2, 3)
     viste: dict[str, Counter] = field(default_factory=dict)  # carte giocate da ciascuno, viste dall'avversario
+    avversaria: str = ""  # nome del mazzo dell'avversaria, per l'interfaccia e i salvataggi
+    torneo: str = ""  # id del torneo di cui fa parte, se c'è
 
     def __post_init__(self) -> None:
         self.rng = random.Random(self.seed)

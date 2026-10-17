@@ -69,7 +69,7 @@ $("crea").onclick = async () => {
       torneo = await api(`/api/tornei/${id}`);
       disegna();
     } catch (e) {
-      avvisa("Torneo non trovato (il server è stato riavviato?): creane uno nuovo.");
+      avvisa("Torneo non trovato (forse è stato eliminato): creane uno nuovo.");
     }
   }
 })();

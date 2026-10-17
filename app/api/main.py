@@ -21,6 +21,7 @@ from app.ai.sideboard import scegli_cambi
 from app.incontro import Incontro, Lista
 from app.torneo import Partecipante, Torneo
 from app.regia import avanza, esegui_comando
+from app.salvataggio import Archivio
 
 UMANO = "Tu"
 AI = "Avversaria"
@@ -33,10 +34,13 @@ MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 2, "Uthden Troll": 2, "H
                "Roc of Kher Ridges": 4, "Lightning Bolt": 4}
 
 app = FastAPI(title="Old School Arena")
-partite: dict[str, Incontro] = {}  # incontri al meglio di tre, per id
-richieste_mazzo: dict[str, str] = {}  # id incontro -> nome del mazzo dell'avversaria
-tornei: dict[str, Torneo] = {}
-torneo_di: dict[str, str] = {}  # id incontro -> id torneo
+# Incontri e tornei si salvano dopo ogni mossa e si ricaricano all'avvio (app/salvataggio.py).
+archivio = Archivio()
+tornei: dict[str, Torneo] = archivio.carica_tutti("torneo")
+partite: dict[str, Incontro] = archivio.carica_tutti("incontro")  # incontri al meglio di tre, per id
+for _t in tornei.values():
+    partite.update(_t.incontri)  # gli incontri di un torneo stanno dentro il torneo: stesso oggetto
+costruttore = database.CostruttoreMazzi()
 conn_carte = database.connetti()
 database.carica_carte_base(conn_carte)  # idempotente: aggiorna le carte di prova se il JSON cambia
 MAZZO_UMANO_PREDEFINITO = "Verde (prova)"
@@ -177,8 +181,8 @@ def vista_incontro(inc: Incontro) -> dict:
     return {**vista(inc.partita), "id": inc.id, "incontro": {
         "numero": inc.numero, "vittorie": inc.vittorie, "esiti": inc.esiti, "lancio_moneta": inc.lancio_moneta,
         "vincitore": inc.vincitore, "prossima_possibile": bool(inc.partita.vincitore and not inc.vincitore),
-        "mazzo_avversaria": richieste_mazzo.get(inc.id, ""),
-        "torneo": torneo_di.get(inc.id),
+        "mazzo_avversaria": inc.avversaria,
+        "torneo": inc.torneo or None,
         "liste": ({"mazzo": inc.liste[UMANO].mazzo, "sideboard": inc.liste[UMANO].sideboard}
                   if inc.partita.vincitore and not inc.vincitore else None)}}
 
@@ -194,14 +198,28 @@ def crea_partita(richiesta: RichiestaPartita | None = None) -> dict:
     inc = Incontro(
         [UMANO, AI],
         {UMANO: _carica_lista(richiesta.mazzo), AI: _carica_lista(mazzo_ai)},
-        lambda lista: database.mazzo_da_lista(conn_carte, lista),
+        costruttore,
         opzioni={"mana_burn": regole.mana_burn, "mulligan": regole.mulligan == "london"},
-        scelte_manuali={UMANO})
+        scelte_manuali={UMANO}, avversaria=mazzo_ai)
     partite[inc.id] = inc
-    richieste_mazzo[inc.id] = mazzo_ai
     inc.partita.registro.aggiungi(Evento(1, "inizio", AI, "mazzo", f"L'avversaria gioca «{mazzo_ai}»"))
     avanza(inc.partita, UMANO, AI)
+    _salva(inc)
     return vista_incontro(inc)
+
+
+def _salva(inc: Incontro) -> None:
+    """Salva l'incontro, o il torneo che lo contiene."""
+    if inc.torneo and inc.torneo in tornei:
+        _salva_torneo(tornei[inc.torneo])
+        return
+    punteggio = "-".join(str(inc.vittorie[g]) for g in inc.giocatori)
+    stato = f"vince {inc.vincitore}" if inc.vincitore else f"partita {inc.numero}"
+    archivio.salva("incontro", inc.id, inc, f"Contro «{inc.avversaria}», {punteggio}, {stato}")
+
+
+def _salva_torneo(t: Torneo) -> None:
+    archivio.salva("torneo", t.id, t, f"Top 8 di {t.nome}: {t.fase}")
 
 
 def _incontro(id_partita: str) -> Incontro:
@@ -220,8 +238,9 @@ def comando(id_partita: str, richiesta: RichiestaComando) -> dict:
     inc = _incontro(id_partita)
     messaggio = esegui_comando(inc.partita, UMANO, AI, richiesta.testo, giudice)
     inc.registra_esito()
-    if inc.vincitore and inc.id in torneo_di:
-        tornei[torneo_di[inc.id]].registra_incontro(inc)
+    if inc.vincitore and inc.torneo in tornei:
+        tornei[inc.torneo].registra_incontro(inc)
+    _salva(inc)
     return {"messaggio": messaggio, "partita": vista_incontro(inc)}
 
 
@@ -232,6 +251,7 @@ def cambia_sideboard(id_partita: str, cambi: CambiSideboard) -> dict:
         inc.cambia_sideboard(UMANO, cambi.entra, cambi.esce)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    _salva(inc)
     return vista_incontro(inc)
 
 
@@ -256,6 +276,7 @@ def prossima_partita(id_partita: str) -> dict:
     except ValueError as e:
         raise HTTPException(400, str(e))
     avanza(inc.partita, UMANO, AI)
+    _salva(inc)
     return vista_incontro(inc)
 
 
@@ -382,10 +403,11 @@ def crea_torneo(richiesta: RichiestaTorneo) -> dict:
         partecipanti.append(Partecipante(posto, voce.nome, voce.giocatore, lista))
     regole = carica_regole()
     nomi = {n for p in partecipanti for n in list(p.lista.mazzo) + list(p.lista.sideboard)}
-    t = Torneo(top.torneo, partecipanti, lambda lista: database.mazzo_da_lista(conn_carte, lista),
+    t = Torneo(top.torneo, partecipanti, costruttore,
                opzioni={"mana_burn": regole.mana_burn, "mulligan": regole.mulligan == "london"},
                info_carte={n: c for n in nomi if (c := database.cerca(conn_carte, n))})
     tornei[t.id] = t
+    _salva_torneo(t)
     return {**t.stato(), "avvisi": avvisi}
 
 
@@ -412,12 +434,32 @@ def gioca_incontro_torneo(id_torneo: str) -> dict:
         sfida = t.sfida_umano()
         avversario = sfida.b if sfida.a.umano else sfida.a
         partite[inc.id] = inc
-        torneo_di[inc.id] = t.id
-        richieste_mazzo[inc.id] = avversario.etichetta
+        inc.torneo = t.id
+        inc.avversaria = avversario.etichetta
         inc.partita.registro.aggiungi(Evento(1, "inizio", AI, "mazzo",
                                              f"{t.fase} di {t.nome}: l'avversaria gioca {avversario.etichetta}"))
         avanza(inc.partita, UMANO, AI)
+        _salva_torneo(t)
     return vista_incontro(inc)
+
+
+@app.get("/api/salvataggi")
+def elenco_salvataggi() -> list[dict]:
+    """Incontri e tornei salvati, dal più recente; gli incontri di un torneo stanno nel torneo."""
+    return [v for v in archivio.elenco() if v["id"] in partite or v["id"] in tornei]
+
+
+@app.delete("/api/salvataggi/{id_salvataggio}")
+def elimina_salvataggio(id_salvataggio: str) -> dict:
+    t = tornei.pop(id_salvataggio, None)
+    if t is not None:
+        for id_inc in t.incontri:
+            partite.pop(id_inc, None)
+    else:
+        partite.pop(id_salvataggio, None)
+    if not archivio.elimina(id_salvataggio):
+        raise HTTPException(404, "salvataggio non trovato")
+    return {"ok": True}
 
 
 @app.get("/api/immagini/{nome}")

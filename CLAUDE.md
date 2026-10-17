@@ -29,6 +29,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/incontro.py` — incontro al meglio di tre: prima partita a moneta, poi inizia chi ha perso; mazzi nuovi
   a ogni partita dalle `Lista` (mazzo + sideboard) dell'incontro; `cambia_sideboard` (scambi uno per uno, solo tra
   le partite); `viste` = carte giocate da ciascuno. L'AI fa la sua sideboard in `ai/sideboard.py`. L'API tiene gli incontri (`partite: dict[id, Incontro]`), `/api/partite/{id}/prossima`.
+- `app/salvataggio.py` — `Archivio`: incontri e tornei salvati con pickle in `data/salvataggi.sqlite` dopo ogni
+  mossa (`main._salva`) e ricaricati all'avvio; gli incontri di un torneo stanno dentro il torneo. Per questo niente
+  lambda negli oggetti salvati: i mazzi si costruiscono con `database.CostruttoreMazzi`. Un salvataggio illeggibile
+  (codice cambiato) si salta. `/api/salvataggi` (GET, DELETE), menu «Riprendi» nel tavolo.
 - `app/torneo.py` — top 8 simulata: 7 mazzi veri di un torneo (tcdecks.carica_torneo, per nome; senza rete i mazzi
   salvati) + il mazzo dell'umano al posto scelto; tabellone 1-8, 4-5, 2-7, 3-6; incontri AI contro AI giocati da
   `app/simulazione.py` (gioca_da_sola / gioca_incontro_da_solo); l'incontro dell'umano è un Incontro normale.
@@ -136,4 +140,4 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 7. Fatto: aure e incantesimi globali.
 8. Serve Marco: verificare i testi in `data/regole/`; creare la repo GitHub.
 9. Idee: sideboard tra una partita e l'altra dell'incontro, altre famiglie di effetti (distruggi bersaglio,
-   contromagie, pescate), salvataggio della partita.
+   contromagie, pescate). Fatto: salvataggio di incontri e tornei.

@@ -65,6 +65,9 @@ inizia chi ha perso. A fine partita il pulsante «Partita 2» (o 3) avvia la suc
 Prima della partita successiva, «Sideboard» apre il pannello per scambiare carte tra mazzo e sideboard (una per una).
 Anche l'avversaria fa la sua sideboard, in base alle carte che le hai fatto vedere.
 
+Incontri e tornei si salvano da soli dopo ogni mossa (in `data/salvataggi.sqlite`): se chiudi l'app, alla
+riapertura li ritrovi nel menu in alto accanto a «Riprendi» (✕ elimina il salvataggio).
+
 ## Cosa funziona oggi
 - Partita a due con mazzi di prova, turni e fasi, una terra per turno, stap e pescata automatici.
 - Mana, pila e priorità: si lanciano le creature, che entrano con debolezza da evocazione. Niente mana burn, come nel Swedish (attivabile da `regole_swedish.json`).

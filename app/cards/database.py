@@ -78,6 +78,22 @@ def mazzo_da_lista(conn: sqlite3.Connection, lista: dict[str, int]) -> list[Cart
     return mazzo
 
 
+class CostruttoreMazzi:
+    """Da {nome: copie} a carte nuove, leggendo il database delle carte. A differenza di una lambda si può salvare
+    con pickle insieme all'incontro (vedi app/salvataggio.py); la connessione si riapre al bisogno."""
+
+    _connessioni: dict[str, sqlite3.Connection] = {}
+
+    def __init__(self, percorso: Path | str | None = None) -> None:
+        self.percorso = str(percorso) if percorso else None  # None = il database predefinito (DB_CARTE)
+
+    def __call__(self, lista: dict[str, int]) -> list[Carta]:
+        percorso = self.percorso or str(DB_CARTE)
+        if percorso not in self._connessioni:
+            self._connessioni[percorso] = connetti(percorso)
+        return mazzo_da_lista(self._connessioni[percorso], lista)
+
+
 def cerca_per_testo(conn: sqlite3.Connection, testo: str, limite: int = 30) -> list[dict]:
     righe = conn.execute(
         "SELECT nome, tipo, costo, forza, costituzione, testo FROM carte WHERE nome LIKE ? "

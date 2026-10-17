@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from app.api import main
 from app.cards import database, mazzi, tcdecks
 from app.engine import azioni
+from app.engine.stato import Carta
 from app.incontro import Lista
 from app.simulazione import gioca_da_sola
 from app.torneo import Partecipante, Torneo
@@ -108,3 +109,14 @@ def test_api_torneo_completo(monkeypatch):
 def test_api_posto_non_valido():
     client = TestClient(main.app)
     assert client.post("/api/tornei", json={"posto": 9}).status_code == 400
+
+
+def test_la_sideboard_non_passa_al_turno_dopo():
+    lista = Lista({"Forest": 20, "Grizzly Bears": 20}, {"War Mammoth": 2})
+    from app.incontro import Incontro
+    inc = Incontro(["Tu", "Avversaria"], {"Tu": lista, "Avversaria": Lista(VERDE)},
+                   lambda l: [Carta(n, "Basic Land — Forest") for n, q in l.items() for _ in range(q)], seed=1)
+    azioni.concedi(inc.partita, "Avversaria")
+    inc.registra_esito()
+    inc.cambia_sideboard("Tu", {"War Mammoth": 2}, {"Grizzly Bears": 2})
+    assert lista.mazzo == {"Forest": 20, "Grizzly Bears": 20} and lista.sideboard == {"War Mammoth": 2}

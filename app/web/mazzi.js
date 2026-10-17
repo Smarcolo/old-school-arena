@@ -9,8 +9,10 @@ const conCarta = (e, nome) => { e.dataset.carta = nome; return e; };
 
 async function api(percorso, opzioni = {}) {
   const r = await fetch(percorso, { headers: { "Content-Type": "application/json" }, ...opzioni });
-  const dati = await r.json();
-  if (!r.ok) throw new Error(dati.detail || r.statusText);
+  const testo = await r.text();
+  let dati = null;
+  try { dati = testo ? JSON.parse(testo) : null; } catch { /* risposta non JSON, es. errore 500 in testo */ }
+  if (!r.ok) throw new Error((dati && dati.detail) || testo || r.statusText);
   return dati;
 }
 

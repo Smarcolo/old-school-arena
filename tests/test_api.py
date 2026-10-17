@@ -96,3 +96,17 @@ def test_avversaria_automatica_dai_tornei():
     assert p["incontro"]["mazzo_avversaria"] == "TC 1° Rossi · Torneo di prova"
     assert any("L'avversaria gioca" in e for e in p["eventi"])
     mazzi.elimina(conn_carte, "TC 1° Rossi · Torneo di prova")
+
+
+def test_mazzo_con_barra_nel_nome():
+    testo = "20 Forest\n20 Grizzly Bears"
+    assert client.put("/api/mazzi/R%2FG Orsi", json={"testo": testo}).status_code == 200
+    assert client.get("/api/mazzi/R%2FG Orsi").status_code == 200
+    assert client.delete("/api/mazzi/R%2FG Orsi").status_code == 200
+
+
+def test_pesca_e_vita_bloccate_a_partita_finita():
+    p = client.post("/api/partite").json()
+    comando(p["id"], "concedo")
+    r = comando(p["id"], "pesca 80")
+    assert "Ora no" in r["messaggio"] and r["partita"]["vincitore"] == "Avversaria"

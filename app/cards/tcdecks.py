@@ -72,6 +72,9 @@ def mazzi_del_torneo(pagina: str, id_torneo: str, quanti: int = 8) -> list[VoceM
             voci.append(VoceMazzo(m.group(1), _testo(m.group(2)) or f"Mazzo {m.group(1)}",
                                   numeri[0] if numeri else len(voci) + 1, altre[0] if altre else ""))
     voci.sort(key=lambda v: v.posizione)
+    if len({v.posizione for v in voci}) != len(voci):  # pari merito (5-8, 5-8...): posti in ordine di tabella
+        for i, v in enumerate(voci, 1):
+            v.posizione = i
     return voci[:quanti]
 
 
@@ -89,7 +92,7 @@ def lista_dal_mazzo(pagina: str) -> tuple[dict[str, int], dict[str, int]]:
         if re.match(r"^side ?board\b", riga, re.I):
             destinazione = sideboard
             continue
-        m = re.match(r"^(\d{1,2})\s*x?\s+([A-Z][A-Za-z0-9 ',.\-:!áéíóúÆæ/]+?)$", riga)
+        m = re.match(r"^(\d{1,2})\s*x?\s+([A-ZÀ-Þ][\w ',.\-:!/]+?)$", riga)  # \w: anche Dandân, Ma'rûf
         if m and not re.search(r"\b(cards?|total|creatures?|spells?|lands?|artifacts?|sorcer(?:y|ies)|instants?|enchantments?)\b$",
                                m.group(2), re.I):
             nome = m.group(2).strip()
@@ -196,7 +199,12 @@ def _top_otto_salvata(conn, nome: str, motivo: str) -> TopOtto:
                and (not cercato or cercato in v["info"].get("torneo", "").lower())]
     if not salvati:
         return TopOtto(nome, errori=[motivo + "; e non ci sono mazzi salvati di quel torneo"])
-    torneo = salvati[0]["info"]["torneo"]
+    # il torneo con più posti salvati (meglio se completo), poi il più recente
+    per_torneo: dict[str, list[dict]] = {}
+    for v in salvati:
+        per_torneo.setdefault(v["info"].get("torneo", ""), []).append(v)
+    torneo = max(per_torneo, key=lambda t: (min(len({v["info"]["posizione"] for v in per_torneo[t]}), 7),
+                                             max(v["aggiornato"] or "" for v in per_torneo[t])))
     risultato = TopOtto(torneo, errori=[motivo + f"; uso i mazzi già salvati di «{torneo}»"])
     for v in sorted((v for v in salvati if v["info"]["torneo"] == torneo), key=lambda v: v["info"]["posizione"])[:8]:
         mazzo, side = mazzi.leggi(conn, v["nome"])

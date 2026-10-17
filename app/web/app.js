@@ -13,8 +13,11 @@ const el = (tag, props = {}, ...figli) => {
 
 async function api(percorso, opzioni = {}) {
   const r = await fetch(percorso, { headers: { "Content-Type": "application/json" }, ...opzioni });
-  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
-  return r.json();
+  const testo = await r.text();
+  let dati = null;
+  try { dati = testo ? JSON.parse(testo) : null; } catch { /* risposta non JSON, es. errore 500 in testo */ }
+  if (!r.ok) throw new Error((dati && dati.detail) || testo || r.statusText);
+  return dati;
 }
 
 function avvisa(testo) {
@@ -144,6 +147,8 @@ async function confermaSideboard() {
 }
 
 async function prossimaPartita() {
+  if (inAttesa) return;
+  inAttesa = true;
   $("pannello-sideboard").hidden = true;
   try {
     partita = await api(`/api/partite/${partita.id}/prossima`, { method: "POST" });
@@ -152,6 +157,8 @@ async function prossimaPartita() {
     disegna();
   } catch (e) {
     avvisa("Errore: " + e.message);
+  } finally {
+    inAttesa = false;
   }
 }
 
@@ -197,7 +204,9 @@ function disegnaBarraCombattimento() {
   } else if (partita.richiesta === "attaccanti") {
     barra.replaceChildren(
       el("span", { textContent: "Combattimento: clicca le creature che attaccano." }),
-      bottone(`Attacca con le scelte (${attaccantiScelti.size})`, () => invia(`attacca con ${[...attaccantiScelti].join(", ")}`)),
+      bottone(`Attacca con le scelte (${attaccantiScelti.size})`, () => attaccantiScelti.size
+        ? invia(`attacca con ${[...attaccantiScelti].join(", ")}`)
+        : avvisa("Clicca prima le creature che attaccano (o «Non attacco»).")),
       ...(attaccantiScelti.size > 1 ? [bottone("Attacca in banda", () => invia(`attacca con ${[...attaccantiScelti].join(" + ")}`))] : []),
       bottone("Attacca con tutto", () => invia("attacca con tutto")),
       bottone("Nessun attacco", () => invia("non attacco")));
@@ -270,7 +279,11 @@ function disegna() {
   $("eventi").replaceChildren(...partita.eventi.slice().reverse().map((t) => el("li", { textContent: t })));
 }
 
+let inAttesa = false;  // una richiesta di gioco alla volta: un doppio clic non manda due comandi
+
 async function invia(testo) {
+  if (inAttesa) return;
+  inAttesa = true;
   try {
     const r = await api(`/api/partite/${partita.id}/comando`, { method: "POST", body: JSON.stringify({ testo }) });
     if (r.partita.richiesta !== partita.richiesta || !r.messaggio.startsWith("Mossa non valida")) azzeraScelteCombattimento();
@@ -279,6 +292,8 @@ async function invia(testo) {
     disegna();
   } catch (e) {
     avvisa("Errore: " + e.message);
+  } finally {
+    inAttesa = false;
   }
 }
 
@@ -315,7 +330,11 @@ $("riprendi").onclick = () => {
 $("elimina-salvato").onclick = async () => {
   const scelta = $("salvati").selectedOptions[0];
   if (!scelta || !confirm(`Eliminare «${scelta.textContent}»?`)) return;
-  await api(`/api/salvataggi/${scelta.value}`, { method: "DELETE" });
+  try {
+    await api(`/api/salvataggi/${scelta.value}`, { method: "DELETE" });
+  } catch (e) {
+    avvisa("Errore: " + e.message);
+  }
   caricaSalvati();
 };
 

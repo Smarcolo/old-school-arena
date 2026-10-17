@@ -116,8 +116,10 @@ def esegui_comando(partita: Partita, umano: str, ai: str, testo: str, giudice=No
             return "Prima finisci il mulligan. " + suggerimento(partita, umano)
         if partita.giocatore_attivo.nome != umano:
             return "Non è il tuo turno."
+        turno = partita.turno
         avanza(partita, umano, ai, fino_a_fine_turno=True)
-        return " ".join(filter(None, ["Turno passato.", suggerimento(partita, umano)]))
+        fatto = "Turno passato." if partita.turno != turno or partita.vincitore else "Il turno non è ancora finito."
+        return " ".join(filter(None, [fatto, suggerimento(partita, umano)]))
     messaggio = esegui(partita, umano, cmd, giudice)
     avanza(partita, umano, ai)
     return " ".join(filter(None, [messaggio, suggerimento(partita, umano)]))

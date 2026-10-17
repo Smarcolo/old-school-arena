@@ -125,7 +125,7 @@ def test_import_scryfall_a_pagine(conn):
         return Json(pagine[len(chiamate) - 1])
 
     n = scryfall.importa(conn, get=get, pausa=0)
-    assert n == 2 and "e:sum" in chiamate[0][1]["q"] and chiamate[1][1] is None
+    assert n == 2 and "e:psum" in chiamate[0][1]["q"] and chiamate[1][1] is None
     assert database.cerca(conn, "Lightning Bolt") and conn.execute(
         "SELECT set_codici FROM carte WHERE nome='Lightning Bolt'").fetchone()[0] == "2ed,lea"
 
@@ -136,3 +136,10 @@ def test_importa_url(conn):
     res = tcdecks.importa_url(conn, "https://www.tcdecks.net/deck.php?id=4&iddeck=5", get=get)
     assert res.salvati == ["TC Lion Dib - TC Decks"]
     assert "serve l'indirizzo" in tcdecks.importa_url(conn, "https://example.com", get=get).errori[0]
+
+
+def test_nomi_con_accenti_arabi_e_pari_merito():
+    mazzo, _ = tcdecks.lista_dal_mazzo("<div>4 Dandân</div><div>1 Ring of Ma'rûf</div><div>1 El-Hajjâj</div>")
+    assert mazzo == {"Dandân": 4, "Ring of Ma'rûf": 1, "El-Hajjâj": 1}
+    righe = "".join(f'<tr><td>5</td><td><a href="deck.php?id=9&iddeck={i}">M{i}</a></td></tr>' for i in range(4))
+    assert [v.posizione for v in tcdecks.mazzi_del_torneo(righe, "9")] == [1, 2, 3, 4]

@@ -40,6 +40,8 @@ class Incontro:
     primo: str = ""  # chi ha iniziato la partita in corso
 
     def __post_init__(self) -> None:
+        # copie: la sideboard di questo incontro non deve cambiare la lista di partenza (torneo: turno successivo)
+        self.liste = {g: Lista(dict(l.mazzo), dict(l.sideboard)) for g, l in self.liste.items()}
         self.rng = random.Random(self.seed)
         self.vittorie = {g: 0 for g in self.giocatori}
         self.viste = {g: Counter() for g in self.giocatori}

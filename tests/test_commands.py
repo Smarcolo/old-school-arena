@@ -18,3 +18,9 @@ def test_esegui_gioca_terra(partita):
 
 def test_esegui_carta_assente(partita):
     assert "Non hai" in esegui(partita, "A", analizza("gioca black lotus"))
+
+
+def test_metti_in_fondo():
+    from app.commands.parser import analizza
+    assert analizza("metti in fondo forest").azione == "infondo"
+    assert analizza("metti forest").azione == "gioca"

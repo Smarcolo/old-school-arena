@@ -37,7 +37,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   salvati) + il mazzo dell'umano al posto scelto; tabellone 1-8, 4-5, 2-7, 3-6; incontri AI contro AI giocati da
   `app/simulazione.py` (gioca_da_sola / gioca_incontro_da_solo); l'incontro dell'umano è un Incontro normale.
   Pagina `/torneo.html`; il tavolo riapre un incontro con `index.html?incontro=<id>`.
-- `app/api/main.py` — FastAPI; serve anche il frontend statico in `app/web/`.
+- `app/api/main.py` — FastAPI; serve anche il frontend statico in `app/web/`. Le richieste `/api/` si servono una
+  alla volta (dipendenza globale `_serializza` con un lock): stato e connessione SQLite sono condivisi.
+  Le liste dell'`Incontro` sono copie: la sideboard non cambia il mazzo del partecipante nei turni successivi.
 - `data/` — database, cache immagini, bulk Scryfall: generati, non versionati (vedi `.gitignore`).
 
 ## Regole del motore
@@ -58,7 +60,15 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   Balance: un passo alla volta (`continua_balance`); l'umano sceglie con Scelta "scegli" e `seguito`
   (`carte_implementate.SEGUITI`), che fa riprendere l'effetto dopo ogni carta scelta.
 - Mana (`engine/mana.py`): `FonteMana` con colori a scelta, quantità, sacrificio (Black Lotus), danno (City of Brass);
-  terre doppie dai tipi base. `piano_pagamento` ritorna [(fonte, colore)].
+  terre doppie dai tipi base. `piano_pagamento` ritorna [(fonte, colore)]; prova le fonti meno flessibili e torna
+  indietro se resta un colore scoperto (Tundra + Plateau per {W}{U}). Il mana si produce solo con la priorità o per
+  pagare una propria Scelta "paga" (`puo_tappare`).
+- Sconfitte: azione di stato (`azioni.controlla_sconfitte`, dentro `azioni_di_stato`, `passa_priorita`, `passa_fase`).
+  `modifica_vita` e `pesca` (flag `Giocatore.pescato_da_vuoto`) non chiudono la partita da sole: così Earthquake o
+  Timetwister che fanno perdere entrambi danno `vincitore == PAREGGIO`, che nell'incontro non conta (si rigioca,
+  inizia di nuovo chi aveva iniziato). Nei test, dopo `modifica_vita` chiamare `azioni_di_stato`.
+- Carte che lasciano il campo: `Carta.lascia_il_campo()` azzera tutto. Tipo corrente (Factory animata = artefatto):
+  usare `tipo_attuale`, non `tipo`, per i controlli in campo.
 - AI (`ai/avversaria.py`): gioca subito Mox/Sol Ring/Lotus; con Counterspell/Mana Drain in mano tiene {U}{U}
   (`lascia_contromagia`); attacca con tutto se è letale; Bolt in faccia quando basta; anima Mishra's Factory per
   attaccare/bloccare; Moat e The Abyss solo se convengono. Contro la versione precedente vince il 73% (100 partite

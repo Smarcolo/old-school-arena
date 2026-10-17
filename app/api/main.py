@@ -1,8 +1,9 @@
 """API FastAPI e server del frontend statico. Avvio: uvicorn app.api.main:app"""
 import random
+import threading
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -33,7 +34,21 @@ MAZZO_ROSSO = {"Mountain": 17, "Mons's Goblin Raiders": 2, "Uthden Troll": 2, "H
                "Shivan Dragon": 1,
                "Roc of Kher Ridges": 4, "Lightning Bolt": 4}
 
-app = FastAPI(title="Old School Arena")
+_una_alla_volta = threading.Lock()
+
+
+def _serializza(request: Request):
+    """Le richieste all'API si servono una alla volta: incontri, tornei e la connessione SQLite sono condivisi e non
+    reggono due richieste in parallelo (es. doppio clic su «Passa»). Le immagini no: hanno una connessione loro."""
+    if request.url.path.startswith("/api/immagini/"):
+        yield
+        return
+    with _una_alla_volta:
+        yield
+
+
+app = FastAPI(title="Old School Arena", dependencies=[Depends(_serializza)])
+
 # Incontri e tornei si salvano dopo ogni mossa e si ricaricano all'avvio (app/salvataggio.py).
 archivio = Archivio()
 tornei: dict[str, Torneo] = archivio.carica_tutti("torneo")
@@ -292,7 +307,7 @@ def analizza_mazzo(corpo: TestoMazzo) -> dict:
     return {**mazzi.analizza(conn_carte, mazzo, sideboard), "righe_non_capite": errori}
 
 
-@app.get("/api/mazzi/{nome}")
+@app.get("/api/mazzi/{nome:path}")
 def leggi_mazzo(nome: str) -> dict:
     salvato = mazzi.leggi(conn_carte, nome)
     if salvato is None:
@@ -300,7 +315,7 @@ def leggi_mazzo(nome: str) -> dict:
     return {"nome": nome, "testo": mazzi.formatta_testo(*salvato), **mazzi.analizza(conn_carte, *salvato)}
 
 
-@app.put("/api/mazzi/{nome}")
+@app.put("/api/mazzi/{nome:path}")
 def salva_mazzo(nome: str, corpo: TestoMazzo) -> dict:
     if not nome.strip():
         raise HTTPException(400, "il mazzo deve avere un nome")
@@ -312,7 +327,7 @@ def salva_mazzo(nome: str, corpo: TestoMazzo) -> dict:
     return {"nome": nome.strip(), "testo": mazzi.formatta_testo(analisi["mazzo"], analisi["sideboard"]), **analisi}
 
 
-@app.delete("/api/mazzi/{nome}")
+@app.delete("/api/mazzi/{nome:path}")
 def elimina_mazzo(nome: str) -> dict:
     if not mazzi.elimina(conn_carte, nome):
         raise HTTPException(404, "mazzo non trovato")
@@ -447,6 +462,8 @@ def elenco_salvataggi() -> list[dict]:
 
 @app.delete("/api/salvataggi/{id_salvataggio}")
 def elimina_salvataggio(id_salvataggio: str) -> dict:
+    if id_salvataggio in partite and partite[id_salvataggio].torneo:
+        raise HTTPException(400, "questo incontro fa parte di un torneo: elimina il torneo")
     t = tornei.pop(id_salvataggio, None)
     if t is not None:
         for id_inc in t.incontri:
@@ -460,7 +477,11 @@ def elimina_salvataggio(id_salvataggio: str) -> dict:
 
 @app.get("/api/immagini/{nome}")
 def immagine_carta(nome: str) -> FileResponse:
-    file = immagini.ottieni(conn_carte, nome)
+    conn = database.connetti()  # non quella condivisa: le immagini si servono in parallelo al resto
+    try:
+        file = immagini.ottieni(conn, nome)
+    finally:
+        conn.close()
     if file is None:
         raise HTTPException(404, "immagine non disponibile")
     return FileResponse(file, media_type="image/jpeg", headers={"Cache-Control": "max-age=604800"})

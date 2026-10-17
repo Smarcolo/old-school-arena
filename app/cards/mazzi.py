@@ -24,13 +24,19 @@ def analizza_testo(testo: str) -> tuple[dict[str, int], dict[str, int], list[str
     mazzo: Counter = Counter()
     sideboard: Counter = Counter()
     errori = []
-    in_sideboard = False
+    in_sideboard = segnata = False
+    blocchi: list[Counter] = [Counter()]  # gruppi separati da righe vuote (export MTGO: la sideboard è l'ultimo)
     for riga in testo.splitlines():
         riga = riga.strip()
-        if not riga or riga.startswith(("#", "//")):
+        if not riga:
+            if blocchi[-1]:
+                blocchi.append(Counter())
             continue
-        if riga.lower().rstrip(":") in ("sideboard", "sb"):
-            in_sideboard = True
+        intestazione = re.sub(r"^(?://|#)\s*|\s*\(\d+\)$|:$", "", riga).strip().lower()
+        if intestazione in ("sideboard", "sb"):  # «Sideboard», «Sideboard:», «// Sideboard», «Sideboard (15)»
+            in_sideboard = segnata = True
+            continue
+        if riga.startswith(("#", "//")):
             continue
         destinazione = sideboard if in_sideboard else mazzo
         if riga.lower().startswith("sb:"):
@@ -40,6 +46,13 @@ def analizza_testo(testo: str) -> tuple[dict[str, int], dict[str, int], list[str
             errori.append(riga)
             continue
         destinazione[m.group(2)] += int(m.group(1) or 1)
+        if destinazione is mazzo:
+            blocchi[-1][m.group(2)] += int(m.group(1) or 1)
+        else:
+            segnata = True
+    blocchi = [b for b in blocchi if b]
+    if not segnata and len(blocchi) > 1 and sum(blocchi[-1].values()) <= 15 and sum(mazzo.values()) - sum(blocchi[-1].values()) >= 40:
+        sideboard, mazzo = blocchi[-1], mazzo - blocchi[-1]
     return dict(mazzo), dict(sideboard), errori
 
 

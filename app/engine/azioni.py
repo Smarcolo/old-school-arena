@@ -209,8 +209,8 @@ def tappa(partita: Partita, giocatore: str, carta: Carta, colore: str | None = N
     if fonte.sacrifica:
         distruggi(partita, carta, "(sacrificata)", rigenerabile=False)
     if fonte.danno:
+        # la sconfitta arriva al prossimo controllo (anche a metà pagamento di una magia: non la interrompe)
         modifica_vita(partita, giocatore, -fonte.danno, f"(danni da {carta.nome})", danno=True)
-        controlla_sconfitte(partita)
 
 
 def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] | None = None, x: int = 0) -> None:
@@ -634,7 +634,10 @@ def _un_giro_di_controlli(partita: Partita) -> bool:
 
 def passa_priorita(partita: Partita, giocatore: str) -> None:
     """Quando entrambi passano di fila: si risolve la cima della pila, o se è vuota si va alla fase successiva."""
-    controlla_sconfitte(partita)
+    if not partita.vincitore:
+        controlla_sconfitte(partita)  # es. City of Brass tappata a 1 punto vita
+        if partita.vincitore:
+            return
     _verifica(puo_passare(partita, giocatore))
     partita.passaggi += 1
     if partita.passaggi < 2:

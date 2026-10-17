@@ -30,13 +30,13 @@ SINONIMI = {
 }
 
 PATTERN = [
+    (re.compile(r"^(?:in fondo|metti in fondo|fondo)\s+(.+)$"), "infondo"),
     (re.compile(r"^(?:gioca|metti)\s+(?:la\s+terra\s+|terra\s+)?(.+)$"), "gioca"),
     (re.compile(r"^(?:lancia|evoca)\s+(.+)$"), "lancia"),
     (re.compile(r"^(?:attiva|usa)\s+(.+)$"), "attiva"),
     (re.compile(r"^tappa\s+(.+)$"), "tappa"),
     (re.compile(r"^attacca(?:\s+con)?\s*(.*)$"), "attacca"),
     (re.compile(r"^blocca\s+(.+)$"), "blocca"),
-    (re.compile(r"^(?:in fondo|metti in fondo|fondo)\s+(.+)$"), "infondo"),
     (re.compile(r"^danni\s+(.+)$"), "danni"),
     (re.compile(r"^(?:scelgo|prendo)\s+(.+)$"), "scelgo"),
     (re.compile(r"^pesca\s+(\d+)$"), "pesca"),

@@ -137,8 +137,11 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
             case "stato":
                 return " | ".join(f"{g.nome}: {g.vita} vita, {len(g[Zona.MANO])} in mano, "
                                   f"{len(g[Zona.GRIMORIO])} nel grimorio" for g in partita.giocatori)
+            case "pesca" | "vita" if partita.vincitore or mulligan.in_corso(partita):
+                return "Ora no: la partita è finita o il mulligan è in corso."
             case "pesca":
                 carte = azioni.pesca(partita, giocatore, cmd.numero or 1)
+                azioni.azioni_di_stato(partita)
                 return "Hai pescato: " + ", ".join(c.nome for c in carte)
             case "gioca" | "lancia":
                 carta = azioni.trova_in_zona(partita, giocatore, Zona.MANO, cmd.argomento)
@@ -193,6 +196,7 @@ def esegui(partita: Partita, giocatore: str, cmd: Comando, giudice=None) -> str:
                 return f"Hai tappato {carta.nome}. Riserva: {mana.formatta(partita.giocatore(giocatore).riserva)}"
             case "vita":
                 azioni.modifica_vita(partita, giocatore, cmd.numero, "(manuale)")
+                azioni.azioni_di_stato(partita)
                 return f"Vita: {partita.giocatore(giocatore).vita}"
             case "attacca":
                 return _attacca(partita, giocatore, cmd.argomento)

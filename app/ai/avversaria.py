@@ -118,6 +118,9 @@ def bersaglio_growth(partita: Partita, nome: str, growth: Carta | None = None) -
 
 def bersaglio_bolt(partita: Partita, nome: str, bolt: Carta | None = None) -> str | None:
     avversario = partita.avversario_di(nome)
+    bolt_in_mano = sum(1 for c in partita.giocatore(nome)[Zona.MANO] if c.nome == "Lightning Bolt")
+    if avversario.vita <= DANNI_BOLT * bolt_in_mano:
+        return f"giocatore:{avversario.nome}"
     if migliore := _creatura_uccidibile(partita, nome, DANNI_BOLT, bolt):
         return f"carta:{migliore.id}"
     if not partita.pila and partita.giocatore_attivo.nome == nome and partita.fase in FASI_PRINCIPALI:
@@ -129,6 +132,65 @@ def bersaglio_aura(partita: Partita, nome: str, aura: Carta) -> Carta | None:
     """Le aure gestite sono tutte di potenziamento: vanno sulla propria creatura più forte che possono incantare."""
     candidate = [c for c in partita.giocatore(nome)[Zona.CAMPO] if c.is_creatura and not c.protetta_da(aura)]
     return max(candidate, key=lambda c: (c.forza_attuale, c.costituzione_attuale)) if candidate else None
+
+
+CONTROMAGIE = ("Counterspell", "Mana Drain")
+
+
+def lascia_contromagia(partita: Partita, nome: str, carta: Carta) -> bool:
+    """Con una contromagia in mano (e l'avversario con carte in mano) non spende il mana che serve a lanciarla."""
+    g = partita.giocatore(nome)
+    if not any(c.nome in CONTROMAGIE for c in g[Zona.MANO]) or len(partita.avversario_di(nome)[Zona.MANO]) < 2:
+        return True
+    from app.engine.validazione import fonti_di_mana
+    costo = mana.con_x(mana.analizza_costo(carta.costo), 0)
+    costo["U"] = costo.get("U", 0) + 2
+    return mana.piano_pagamento(g.riserva, fonti_di_mana(partita, nome), costo) is not None
+
+
+def _forza_terrestre(partita: Partita, chi: str) -> int:
+    return sum(c.forza_attuale for c in partita.giocatore(chi)[Zona.CAMPO] if c.is_creatura and not c.ha("flying"))
+
+
+def permanente_utile(partita: Partita, nome: str, carta: Carta) -> bool:
+    """Gli incantesimi simmetrici solo quando fanno più male all'avversario."""
+    avversario = partita.avversario_di(nome).nome
+    if "Creatures without flying can't attack." in carta.testo:  # Moat
+        return _forza_terrestre(partita, nome) < _forza_terrestre(partita, avversario)
+    if carta.nome == "The Abyss":
+        def quante(chi):
+            return sum(1 for c in partita.giocatore(chi)[Zona.CAMPO] if c.is_creatura and "Artifact" not in c.tipo_attuale)
+        return quante(nome) < quante(avversario)
+    return True
+
+
+def factory_da_animare(partita: Partita, nome: str, per_attaccare: bool):
+    """Mishra's Factory (e simili): animata nella prima fase principale se può attaccare senza farsi uccidere,
+    oppure nel combattimento avversario (dopo gli attacchi, prima dei blocchi) se può bloccare bene."""
+    comb = partita.combattimento
+    avversario = partita.avversario_di(nome).nome
+    if not per_attaccare and not (comb and comb.attaccanti_dichiarati and not comb.bloccanti_dichiarati
+                                  and partita.giocatore_attivo.nome == avversario and not partita.pila):
+        return None
+    for c in partita.giocatore(nome)[Zona.CAMPO]:
+        if c.animata or c.tappata or partita.ha_debolezza_da_evocazione(c) or c.entrata_nel_turno == partita.turno:
+            continue
+        for ab in analizza_abilita(c):
+            if ab.tipo != "anima" or puo_attivare(partita, nome, c, ab) is not None:
+                continue
+            f, cos = ab.forza, ab.costituzione
+            if per_attaccare:
+                bloccanti = combattimento.possibili_bloccanti(partita, avversario)
+                if not any(b.forza_attuale >= cos and f < b.costituzione_attuale - b.danni for b in bloccanti):
+                    return c, ab
+            else:
+                attaccanti = combattimento.attaccanti_in_campo(partita)
+                in_arrivo = sum(x.forza_attuale for x in attaccanti)
+                buono = any(x.forza_attuale < cos and x.costituzione_attuale - x.danni <= f and not x.ha("flying")
+                            for x in attaccanti)
+                if buono or in_arrivo >= partita.giocatore(nome).vita:
+                    return c, ab
+    return None
 
 
 def decidi_mulligan(partita: Partita, nome: str) -> None:
@@ -202,6 +264,12 @@ def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
                               for b in possibili)
         if not cattivo_scambio or _muore_a_fine_turno(a):
             scelti.append(a)
+    tutti = combattimento.possibili_attaccanti(partita, nome)
+    if len(scelti) < len(tutti):
+        # attacco con tutto se, anche bloccando i più forti, i danni che passano bastano
+        forze = sorted((a.forza_attuale for a in tutti), reverse=True)
+        if sum(forze[len(difensori):]) >= partita.avversario_di(nome).vita:
+            return tutti
     return scelti
 
 
@@ -312,7 +380,13 @@ def agisci(partita: Partita, nome: str) -> None:
         if terra:
             azioni.gioca_terra(partita, nome, terra)
             return
-        lanciabili = [c for c in mano if c.is_creatura and puo_lanciare(partita, nome, c) is None]
+        acceleratori = [c for c in mano if "Artifact" in c.tipo and not c.is_creatura and mana.mana_prodotto(c)
+                        and puo_lanciare(partita, nome, c) is None]
+        if acceleratori:  # Mox, Sol Ring, Black Lotus: subito, sono mana in più
+            azioni.lancia(partita, nome, acceleratori[0])
+            return
+        lanciabili = [c for c in mano if c.is_creatura and puo_lanciare(partita, nome, c) is None
+                      and lascia_contromagia(partita, nome, c)]
         if not lanciabili:  # poi le aure, sulla sua creatura migliore
             for aura in (c for c in mano if c.is_aura and puo_lanciare(partita, nome, c) is None):
                 if bersaglio := bersaglio_aura(partita, nome, aura):
@@ -320,7 +394,8 @@ def agisci(partita: Partita, nome: str) -> None:
                     return
         if not lanciabili:  # poi gli altri permanenti (artefatti, incantesimi globali)
             lanciabili = [c for c in mano if c.is_permanente and not c.is_terra and not c.is_aura
-                          and puo_lanciare(partita, nome, c) is None]
+                          and puo_lanciare(partita, nome, c) is None and permanente_utile(partita, nome, c)
+                          and lascia_contromagia(partita, nome, c)]
         if lanciabili:
             piu_cara = max(lanciabili, key=lambda c: sum(mana.analizza_costo(c.costo).values()))
             azioni.lancia(partita, nome, piu_cara)
@@ -328,6 +403,13 @@ def agisci(partita: Partita, nome: str) -> None:
         if bolt and (rif := bersaglio_bolt(partita, nome, bolt)):
             azioni.lancia(partita, nome, bolt, [rif])
             return
+        if partita.fase == Fase.PRINCIPALE_1 and (factory := factory_da_animare(partita, nome, per_attaccare=True)):
+            azioni.attiva(partita, nome, *factory)
+            return
+
+    if factory := factory_da_animare(partita, nome, per_attaccare=False):
+        azioni.attiva(partita, nome, *factory)
+        return
 
     comb = partita.combattimento
     solo_miei_pompaggi = all(o.controllore == nome and o.abilita and o.abilita.tipo == "pompa" for o in partita.pila)

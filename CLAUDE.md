@@ -50,6 +50,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   Costi con X: `OggettoPila.x`, `mana.con_x`, comando «gioca fireball x=5 su avversaria».
 - Mana (`engine/mana.py`): `FonteMana` con colori a scelta, quantità, sacrificio (Black Lotus), danno (City of Brass);
   terre doppie dai tipi base. `piano_pagamento` ritorna [(fonte, colore)].
+- AI (`ai/avversaria.py`): gioca subito Mox/Sol Ring/Lotus; con Counterspell/Mana Drain in mano tiene {U}{U}
+  (`lascia_contromagia`); attacca con tutto se è letale; Bolt in faccia quando basta; anima Mishra's Factory per
+  attaccare/bloccare; Moat e The Abyss solo se convengono. Contro la versione precedente vince il 73% (100 partite
+  con mazzi da torneo scambiati). Per confronti simili: due moduli avversaria su due giocatori, vedi simulazione.py.
 - L'AI decide le magie in `ai/politiche.py` (POLITICHE per nome carta) e le abilità di utilità in `scegli_abilita`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
 - Bersagli: stringhe `"giocatore:<nome>"` o `"carta:<id>"`, risolte con `Partita.risolvi_bersaglio`. Se alla
   risoluzione il bersaglio non è più valido la magia non ha effetto. Dopo ogni risoluzione girano `azioni_di_stato`

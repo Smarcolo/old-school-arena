@@ -421,6 +421,19 @@ function disegnaTurno() {
     el("div", { className: "azioni-turno" }, ...azioniTurno()));
 }
 
+const vitaPrima = {};  // per far lampeggiare i punti vita quando cambiano
+
+function vitaEl(g, umano) {
+  const prima = vitaPrima[g.nome];
+  vitaPrima[g.nome] = g.vita;
+  const classe = prima === undefined || prima === g.vita ? "" : g.vita < prima ? " scende" : " sale";
+  const e = el("span", { className: "vita" + (umano ? " mia" : "") + classe + (g.vita <= 5 ? " bassa" : ""),
+    title: "Punti vita" }, el("span", { className: "cuore", textContent: "♥" }), el("b", { textContent: g.vita }));
+  if (prima !== undefined && prima !== g.vita)
+    e.append(el("span", { className: "delta", textContent: (g.vita > prima ? "+" : "") + (g.vita - prima) }));
+  return e;
+}
+
 let cimiteroAperto = null;  // "tu" / "avversaria" / null
 
 function disegnaGiocatore(sezione, g, umano) {
@@ -431,7 +444,7 @@ function disegnaGiocatore(sezione, g, umano) {
     onclick: () => magiaInAttesa && scegliBersaglio(umano ? "me" : "avversaria"),
   },
     el("span", { className: "nome", textContent: umano ? "Tu" : "Avversaria" }),
-    el("span", { className: "vita", textContent: `♥ ${g.vita}` }),
+    vitaEl(g, umano),
     el("span", { className: "dato", textContent: `grimorio ${g.grimorio}` }),
     ...(umano ? [] : [el("span", { className: "dato", textContent: `mano ${g.mano}` }),
       el("span", { className: "dorsi" }, ...Array.from({ length: Math.min(g.mano, 12) }, () => el("span", { className: "dorso" })))]),
@@ -637,7 +650,18 @@ function disegnaGiocataAvversaria() {
   if (!mostra) return;
   const titolo = cima.tipo === "abilita" ? `L'avversaria attiva un'abilità di ${cima.carta}`
     : cima.tipo === "innesco" ? `Si innesca ${cima.carta} dell'avversaria` : `L'avversaria lancia ${cima.carta}`;
-  const puoiRispondere = giocabiliInMano().length || partita.giocatori[0].campo.some((c) => c.giocabile);
+  // le carte con cui puoi rispondere, direttamente nel riquadro: un clic e la usi
+  const io = partita.giocatori[0];
+  const risposte = [
+    ...io.mano.filter((c) => c.giocabile && !/\bLand\b/.test(c.tipo)).map((c) => [c, () =>
+      // contromagie e Blast su una magia in pila: il bersaglio è la magia appena lanciata
+      cima.tipo === "magia" && (c.bersaglio === "magia" || (c.bersaglio === "blu" && cima.colori.includes("U"))
+        || (c.bersaglio === "rosso" && cima.colori.includes("R"))) ? invia(`gioca ${c.nome} su ${cima.id}`) : suMano(c)]),
+    ...io.campo.filter((c) => c.giocabile).map((c) => [c, () => suCampo(c, true)]),
+  ];
+  const sceltaRisposta = risposte.length ? el("div", { className: "risposte" },
+    el("div", { className: "etichetta", textContent: "Rispondi con:" }),
+    el("div", { className: "fila" }, ...risposte.map(([c, usa]) => cartaEl(c, () => { rispostaPer = cima.id; usa(); disegna(); })))) : null;
   const carta = el("div", { className: "carta grande" }, faccia({ nome: cima.carta, tipo: "", costo: "", testo: cima.testo }));
   carta.dataset.carta = cima.carta;
   box.replaceChildren(el("div", { className: "riquadro" },
@@ -645,9 +669,10 @@ function disegnaGiocataAvversaria() {
     carta,
     el("div", { className: "dettaglio-giocata", textContent: cima.nome
       + (cima.x ? ` (X=${cima.x})` : "") + (cima.bersaglio ? ` → ${cima.bersaglio}` : "") }),
+    ...(sceltaRisposta ? [sceltaRisposta] : []),
     el("div", { className: "azioni-giocata" },
       bottone("Lascia risolvere", () => invia("passa")),
-      ...(puoiRispondere ? [bottone("Rispondi", () => { rispostaPer = cima.id; disegna();
+      ...(risposte.length ? [bottone("Guarda il tavolo", () => { rispostaPer = cima.id; disegna();
         avvisa("Clicca la carta con cui rispondi (illuminata in verde), oppure «Lascia risolvere» in alto."); })] : []))));
 }
 

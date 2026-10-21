@@ -35,6 +35,10 @@ python -m uvicorn app.api.main:app
 - Le tue magie e abilità si risolvono da sole. Quando gioca l'avversaria, la sua carta compare in primo piano:
   «Lascia risolvere» oppure «Rispondi» (se hai qualcosa da giocare). Mind Twist, Millstone e Mirror Universe
   vanno da soli sull'avversaria, senza cliccare il bersaglio.
+- Nel riquadro della giocata avversaria compaiono le carte con cui puoi rispondere: un clic e la giochi
+  (Counterspell, Mana Drain e i Blast colpiscono da soli la magia appena lanciata).
+- I punti vita sono grandi accanto al nome (verdi i tuoi, rossi dell'avversaria): quando cambiano lampeggiano e
+  mostrano di quanto; sotto i 6 pulsano.
 - Mana a mano: clicchi una terra (o Mox, Lotus, City of Brass...) e scegli il colore; il mana resta in riserva
   e la magia che lanci lo usa per primo. Se non tappi niente, il programma tappa da solo.
 - Quando ti attaccano ti fermi prima dei blocchi se puoi fare qualcosa (es. animare Mishra's Factory, che poi può

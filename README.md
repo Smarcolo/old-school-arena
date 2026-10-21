@@ -36,6 +36,13 @@ python -m uvicorn app.api.main:app
   «⚔ Attacca con N» in alto) o usa un'abilità (se può fare entrambe compare un piccolo menu); terra = mana.
   Per le magie con bersaglio clicchi la magia e poi il bersaglio («Annulla» per ripensarci).
 
+## Mazzi pronti
+- «Millstone Dreams (Mr. Pox)»: 2° posto TCDecks, con sideboard. Chaos Orb non si può lanciare sul tavolo: qui
+  distrugge un permanente a tua scelta e poi se stesso. Sylvan Library pesca sempre le due carte in più (poi scegli
+  quali due rimettere in cima o tenere pagando 4 vita).
+- Nell'editor dei mazzi puoi incollare una lista copiata dalla pagina di TCDecks così com'è (con «Instants [13]»,
+  «Land [19]», la sideboard in fondo): viene letta correttamente.
+
 ## Comandi
 - `tengo` / `mulligan` a inizio partita (mulligan London); dopo un mulligan, `in fondo <carte>` per scegliere
   quali carte mettere in fondo al mazzo (oppure i pulsanti e un clic sulle carte).

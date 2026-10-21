@@ -16,6 +16,11 @@ from app.engine.stato import Carta, parole_chiave_da_testo
 MINIMO_PER_GIOCARE = 20  # sotto questo numero una partita di prova non ha senso
 _RIGA = re.compile(r"^(?:(\d+)\s*x?\s+)?(.+?)\s*$", re.IGNORECASE)
 _PROMEMORIA = re.compile(r"^\(.*\)$")
+# Righe di intestazione delle pagine TCDecks copiate a mano: «Instants [13]», «Land [19]», «Deck Name: ...»,
+# «Mr. Pox playing Millstone Dreams  Position: 2». Le sezioni dicono quante carte ha il mazzo: quelle in più,
+# in fondo e senza sezione, sono la sideboard (TCDecks la mostra in una colonna a parte).
+_SEZIONE = re.compile(r"^([A-Za-z][A-Za-z ]*?)\s*\[(\d+)\]$")
+_INTESTAZIONE_TCDECKS = re.compile(r"^(deck name:|.+\bplaying\b.+|.*\bposition:\s*\d+)", re.IGNORECASE)
 
 
 def analizza_testo(testo: str) -> tuple[dict[str, int], dict[str, int], list[str]]:
@@ -26,11 +31,17 @@ def analizza_testo(testo: str) -> tuple[dict[str, int], dict[str, int], list[str
     errori = []
     in_sideboard = segnata = False
     blocchi: list[Counter] = [Counter()]  # gruppi separati da righe vuote (export MTGO: la sideboard è l'ultimo)
+    da_sezioni = 0  # carte annunciate dalle intestazioni «Tipo [N]» (formato TCDecks)
     for riga in testo.splitlines():
         riga = riga.strip()
         if not riga:
             if blocchi[-1]:
                 blocchi.append(Counter())
+            continue
+        if m := _SEZIONE.match(riga):
+            da_sezioni += int(m.group(2))
+            continue
+        if _INTESTAZIONE_TCDECKS.match(riga):
             continue
         intestazione = re.sub(r"^(?://|#)\s*|\s*\(\d+\)$|:$", "", riga).strip().lower()
         if intestazione in ("sideboard", "sb"):  # «Sideboard», «Sideboard:», «// Sideboard», «Sideboard (15)»
@@ -39,6 +50,8 @@ def analizza_testo(testo: str) -> tuple[dict[str, int], dict[str, int], list[str
         if riga.startswith(("#", "//")):
             continue
         destinazione = sideboard if in_sideboard else mazzo
+        if da_sezioni and not in_sideboard and sum(mazzo.values()) >= da_sezioni:
+            destinazione = sideboard  # le sezioni del mazzo sono complete: il resto è la sideboard
         if riga.lower().startswith("sb:"):
             destinazione, riga = sideboard, riga[3:].strip()
         m = _RIGA.match(riga)
@@ -88,7 +101,8 @@ def _limiti_motore(carta: Carta) -> str | None:
     capite = parole_chiave_da_testo(carta.testo)
     for riga in carta.testo.splitlines():
         riga = riga.strip()
-        if (not riga or _PROMEMORIA.match(riga) or mana.riga_di_mana(riga) or riga_capita(carta, riga)
+        if (not riga or _PROMEMORIA.match(riga) or mana.riga_di_mana(riga) or mana.riga_da_terre_avversarie(riga)
+                or riga_capita(carta, riga)
                 or inneschi.riga_capita(carta, riga) or statici.riga_capita(carta, riga)):
             continue
         if not {p.strip() for p in riga.lower().split(",")} <= capite:
@@ -186,6 +200,7 @@ def elimina(conn: sqlite3.Connection, nome: str) -> bool:
     return cur.rowcount > 0
 
 
-def salva_se_manca(conn: sqlite3.Connection, nome: str, mazzo: dict[str, int]) -> None:
+def salva_se_manca(conn: sqlite3.Connection, nome: str, mazzo: dict[str, int],
+                   sideboard: dict[str, int] | None = None) -> None:
     if leggi(conn, nome) is None:
-        salva(conn, nome, mazzo, {})
+        salva(conn, nome, mazzo, sideboard or {})

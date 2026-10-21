@@ -6,7 +6,7 @@
 <title>Old School Arena</title>
 <link rel="stylesheet" href="stile.css">
 </head>
-<body>
+<body class="tavolo">
 <header>
   <h1>Old School Arena</h1>
   <span id="info">Nessuna partita</span>
@@ -17,6 +17,8 @@
     <a class="link" href="torneo.html">Torneo</a>
   </span>
   <button id="nuova">Nuovo incontro</button>
+  <button id="apri-registro" type="button" class="secondario">Registro</button>
+  <button id="apri-giudice" type="button" class="secondario">Giudice</button>
   <span class="salvati" id="riquadro-salvati" hidden>
     <select id="salvati" aria-label="Partite e tornei salvati"></select>
     <button id="riprendi" type="button">Riprendi</button>
@@ -24,25 +26,28 @@
   </span>
 </header>
 <section id="turno" hidden></section>
+<div id="barra-combattimento" hidden></div>
 <p id="messaggio" role="status"></p>
 <div id="menu-carta" hidden></div>
+<section id="pannello-sideboard" hidden></section>
 <main>
   <section class="giocatore" id="avversaria"></section>
-  <section class="pila"><div class="etichetta">Pila</div><div class="fila" id="pila"></div></section>
+  <section class="pila" id="sezione-pila" hidden><span class="etichetta">Pila</span><div class="fila" id="pila"></div></section>
   <section class="giocatore" id="tu"></section>
   <section class="mano" id="mano"></section>
-  <aside>
-    <h2>Giudice</h2>
-    <form id="giudice">
-      <input id="domanda" autocomplete="off" placeholder="Es. il banding funziona con travolgere?">
-    </form>
-    <p id="risposta-giudice"></p>
-    <h2>Registro</h2>
-    <ol id="eventi"></ol>
-  </aside>
 </main>
-<div id="barra-combattimento" hidden></div>
-<section id="pannello-sideboard" hidden></section>
+<!-- Giudice e registro: si aprono solo quando servono -->
+<aside id="pannello-giudice" class="pannello-laterale" hidden>
+  <div class="testata"><h2>Giudice</h2><button type="button" class="chiudi" data-chiudi="pannello-giudice">✕</button></div>
+  <form id="giudice">
+    <input id="domanda" autocomplete="off" placeholder="Es. il banding funziona con travolgere?">
+  </form>
+  <p id="risposta-giudice"></p>
+</aside>
+<aside id="pannello-registro" class="pannello-laterale" hidden>
+  <div class="testata"><h2>Registro</h2><button type="button" class="chiudi" data-chiudi="pannello-registro">✕</button></div>
+  <ol id="eventi"></ol>
+</aside>
 <script src="comune.js"></script>
 <script src="app.js"></script>
 </body>

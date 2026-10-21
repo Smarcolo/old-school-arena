@@ -69,6 +69,27 @@ def mana_prodotto(carta: Carta) -> FonteMana | None:
     return None
 
 
+_COME_TERRE_AVVERSARIE = re.compile(r"^\{T\}: Add one mana of any color that a land an opponent controls could produce\.$")
+
+
+def riga_da_terre_avversarie(riga: str) -> bool:
+    return bool(_COME_TERRE_AVVERSARIE.match(riga.strip()))
+
+
+def da_terre_avversarie(carta: Carta) -> bool:
+    """Fellwar Stone: il colore dipende dalle terre dell'avversario (vedi fonte_in_partita)."""
+    return any(riga_da_terre_avversarie(r) for r in carta.testo.splitlines())
+
+
+def fonte_in_partita(carta: Carta, terre_avversarie: list[Carta]) -> FonteMana | None:
+    """Come mana_prodotto, ma sa anche i colori che dipendono dalla partita (Fellwar Stone)."""
+    if da_terre_avversarie(carta):
+        colori = "".join(c for c in COLORI if any(c in f.colori for t in terre_avversarie
+                                                   if t.is_terra and (f := mana_prodotto(t))))
+        return FonteMana(carta, colori, 1, False, 0) if colori else None
+    return mana_prodotto(carta)
+
+
 def analizza_costo(costo: str) -> dict[str, int]:
     """'{2}{G}{G}' -> {'generico': 2, 'G': 2}; 'X' conta quante X ci sono (es. Fireball: {'X': 1})."""
     risultato = {"generico": 0}

@@ -20,8 +20,14 @@ async function api(percorso, opzioni = {}) {
   return dati;
 }
 
+// I messaggi compaiono in basso e spariscono da soli, così non rubano spazio al tavolo.
+let timerAvviso = null;
 function avvisa(testo) {
-  $("messaggio").textContent = testo;
+  const m = $("messaggio");
+  m.textContent = testo;
+  m.classList.toggle("visibile", Boolean(testo));
+  clearTimeout(timerAvviso);
+  timerAvviso = setTimeout(() => m.classList.remove("visibile"), Math.max(4000, testo.length * 60));
 }
 
 function scegliBersaglio(rif) {
@@ -59,7 +65,7 @@ function facciaTestuale(c) {
 
 function faccia(c) {
   if (immaginiNonDisponibili.has(c.nome)) return facciaTestuale(c);
-  const img = el("img", { src: `/api/immagini/${encodeURIComponent(c.nome)}`, alt: c.nome, loading: "lazy", draggable: false });
+  const img = el("img", { src: urlImmagine(c.nome), alt: c.nome, loading: "lazy", draggable: false });
   img.onerror = () => { immaginiNonDisponibili.add(c.nome); img.replaceWith(facciaTestuale(c)); };
   return img;
 }
@@ -393,6 +399,8 @@ function disegnaTurno() {
     el("div", { className: "azioni-turno" }, ...azioniTurno()));
 }
 
+const cimiteriAperti = { tu: false, avversaria: false };
+
 function disegnaGiocatore(sezione, g, umano) {
   const mioTurno = partita.attivo === g.nome && !partita.vincitore;
   sezione.classList.toggle("di-turno", mioTurno);
@@ -403,7 +411,9 @@ function disegnaGiocatore(sezione, g, umano) {
     el("span", { className: "nome", textContent: umano ? "Tu" : "Avversaria" }),
     el("span", { className: "vita", textContent: `♥ ${g.vita}` }),
     el("span", { className: "dato", textContent: `grimorio ${g.grimorio}` }),
-    ...(umano ? [] : [el("span", { className: "dato", textContent: `mano ${g.mano}` })]),
+    ...(umano ? [] : [el("span", { className: "dato", textContent: `mano ${g.mano}` }),
+      el("span", { className: "dorsi" }, ...Array.from({ length: Math.min(g.mano, 12) }, () => el("span", { className: "dorso" })))]),
+    ...(g.cima ? [conCarta(el("span", { className: "cima-rivelata", textContent: `in cima: ${g.cima}` }), g.cima)] : []),
     ...(g.riserva && g.riserva !== "vuota" ? [el("span", { className: "dato", textContent: `mana ${g.riserva}` })] : []),
     ...(mioTurno ? [el("span", { className: "badge-turno", textContent: umano ? "tuo turno" : "suo turno" })] : []));
   const etichetta = (t) => el("div", { className: "etichetta", textContent: t });
@@ -414,18 +424,16 @@ function disegnaGiocatore(sezione, g, umano) {
   const righe = umano
     ? [fila(altri, suQuesto, "permanenti"), fila(terre, suQuesto, "terre")]
     : [fila(terre, suQuesto, "terre"), fila(altri, suQuesto, "permanenti")];
-  sezione.replaceChildren(titolo);
-  if (!umano && g.mano) sezione.append(el("div", { className: "dorsi" },
-    ...Array.from({ length: g.mano }, () => el("span", { className: "dorso" }))));
-  sezione.append(...righe);
+  // il cimitero è un pulsante nella riga del giocatore: l'elenco si apre solo se serve (o se si sceglie un bersaglio)
+  const chiave = umano ? "tu" : "avversaria";
+  if (g.cimitero.length) titolo.append(el("button", { type: "button", className: "secondario cimitero-bottone",
+    textContent: `Cimitero (${g.cimitero.length})`,
+    onclick: (e) => { e.stopPropagation(); cimiteriAperti[chiave] = !cimiteriAperti[chiave]; disegna(); } }));
+  sezione.replaceChildren(titolo, ...righe);
   if (!g.campo.length) sezione.append(el("div", { className: "vuoto", textContent: "Nessun permanente in campo" }));
-  if (g.cimitero.length) {
-    const cim = el("div", { className: "fila cimitero" }, ...g.cimitero.map((c) => {
-      const e = el("span", { className: "nome-cimitero", textContent: c.nome, onclick: () => magiaInAttesa && scegliBersaglio(c.id) });
-      e.dataset.carta = c.nome;
-      return e;
-    }));
-    sezione.append(etichetta(`Cimitero (${g.cimitero.length})`), cim);
+  if (g.cimitero.length && (cimiteriAperti[chiave] || magiaInAttesa)) {
+    sezione.append(el("div", { className: "fila cimitero" }, ...g.cimitero.map((c) => conCarta(el("span", {
+      className: "nome-cimitero", textContent: c.nome, onclick: () => magiaInAttesa && scegliBersaglio(c.id) }), c.nome))));
   }
 }
 
@@ -443,6 +451,7 @@ function disegna() {
   disegnaGiocatore($("avversaria"), partita.giocatori[1], false);
   disegnaGiocatore($("tu"), partita.giocatori[0], true);
   disegnaMano();
+  $("sezione-pila").hidden = !partita.pila.length;
   $("pila").replaceChildren(...(partita.pila.length
     ? partita.pila.slice().reverse().map((o) => el("span", { className: "oggetto-pila",
         textContent: `${o.nome}${o.x ? " X=" + o.x : ""}${o.bersaglio ? " → " + o.bersaglio : ""} (${o.controllore === "Tu" ? "tua" : "avversaria"})`,
@@ -564,3 +573,13 @@ $("giudice").onsubmit = async (e) => {
     $("risposta-giudice").textContent = "Errore: " + err.message;
   }
 };
+
+// Giudice e registro in pannelli che si aprono solo quando servono
+function apriPannello(id) {
+  for (const altro of ["pannello-giudice", "pannello-registro"]) if (altro !== id) $(altro).hidden = true;
+  $(id).hidden = !$(id).hidden;
+  if (id === "pannello-giudice" && !$(id).hidden) $("domanda").focus();
+}
+$("apri-giudice").onclick = () => apriPannello("pannello-giudice");
+$("apri-registro").onclick = () => apriPannello("pannello-registro");
+document.querySelectorAll("[data-chiudi]").forEach((b) => (b.onclick = () => { $(b.dataset.chiudi).hidden = true; }));

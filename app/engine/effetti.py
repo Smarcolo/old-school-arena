@@ -14,14 +14,16 @@ class Effetto:
     bersaglio: str | None = None
     max_bersagli: int = 1  # 0 = quanti se ne vuole (Fireball)
     costo_per_bersaglio: str = ""  # mana in più per ogni bersaglio oltre il primo
+    rimuovi_dal_gioco: bool = False  # dopo la risoluzione va tra le rimosse, non nel cimitero (Recall)
 
 
 EFFETTI: dict[str, Effetto] = {}
 
 
-def effetto(nome: str, bersaglio: str | None = None, max_bersagli: int = 1, costo_per_bersaglio: str = ""):
+def effetto(nome: str, bersaglio: str | None = None, max_bersagli: int = 1, costo_per_bersaglio: str = "",
+            rimuovi_dal_gioco: bool = False):
     def registra(funzione: Callable) -> Callable:
-        EFFETTI[nome] = Effetto(funzione, bersaglio, max_bersagli, costo_per_bersaglio)
+        EFFETTI[nome] = Effetto(funzione, bersaglio, max_bersagli, costo_per_bersaglio, rimuovi_dal_gioco)
         return funzione
     return registra
 
@@ -64,6 +66,7 @@ def _tipi():
         "qualsiasi": ("una creatura o un giocatore", lambda p, o, f: isinstance(o, Giocatore) or (in_campo(p, o) and o.is_creatura)),
         "creatura": ("una creatura", lambda p, o, f: in_campo(p, o) and o.is_creatura),
         "giocatore": ("un giocatore", lambda p, o, f: isinstance(o, Giocatore)),
+        "avversario": ("un avversario", lambda p, o, f: isinstance(o, Giocatore) and o.nome != _controllore(p, f)),
         "creatura_non_nera_non_artefatto": ("una creatura non nera e non artefatto", lambda p, o, f: in_campo(p, o)
                                             and o.is_creatura and "B" not in o.colori and "Artifact" not in o.tipo_attuale),
         "artefatto": ("un artefatto", lambda p, o, f: in_campo(p, o) and "Artifact" in o.tipo_attuale),

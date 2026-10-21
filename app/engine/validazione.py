@@ -87,8 +87,9 @@ def puo_tappare(partita: Partita, nome_giocatore: str, carta: Carta) -> str | No
 def fonti_di_mana(partita: Partita, nome_giocatore: str, esclusa: Carta | None = None) -> list:
     """Fonti di mana (mana.FonteMana) su permanenti stappati che possono produrre mana adesso."""
     fonti = []
+    terre_avversarie = partita.avversario_di(nome_giocatore)[Zona.CAMPO]
     for c in partita.giocatore(nome_giocatore)[Zona.CAMPO]:
-        fonte = mana.mana_prodotto(c)
+        fonte = mana.fonte_in_partita(c, terre_avversarie)
         if fonte and c is not esclusa and puo_tappare(partita, nome_giocatore, c) is None:
             fonti.append(fonte)
     return fonti
@@ -182,6 +183,9 @@ def puo_attivare(partita: Partita, nome_giocatore: str, carta: Carta, abilita, b
         return motivo
     if carta not in partita.giocatore(nome_giocatore)[Zona.CAMPO]:
         return f"{carta.nome} non è sul tuo campo di battaglia"
+    if abilita.solo_nel_mantenimento and (partita.giocatore_attivo.nome != nome_giocatore
+                                          or partita.fase != Fase.MANTENIMENTO):
+        return f"{carta.nome}: si attiva solo nel tuo mantenimento"
     if abilita.solo_nel_tuo_turno and partita.giocatore_attivo.nome != nome_giocatore:
         return f"{carta.nome}: si attiva solo nel tuo turno"
     if abilita.tappa and (motivo := puo_tappare(partita, nome_giocatore, carta)):

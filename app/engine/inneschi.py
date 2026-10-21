@@ -76,9 +76,17 @@ def _effetto(nome: str, testo: str) -> tuple[str, int, str] | None:
     return None
 
 
+_SYLVAN = re.compile(r"^At the beginning of your draw step, you may draw two additional cards\. If you do, choose two "
+                     r"cards in your hand drawn this turn\. For each of those cards, pay 4 life or put the card on top "
+                     r"of your library\.$", re.I)
+
+
 def analizza_inneschi(carta: Carta) -> list[Innesco]:
     trovati = []
     nome = re.escape(carta.nome)
+    for riga in carta.testo.splitlines():
+        if _SYLVAN.match(riga.strip()):
+            trovati.append(Innesco(riga.strip(), "pescata", "tuo", "sylvan"))
     for riga in carta.testo.splitlines():
         riga = riga.strip()
         corpo = riga.rstrip(".")

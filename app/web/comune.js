@@ -3,9 +3,15 @@ const anteprima = Object.assign(document.createElement("img"), { id: "anteprima"
 document.body.append(anteprima);
 const immaginiMancanti = new Set();
 
+// «v=1993»: le immagini con la cornice old school hanno un indirizzo nuovo, così il browser non mostra più quelle
+// moderne che aveva in memoria dalle versioni precedenti.
+function urlImmagine(nome) {
+  return `/api/immagini/${encodeURIComponent(nome)}?v=1993`;
+}
+
 function mostraAnteprima(nome, evento) {
   if (!nome || immaginiMancanti.has(nome) || matchMedia("(hover: none)").matches) return;
-  const src = `/api/immagini/${encodeURIComponent(nome)}`;
+  const src = urlImmagine(nome);
   if (anteprima.getAttribute("src") !== src) anteprima.src = src;
   anteprima.onerror = () => { immaginiMancanti.add(nome); anteprima.classList.remove("visibile"); };
   anteprima.onload = () => anteprima.classList.add("visibile");

@@ -7,6 +7,9 @@
 - «Destroy target land / artifact / creature / artifact or enchantment.»                 -> distruggi
 - «Draw a card.» (+ «Activate only if you have exactly seven cards in your hand.»)       -> pesca
 - «Tap target artifact, creature, or land.»                                              -> tappa
+- «Target player mills two cards.» (Millstone)                                           -> macina
+- «Exchange life totals with target opponent. Activate only during your upkeep.»          -> scambia_vita
+- Chaos Orb: lancio fisico sul tavolo, reso come «distruggi un permanente a scelta, poi Chaos Orb» -> chaos_orb
 
 Le abilità di mana («...: Add ...») stanno in mana.py e non usano la pila.
 """
@@ -26,6 +29,9 @@ _TAPPA = re.compile(r"^Tap target artifact, creature, or land\.$")
 _ANIMA = re.compile(r"^(?P<nome>.+) becomes an? (?P<f>\d+)/(?P<c>\d+) (?P<tipi>[A-Za-z\- ]+?) creature until end of turn\. It's still a land\.$")
 _POMPA_BERSAGLIO = re.compile(r"^Target Assembly-Worker creature gets (?P<f>[+-]\d+)/(?P<c>[+-]\d+) until end of turn\.$")
 _SCARTA = re.compile(r"^Target player discards a card\.(?P<turno> Activate only during your turn\.)?$")
+_MACINA = re.compile(r"^Target player (?:mills (?P<n>\w+) cards?|puts the top (?P<n2>\w+) cards? of (?:their|his or her) library into (?:their|his or her) graveyard)\.$")
+_SCAMBIA_VITA = re.compile(r"^Exchange life totals with target opponent\.(?P<mantenimento> Activate only during your upkeep\.)?$")
+_NUMERI = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
 _BERSAGLI = {"any target": "qualsiasi", "target creature": "creatura", "target player": "giocatore"}
 _DISTRUGGIBILI = {"land": "terra", "artifact": "artefatto", "creature": "creatura",
                   "artifact or enchantment": "artefatto_o_incantesimo"}
@@ -48,6 +54,8 @@ class AbilitaAttivata:
     solo_con_sette: bool = False  # Library of Alexandria
     solo_nel_tuo_turno: bool = False  # Disrupting Scepter
     togli_segnalino: bool = False  # «Remove a +1/+1 counter from NAME» (Triskelion)
+    solo_nel_mantenimento: bool = False  # Mirror Universe
+    quante: int = 0  # carte macinate (Millstone)
     tipo_animato: str = ""  # per «anima»: es. "Artifact Creature — Assembly-Worker"
 
 
@@ -57,6 +65,10 @@ def _di_se_stessa(nome_nel_testo: str, carta: Carta) -> bool:
 
 def analizza_abilita(carta: Carta) -> list[AbilitaAttivata]:
     trovate = []
+    if carta.nome == "Chaos Orb":  # il lancio fisico non si può fare: si sceglie il permanente colpito
+        riga = next((r.strip() for r in carta.testo.splitlines() if r.strip().startswith("{1}, {T}:")), "")
+        return [AbilitaAttivata(0, riga or "{1}, {T}: distrugge un permanente, poi Chaos Orb", "{1}", True,
+                                "chaos_orb", bersaglio="permanente")]
     for riga in carta.testo.splitlines():
         riga = riga.strip()
         m = _RIGA.match(riga)
@@ -98,6 +110,13 @@ def analizza_abilita(carta: Carta) -> list[AbilitaAttivata]:
         elif pb := _POMPA_BERSAGLIO.match(effetto):
             trovate.append(AbilitaAttivata(**base, tipo="pompa_bersaglio", forza=int(pb["f"]), costituzione=int(pb["c"]),
                                            bersaglio="assembly_worker"))
+        elif mc := _MACINA.match(effetto):
+            n = mc["n"] or mc["n2"]
+            trovate.append(AbilitaAttivata(**base, tipo="macina", bersaglio="giocatore",
+                                           quante=int(n) if n.isdigit() else _NUMERI.get(n, 1)))
+        elif sv := _SCAMBIA_VITA.match(effetto):
+            trovate.append(AbilitaAttivata(**base, tipo="scambia_vita", bersaglio="avversario",
+                                           solo_nel_mantenimento=bool(sv["mantenimento"])))
         elif sc := _SCARTA.match(effetto):
             trovate.append(AbilitaAttivata(**base, tipo="scarta", bersaglio="giocatore", solo_nel_tuo_turno=bool(sc["turno"])))
     return trovate

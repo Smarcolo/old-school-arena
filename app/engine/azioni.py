@@ -41,6 +41,7 @@ def pesca(partita: Partita, giocatore: str, quante: int = 1) -> list[Carta]:
             g.pescato_da_vuoto = True
             break
         carta = g[Zona.GRIMORIO].pop()
+        carta.pescata_nel_turno = partita.turno
         g[Zona.MANO].append(carta)
         pescate.append(carta)
     _log(partita, giocatore, "pesca", f"{giocatore} pesca {len(pescate)} carta/e")
@@ -111,6 +112,9 @@ def _risolvi_innesco(partita: Partita, oggetto: OggettoPila) -> None:
             pesca(partita, quel_giocatore)
         case "pesca_tu":
             pesca(partita, chi)
+        case "sylvan":
+            pesca(partita, chi, 2)
+            carte_implementate.continua_sylvan(partita, chi, 0, ())
         case "segnalino_su_se":
             if in_campo:
                 carta.segnalini += 1
@@ -195,7 +199,7 @@ def tappa(partita: Partita, giocatore: str, carta: Carta, colore: str | None = N
     `colore` sceglie tra le opzioni della fonte (di default la prima). Black Lotus si sacrifica, City of Brass fa
     1 danno a chi la tappa."""
     _verifica(puo_tappare(partita, giocatore, carta))
-    fonte = mana.mana_prodotto(carta)
+    fonte = mana.fonte_in_partita(carta, partita.avversario_di(giocatore)[Zona.CAMPO])
     if fonte and colore and colore not in fonte.colori:
         raise AzioneIllegale(f"{carta.nome} non produce {{{colore}}}")
     carta.tappata = True
@@ -315,6 +319,19 @@ def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
         bersaglio = partita.risolvi_bersaglio(oggetto.bersagli[0])
         bersaglio.tappata = True
         _log(partita, chi, "tappa", f"{fonte.nome} tappa {bersaglio.nome}")
+    elif ab.tipo == "macina":
+        macina(partita, partita.risolvi_bersaglio(oggetto.bersagli[0]).nome, ab.quante, f"({fonte.nome})")
+    elif ab.tipo == "scambia_vita":
+        altro = partita.risolvi_bersaglio(oggetto.bersagli[0])
+        mia, sua = partita.giocatore(chi).vita, altro.vita
+        modifica_vita(partita, chi, sua - mia, f"({fonte.nome}: scambio dei punti vita)")
+        modifica_vita(partita, altro.nome, mia - sua, f"({fonte.nome}: scambio dei punti vita)")
+    elif ab.tipo == "chaos_orb":
+        colpito = partita.risolvi_bersaglio(oggetto.bersagli[0])
+        _log(partita, chi, "chaos_orb", f"{fonte.nome} cade su {colpito.nome}")
+        distruggi(partita, colpito, f"(colpita da {fonte.nome})")
+        if partita.trova_in_campo(fonte.id):
+            distruggi(partita, fonte, "(Chaos Orb si distrugge)")
     elif ab.tipo == "rigenera":
         if not partita.trova_in_campo(fonte.id):
             _log(partita, chi, "neutralizzata", f"{fonte.nome} non è più in campo: niente rigenerazione")
@@ -356,7 +373,8 @@ def risolvi_pila(partita: Partita) -> None:
         else:
             effetto.funzione(partita, oggetto)
             _log(partita, chi, "risolve", f"{carta.nome} si risolve", carta=carta.id)
-        partita.giocatore(carta.proprietario or chi)[Zona.CIMITERO].append(carta)
+        zona = Zona.RIMOSSE if effetto.rimuovi_dal_gioco else Zona.CIMITERO  # Recall: «Exile Recall»
+        partita.giocatore(carta.proprietario or chi)[zona].append(carta)
     azioni_di_stato(partita)
     partita.priorita = partita.attivo
     partita.passaggi = 0
@@ -458,6 +476,17 @@ def _lascia_il_campo(partita: Partita, carta: Carta) -> str | None:
     return trovato[0].nome
 
 
+def macina(partita: Partita, giocatore: str, quante: int, motivo: str = "") -> list[Carta]:
+    """Le prime carte del grimorio nel cimitero (Millstone). Con il grimorio vuoto non succede niente:
+    si perde solo quando si deve pescare."""
+    g = partita.giocatore(giocatore)
+    macinate = [g[Zona.GRIMORIO].pop() for _ in range(min(quante, len(g[Zona.GRIMORIO])))]
+    g[Zona.CIMITERO].extend(macinate)
+    nomi = ", ".join(c.nome for c in macinate) or "nessuna carta"
+    _log(partita, giocatore, "macina", f"{giocatore} mette nel cimitero dal grimorio: {nomi} {motivo}".strip())
+    return macinate
+
+
 def rimuovi_dal_gioco(partita: Partita, carta: Carta, motivo: str = "") -> None:
     """Esilio («rimossa dal gioco» nel 93/94): non si rigenera."""
     chi = _lascia_il_campo(partita, carta)
@@ -542,6 +571,20 @@ def _applica_scelta(partita: Partita, giocatore: str, azione: str, carta: Carta,
         statici.aggiorna(partita)
     elif azione == "scarta":
         scarta(partita, giocatore, carta, f"({fonte})")
+    elif azione == "riprendi":
+        g = partita.giocatore(giocatore)
+        if carta in g[Zona.CIMITERO]:
+            g[Zona.CIMITERO].remove(carta)
+            g[Zona.MANO].append(carta)
+            _log(partita, giocatore, "riprende", f"{giocatore} riprende in mano {carta.nome} ({fonte})")
+    elif azione == "in_cima":
+        g = partita.giocatore(giocatore)
+        if carta in g[Zona.MANO]:
+            g[Zona.MANO].remove(carta)
+            g[Zona.GRIMORIO].append(carta)  # l'ultima della lista è la cima
+            _log(partita, giocatore, "in_cima", f"{giocatore} rimette una carta in cima al grimorio ({fonte})")
+    elif azione == "tieni_pagando":
+        modifica_vita(partita, giocatore, -4, f"({fonte}: tiene {carta.nome})")
     azioni_di_stato(partita)
 
 
@@ -577,10 +620,17 @@ def rispondi_scegli(partita: Partita, giocatore: str, id_carta: str) -> None:
         raise AzioneIllegale(f"tocca a {scelta.giocatore} scegliere")
     if id_carta not in scelta.dati["carte"]:
         raise AzioneIllegale("non puoi scegliere quella carta")
-    carta = next(c for g in partita.giocatori for z in (Zona.CAMPO, Zona.MANO) for c in g[z] if c.id == id_carta)
+    azione = scelta.dati["azione"]
+    if ":" in id_carta:  # opzioni con l'azione dentro: «in_cima:<id>» / «tieni_pagando:<id>»
+        azione, id_carta = id_carta.split(":", 1)
+    carta = next(c for g in partita.giocatori for z in (Zona.CAMPO, Zona.MANO, Zona.CIMITERO) for c in g[z]
+                 if c.id == id_carta)
     partita.scelta = None
-    _applica_scelta(partita, giocatore, scelta.dati["azione"], carta, scelta.dati["fonte"])
-    _riprendi(partita, scelta.dati.get("seguito"))
+    _applica_scelta(partita, giocatore, azione, carta, scelta.dati["fonte"])
+    seguito = scelta.dati.get("seguito")
+    if seguito and seguito[0] == "sylvan":
+        seguito = (*seguito[:-1], seguito[-1] + (carta.id,))
+    _riprendi(partita, seguito)
     partita.priorita = partita.attivo
     partita.passaggi = 0
 
@@ -612,6 +662,12 @@ def azioni_di_stato(partita: Partita) -> None:
 
 def _un_giro_di_controlli(partita: Partita) -> bool:
     cambiato = False
+    mondi = [c for g in partita.giocatori for c in g[Zona.CAMPO] if "World" in c.tipo]
+    for vecchio in mondi[:-1] if len(mondi) > 1 else []:  # un solo incantesimo del mondo: resta il più recente
+        recente = max(mondi, key=lambda c: c.entrata_nel_turno or 0)
+        if vecchio is not recente:
+            distruggi(partita, vecchio, "(c'è un altro incantesimo del mondo)", rigenerabile=False)
+            cambiato = True
     for g in partita.giocatori:
         for c in list(g[Zona.CAMPO]):
             if c.is_aura:

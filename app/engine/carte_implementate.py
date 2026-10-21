@@ -291,7 +291,53 @@ def continua_balance(partita, passo: int) -> None:
                 _az()._applica_scelta(partita, nome, azione, c, "Balance")
 
 
-SEGUITI = {"balance": continua_balance}  # scelte che, una volta fatte, riprendono un effetto a metà
+# --- Recall e Sylvan Library ---------------------------------------------------------------------
+
+@effetto("Recall", rimuovi_dal_gioco=True)
+def recall(partita, oggetto):
+    """Scarti X carte, poi riprendi dal cimitero una carta per ogni carta scartata. Recall è rimossa dal gioco."""
+    continua_recall(partita, oggetto.controllore, oggetto.x, 0, 0)
+
+
+def continua_recall(partita, chi: str, x: int, scartate: int, riprese: int) -> None:
+    g = partita.giocatore(chi)
+    if scartate < x and g[Zona.MANO]:
+        _az().scegli_o_decidi(partita, chi, "Recall", "scarta", list(g[Zona.MANO]),
+                              f"Recall: scegli una carta da scartare ({scartate + 1} di {x})",
+                              seguito=("recall", chi, x, scartate + 1, riprese))
+        return
+    scartate = min(scartate, x)
+    if riprese < scartate and g[Zona.CIMITERO]:
+        _az().scegli_o_decidi(partita, chi, "Recall", "riprendi", list(g[Zona.CIMITERO]),
+                              f"Recall: scegli una carta da riprendere dal cimitero ({riprese + 1} di {scartate})",
+                              seguito=("recall", chi, x, scartate, riprese + 1))
+
+
+def continua_sylvan(partita, chi: str, fatte: int, gestite: tuple) -> None:
+    """Sylvan Library dopo aver pescato le due carte in più: per due carte pescate in questo turno, paghi 4 vita
+    o la rimetti in cima al grimorio. (Pescare le due carte in più conviene sempre: si possono rimettere quelle.)"""
+    g = partita.giocatore(chi)
+    pescate = [c for c in g[Zona.MANO] if c.pescata_nel_turno == partita.turno and c.id not in gestite]
+    if fatte >= 2 or not pescate:
+        return
+    if chi not in partita.scelte_manuali:  # AI: rimette in cima le meno preziose, senza pagare vita
+        for c in sorted(pescate, key=valore_carta)[:2 - fatte]:
+            _az()._applica_scelta(partita, chi, "in_cima", c, "Sylvan Library")
+        return
+    opzioni = {}
+    for c in pescate:
+        opzioni[f"in_cima:{c.id}"] = f"Rimetti in cima: {c.nome}"
+    for c in pescate:
+        opzioni[f"tieni_pagando:{c.id}"] = f"Tieni {c.nome} pagando 4 vita"
+    from app.engine.stato import Scelta
+    partita.scelta = Scelta(chi, testo=f"Sylvan Library: scegli cosa fare con una carta pescata ({fatte + 1} di 2)",
+                            tipo="scegli", dati={"carte": opzioni, "fonte": "Sylvan Library", "azione": "in_cima",
+                                                 "seguito": ("sylvan", chi, fatte + 1, gestite)})
+
+
+# Scelte che riprendono un effetto a metà. Per "sylvan" l'ultimo argomento (carte già gestite) riceve anche
+# la carta appena scelta (vedi azioni.rispondi_scegli).
+SEGUITI = {"balance": continua_balance, "recall": continua_recall, "sylvan": continua_sylvan}
 
 
 # --- Creature e potenziamenti ------------------------------------------------------------------

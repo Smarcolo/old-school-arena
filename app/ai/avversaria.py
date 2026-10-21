@@ -223,14 +223,16 @@ def scelta_automatica(partita: Partita, nome: str, azione: str, candidate: list[
     from app.engine.carte_implementate import valore_carta
     if azione == "passaforeste":
         return min(candidate, key=lambda c: (c.forza_attuale, c.costituzione_attuale))
+    if azione == "riprendi":  # Recall: la migliore dal cimitero
+        return max(candidate, key=valore_carta)
     return min(candidate, key=valore_carta)
 
 
 def decidi_scelta(partita: Partita, nome: str) -> None:
     """«Paga o subisci»: paga se può. (Le divisioni del banding l'AI le fa in automatico, senza Scelta.)"""
     if partita.scelta.tipo in ("scegli", "cerca"):
-        candidate = [c for g in partita.giocatori for z in (Zona.CAMPO, Zona.MANO, Zona.GRIMORIO) for c in g[z]
-                     if c.id in partita.scelta.dati["carte"]]
+        candidate = [c for g in partita.giocatori for z in (Zona.CAMPO, Zona.MANO, Zona.GRIMORIO, Zona.CIMITERO)
+                     for c in g[z] if c.id in partita.scelta.dati["carte"]]
         if partita.scelta.tipo == "cerca":
             from app.engine.carte_implementate import scegli_migliore
             azioni.rispondi_cerca(partita, nome, scegli_migliore(candidate).id)

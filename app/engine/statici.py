@@ -61,6 +61,8 @@ def riga_capita(carta: Carta, riga: str) -> bool:
     riga = riga.strip()
     if riga.lower() == "enchant creature" and "Aura" in carta.tipo:
         return True
+    if riga == "Players play with the top card of their libraries revealed.":  # Field of Dreams: lo mostra il tavolo
+        return True
     if speciali.riga_capita(carta, riga):
         return True
     return any(e.testo == riga for e in analizza_statici(carta))

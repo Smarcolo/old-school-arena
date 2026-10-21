@@ -63,6 +63,16 @@ MAZZO_UMANO_PREDEFINITO = "Verde (prova)"
 MAZZO_AI_PREDEFINITO = "Rosso (prova)"
 mazzi.salva_se_manca(conn_carte, MAZZO_UMANO_PREDEFINITO, MAZZO_VERDE)
 mazzi.salva_se_manca(conn_carte, MAZZO_AI_PREDEFINITO, MAZZO_ROSSO)
+# Mazzo chiesto da Marco: 2° classificato, Mr. Pox (TCDecks)
+MILLSTONE_DREAMS = {
+    "Counterspell": 4, "Swords to Plowshares": 4, "Disenchant": 3, "Ancestral Recall": 1, "Mana Drain": 1,
+    "Balance": 1, "Braingeyser": 1, "Demonic Tutor": 1, "Mind Twist": 1, "Recall": 1, "Regrowth": 1, "Time Walk": 1,
+    "Wrath of God": 1, "Field of Dreams": 3, "Sylvan Library": 2, "Moat": 1, "Millstone": 4, "Fellwar Stone": 2,
+    "Black Lotus": 1, "Chaos Orb": 1, "Mirror Universe": 1, "Mox Emerald": 1, "Mox Jet": 1, "Mox Pearl": 1,
+    "Mox Ruby": 1, "Mox Sapphire": 1, "Sol Ring": 1, "City of Brass": 4, "Tundra": 4, "Underground Sea": 4,
+    "Mishra's Factory": 3, "Tropical Island": 2, "Library of Alexandria": 1, "Strip Mine": 1}
+mazzi.salva_se_manca(conn_carte, "Millstone Dreams (Mr. Pox)", MILLSTONE_DREAMS,
+                     {"Serra Angel": 4, "Juzám Djinn": 4, "Erhnam Djinn": 4, "Blue Elemental Blast": 3})
 giudice = Giudice()
 
 
@@ -154,11 +164,13 @@ def vista(p: Partita) -> dict:
                 for c in g[z]]
 
     giocatori = []
+    rivelate = any(c.nome == "Field of Dreams" for g in p.giocatori for c in g[Zona.CAMPO])
     for g in p.giocatori:
         dati = {"nome": g.nome, "vita": g.vita, "grimorio": len(g[Zona.GRIMORIO]),
                 "riserva": mana.formatta(g.riserva),
                 "campo": zona(g, Zona.CAMPO), "cimitero": zona(g, Zona.CIMITERO),
-                "mano": zona(g, Zona.MANO) if g.nome == UMANO else len(g[Zona.MANO])}
+                "mano": zona(g, Zona.MANO) if g.nome == UMANO else len(g[Zona.MANO]),
+                "cima": g[Zona.GRIMORIO][-1].nome if rivelate and g[Zona.GRIMORIO] else None}  # Field of Dreams
         giocatori.append(dati)
     return {
         "id": p.id, "turno": p.turno, "fase": p.fase.value, "attivo": p.giocatore_attivo.nome,

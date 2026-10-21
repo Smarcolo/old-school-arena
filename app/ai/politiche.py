@@ -159,6 +159,14 @@ def _creatura_che_muore(p: Partita, nome: str, fonte: Carta, danni: int) -> Cart
     return max(candidate, key=lambda c: (c.forza_attuale, c.costituzione_attuale)) if candidate else None
 
 
+def recall(p: Partita, nome: str, carta: Carta):
+    """Recall per X=1 se nel cimitero c'è una carta tra le migliori (Ancestral, Time Walk...)."""
+    g = p.giocatore(nome)
+    if _mia_principale(p, nome) and len(g[Zona.MANO]) >= 2 and any(c.nome in CARTE_MIGLIORI for c in g[Zona.CIMITERO]):
+        return [], 1
+    return None
+
+
 def spazza(p: Partita, nome: str, carta: Carta):
     if not _mia_principale(p, nome):
         return None
@@ -179,7 +187,7 @@ POLITICHE = {
     "Sinkhole": distruggi_permanente, "Ice Storm": distruggi_permanente,
     "Ancestral Recall": pescate, "Braingeyser": pescate, "Timetwister": pescate, "Wheel of Fortune": pescate,
     "Time Walk": tutor_e_turni, "Demonic Tutor": tutor_e_turni, "Regrowth": tutor_e_turni,
-    "Mind Twist": mind_twist, "Fireball": danni_x, "Disintegrate": danni_x, "Psionic Blast": danni_x,
+    "Recall": recall, "Mind Twist": mind_twist, "Fireball": danni_x, "Disintegrate": danni_x, "Psionic Blast": danni_x,
     "Wrath of God": spazza, "Armageddon": spazza,
 }
 
@@ -210,6 +218,15 @@ def scegli_abilita(p: Partita, nome: str):
                     return c, ab, [f"carta:{max(bersagli, key=valore_carta).id}"]
             if ab.tipo == "pesca" and _fine_turno_avversario(p, nome):
                 return c, ab, []
+            if ab.tipo == "macina" and _fine_turno_avversario(p, nome):  # Millstone
+                return c, ab, [f"giocatore:{avv.nome}"]
+            if ab.tipo == "scambia_vita" and avv.vita - p.giocatore(nome).vita >= 8:  # Mirror Universe
+                return c, ab, [f"giocatore:{avv.nome}"]
+            if ab.tipo == "chaos_orb" and _mia_principale(p, nome):
+                minacce = [t for t in avv[Zona.CAMPO] if not t.is_terra and bersaglio_legale(p, "permanente", f"carta:{t.id}", c)
+                           and ((t.forza_attuale or 0) >= 3 or t.nome in ("Moat", "The Abyss", "Black Vise", "Mirror Universe"))]
+                if minacce:
+                    return c, ab, [f"carta:{max(minacce, key=lambda t: (t.forza_attuale or 0, valore_carta(t))).id}"]
             if (ab.tipo == "tappa" and p.giocatore_attivo.nome == avv.nome and p.fase == Fase.MANTENIMENTO
                     and not p.pila):
                 creature = [t for t in avv[Zona.CAMPO] if t.is_creatura and not t.tappata

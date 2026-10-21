@@ -21,6 +21,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/cards/immagini.py` — immagini scaricate da Scryfall alla prima richiesta (`/api/immagini/{nome}`), cache in
   `data/immagini/`. Senza rete l'app resta testuale; i fallimenti si ricordano fino al riavvio.
 - `app/web/comune.js` — codice condiviso dalle pagine (anteprima immagine su elementi con `data-carta`).
+- Tavolo: sta in una schermata (altezza carte `--h` in `stile.css` calcolata dall'altezza della finestra), giudice e
+  registro in pannelli che si aprono dai pulsanti in alto, messaggi come avviso che sparisce, cimitero a richiesta.
+  Immagini con `?v=1993` (`comune.js` `urlImmagine`) per non riusare quelle moderne nella cache del browser.
 - Tavolo (`app/web/app.js`): carte come immagini fisse (`faccia`, ripiego `facciaTestuale`), banner `#turno` con
   fase spiegata (`fase()`), cosa fare (`cosaFare()`) e pulsanti del momento (`azioniTurno()`); mano in `#mano`.
   `vista` manda per ogni carta dell'umano `giocabile` (mano: lanciabile ora con almeno un bersaglio valido;
@@ -108,6 +111,15 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   (`Carta.attaccata_a`); i bonus statici vanno in `statico_forza/statico_costituzione/parole_extra`, ricalcolati
   da `statici.aggiorna` dentro `azioni_di_stato` (che ora ripete i controlli finché qualcosa cambia).
   Abilità di un'aura su «Enchanted creature» (Firebreathing): `AbilitaAttivata.su_incantata`.
+- Carte di Millstone Dreams: Millstone (abilità «macina», `azioni.macina`), Mirror Universe («scambia_vita»,
+  `solo_nel_mantenimento`, bersaglio «avversario»), Chaos Orb (il lancio fisico è reso come «distrugge un permanente
+  a scelta, poi Chaos Orb»: `abilita.py`, tipo «chaos_orb»), Fellwar Stone (`mana.fonte_in_partita`: colori delle
+  terre avversarie), Recall (`continua_recall`, `Effetto.rimuovi_dal_gioco`), Sylvan Library (innesco «sylvan»:
+  pesca sempre 2 in più, poi per 2 carte pescate nel turno — `Carta.pescata_nel_turno` — «in_cima» o
+  «tieni_pagando» 4 vita; scelte «azione:id» in `rispondi_scegli`), Field of Dreams (la vista mostra la cima dei
+  grimori, `cima`), incantesimi del mondo (ne resta uno, il più recente, in `_un_giro_di_controlli`).
+- Liste incollate da TCDecks: `mazzi.analizza_testo` salta «Tipo [N]», «Deck Name:», «X playing Y Position: N» e
+  mette in sideboard le carte oltre il totale delle sezioni.
 - Regole di singole carte (`engine/speciali.py`): Moat, Ali from Cairo, Juggernaut, Kird Ape/Sedge Troll,
   Sengir Vampire (innesco in pila, effetto «segnalino_su_se»), Triskelion. Segnalini +1/+1 (`Carta.segnalini`), animazione
   (`Carta.animata`, Mishra's Factory), danni tracciati per fonte (`danneggiata_da`), `danni_a_giocatore` /

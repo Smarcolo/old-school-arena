@@ -208,3 +208,13 @@ body.tavolo .scelta-mazzi label { white-space: nowrap; }
   border-radius: 6px; padding: .1rem .5rem; font-size: .8rem; color: var(--testo); cursor: help; }
 .cima-rivelata .etichetta-cima { color: var(--accento); }
 .carta.mini { --l: calc(var(--h) * .7176 * .45); display: inline-block; vertical-align: middle; cursor: help; }
+
+/* Cimitero aperto: immagini delle carte */
+#vista-cimitero { position: fixed; inset: 0; z-index: 35; background: #0009; display: flex; align-items: center; justify-content: center; }
+#vista-cimitero[hidden] { display: none; }
+#vista-cimitero .riquadro { background: var(--tavolo); border: 1px solid var(--accento); border-radius: 10px; padding: .6rem 1rem 1rem;
+  width: min(1000px, 94vw); max-height: 86vh; overflow: auto; box-shadow: 0 12px 40px #000; }
+#vista-cimitero .testata { display: flex; justify-content: space-between; align-items: center; }
+#vista-cimitero h2 { margin: .2rem 0 .6rem; font-size: 1rem; }
+.griglia-cimitero { display: flex; flex-wrap: wrap; gap: .6rem; }
+.griglia-cimitero .carta { --l: min(130px, 26vw); }

@@ -314,6 +314,7 @@ function suMano(c) {
   if (x === null) return;
   if (c.bersaglio && BERSAGLIO_OVVIO[c.nome]) return invia(`gioca ${c.nome}${x} su ${BERSAGLIO_OVVIO[c.nome]}`);
   if (c.bersaglio) {
+    if (c.bersaglio === "carta_tuo_cimitero") cimiteroAperto = "tu";  // Regrowth: si sceglie nel cimitero
     magiaInAttesa = `gioca ${c.nome}${x}`;
     document.body.classList.add("mirino");
     avvisa(`Scegli il bersaglio di ${c.nome}: clicca una creatura o il nome di un giocatore (Esc per annullare).`);
@@ -409,7 +410,7 @@ function disegnaTurno() {
     el("div", { className: "azioni-turno" }, ...azioniTurno()));
 }
 
-const cimiteriAperti = { tu: false, avversaria: false };
+let cimiteroAperto = null;  // "tu" / "avversaria" / null
 
 function disegnaGiocatore(sezione, g, umano) {
   const mioTurno = partita.attivo === g.nome && !partita.vincitore;
@@ -441,13 +442,25 @@ function disegnaGiocatore(sezione, g, umano) {
   const chiave = umano ? "tu" : "avversaria";
   if (g.cimitero.length) titolo.append(el("button", { type: "button", className: "secondario cimitero-bottone",
     textContent: `Cimitero (${g.cimitero.length})`,
-    onclick: (e) => { e.stopPropagation(); cimiteriAperti[chiave] = !cimiteriAperti[chiave]; disegna(); } }));
+    onclick: (e) => { e.stopPropagation(); cimiteroAperto = cimiteroAperto === chiave ? null : chiave; disegna(); } }));
   sezione.replaceChildren(titolo, ...righe);
   if (!g.campo.length) sezione.append(el("div", { className: "vuoto", textContent: "Nessun permanente in campo" }));
-  if (g.cimitero.length && (cimiteriAperti[chiave] || magiaInAttesa)) {
-    sezione.append(el("div", { className: "fila cimitero" }, ...g.cimitero.map((c) => conCarta(el("span", {
-      className: "nome-cimitero", textContent: c.nome, onclick: () => magiaInAttesa && scegliBersaglio(c.id) }), c.nome))));
-  }
+}
+
+// Il cimitero si apre in un riquadro con le immagini delle carte (l'ultima entrata per prima).
+// Durante la scelta di un bersaglio (Regrowth) si clicca la carta lì dentro.
+function disegnaCimitero() {
+  const box = $("vista-cimitero");
+  const g = cimiteroAperto === "tu" ? partita.giocatori[0] : cimiteroAperto === "avversaria" ? partita.giocatori[1] : null;
+  box.hidden = !g || !g.cimitero.length;
+  if (box.hidden) return;
+  box.replaceChildren(el("div", { className: "riquadro" },
+    el("div", { className: "testata" },
+      el("h2", { textContent: `Cimitero ${cimiteroAperto === "tu" ? "tuo" : "dell'avversaria"} (${g.cimitero.length})` }),
+      bottone("✕", () => { cimiteroAperto = null; disegna(); })),
+    el("div", { className: "griglia-cimitero" }, ...g.cimitero.slice().reverse().map((c) => cartaEl(c, () => {
+      if (magiaInAttesa) { cimiteroAperto = null; scegliBersaglio(c.id); }
+    })))));
 }
 
 function disegnaMano() {
@@ -472,6 +485,7 @@ function disegna() {
     : [el("span", { className: "dettaglio", textContent: "vuota" })]));
   disegnaBarraCombattimento();
   disegnaGiocataAvversaria();
+  disegnaCimitero();
   $("eventi").replaceChildren(...partita.eventi.slice().reverse().map((t) => el("li", { textContent: t })));
 }
 
@@ -569,6 +583,7 @@ function annullaBersaglio() {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     chiudiMenu();
+    if (cimiteroAperto) { cimiteroAperto = null; disegna(); }
     if (magiaInAttesa) annullaBersaglio();
   }
 });
@@ -624,3 +639,7 @@ function disegnaGiocataAvversaria() {
       ...(puoiRispondere ? [bottone("Rispondi", () => { rispostaPer = cima.id; disegna();
         avvisa("Clicca la carta con cui rispondi (illuminata in verde), oppure «Lascia risolvere» in alto."); })] : []))));
 }
+
+$("vista-cimitero").addEventListener("click", (e) => {
+  if (e.target.id === "vista-cimitero") { cimiteroAperto = null; disegna(); }  // clic fuori dal riquadro
+});

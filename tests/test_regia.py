@@ -83,3 +83,23 @@ def test_attacco_blocco_e_giant_growth_prima_dei_danni():
     esegui_comando(p, "Tu", "AI", "passa")  # si risolve
     esegui_comando(p, "Tu", "AI", "passa")  # danni
     assert orso in tu[Zona.CAMPO] and muro in ai[Zona.CIMITERO]
+
+
+def test_le_tue_magie_si_risolvono_da_sole():
+    p = partita_con_ai()
+    tu = p.giocatore("Tu")
+    tu[Zona.CAMPO].extend(Carta("Forest", "Basic Land — Forest") for _ in range(2))
+    tu[Zona.MANO].append(Carta("Grizzly Bears", "Creature — Bear", "{1}{G}", 2, 2))
+    esegui_comando(p, "Tu", "AI", "gioca grizzly bears")
+    assert not p.pila and azioni.trova_in_zona(p, "Tu", Zona.CAMPO, "grizzly bears")
+
+
+def test_ti_fermi_se_l_avversaria_risponde():
+    p = partita_con_ai()
+    tu, ai = p.giocatore("Tu"), p.giocatore("AI")
+    tu[Zona.CAMPO].extend(Carta("Forest", "Basic Land — Forest") for _ in range(2))
+    tu[Zona.MANO].append(Carta("Grizzly Bears", "Creature — Bear", "{1}{G}", 2, 2))
+    ai[Zona.CAMPO].extend(Carta("Island", "Basic Land — Island") for _ in range(2))
+    ai[Zona.MANO][:] = [Carta("Counterspell", "Instant", "{U}{U}")]
+    esegui_comando(p, "Tu", "AI", "gioca grizzly bears")
+    assert p.pila and p.pila[-1].carta.nome == "Counterspell" and p.giocatore_con_priorita.nome == "Tu"

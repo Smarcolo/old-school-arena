@@ -20,10 +20,13 @@ def ha_istantanei(partita: Partita, umano: str) -> bool:
 
 
 def deve_fermarsi(partita: Partita, umano: str) -> bool:
-    """Vedi sotto; in più: le scelte in sospeso dell'umano lo fermano sempre, e un innesco in cima alla pila
-    lo ferma solo se può rispondere (altrimenti si risolve da solo, resta nel registro)."""
+    """Vedi sotto; in più: le scelte in sospeso dell'umano lo fermano sempre; quello che l'umano ha messo in pila
+    si risolve senza chiedergli niente (se l'avversaria risponde, l'umano si ferma sulla sua risposta); un innesco
+    dell'avversaria in cima alla pila lo ferma solo se può rispondere."""
     if partita.scelta:
         return partita.scelta.giocatore == umano
+    if partita.pila and partita.pila[-1].controllore == umano:
+        return False  # le tue magie e abilità si risolvono da sole (salvo risposta dell'avversaria)
     if partita.pila and partita.pila[-1].innesco and not ha_istantanei(partita, umano):
         return False
     return _deve_fermarsi(partita, umano)

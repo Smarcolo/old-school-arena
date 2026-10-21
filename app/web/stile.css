@@ -187,3 +187,24 @@ body.tavolo .scelta-mazzi label { white-space: nowrap; }
   opacity: 0; pointer-events: none; transition: opacity .3s; min-height: 0; }
 #messaggio.visibile { opacity: 1; }
 .cimitero-bottone { padding: .05rem .5rem !important; font-size: .75rem !important; }
+
+/* La giocata dell'avversaria in primo piano */
+#giocata-avversaria { position: fixed; inset: 0; z-index: 40; background: #000a; display: flex; align-items: center; justify-content: center; }
+#giocata-avversaria[hidden] { display: none; }
+#giocata-avversaria .riquadro { background: var(--tavolo); border: 2px solid #b8504a; border-radius: 12px; padding: 1rem 1.25rem;
+  display: flex; flex-direction: column; align-items: center; gap: .6rem; max-width: 92vw; box-shadow: 0 12px 40px #000; }
+#giocata-avversaria .titolo-giocata { font-size: 1.15rem; font-weight: bold; color: #f0a59d; text-align: center; }
+#giocata-avversaria .carta.grande { --l: min(300px, 60vw, calc((100vh - 220px) * .7176)); cursor: default; }
+#giocata-avversaria .dettaglio-giocata { opacity: .85; text-align: center; max-width: 320px; }
+#giocata-avversaria .azioni-giocata { display: flex; gap: .6rem; }
+#giocata-avversaria .faccia-testo { font-size: 14px; }
+#giocata-avversaria .faccia-testo .riga-nome { font-size: 15px; }
+
+.faccia { position: relative; width: 100%; height: 100%; border-radius: inherit; }
+.faccia img { position: absolute; inset: 0; opacity: 0; transition: opacity .2s; }
+.faccia img.caricata { opacity: 1; }
+
+.cima-rivelata { display: inline-flex; align-items: center; gap: .4rem; background: #c9a24a22; border: 1px solid var(--accento);
+  border-radius: 6px; padding: .1rem .5rem; font-size: .8rem; color: var(--testo); cursor: help; }
+.cima-rivelata .etichetta-cima { color: var(--accento); }
+.carta.mini { --l: calc(var(--h) * .7176 * .45); display: inline-block; vertical-align: middle; cursor: help; }

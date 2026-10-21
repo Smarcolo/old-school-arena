@@ -158,3 +158,11 @@ def test_un_solo_incantesimo_del_mondo(p):
     azioni.lancia(p, "B", f2)
     risolvi(p)
     assert f1 in p.giocatore("A")[Zona.CIMITERO] and f2 in p.giocatore("B")[Zona.CAMPO]
+
+
+def test_field_of_dreams_mostra_la_cima_di_entrambi_i_grimori(p):
+    from app.api.main import vista
+    p.giocatori[0].nome, p.giocatori[1].nome = "Tu", "Avversaria"
+    in_campo(p, "Tu", carta("Field of Dreams"))
+    v = vista(p)
+    assert [g["cima"] for g in v["giocatori"]] == [p.giocatori[0][Zona.GRIMORIO][-1].nome, p.giocatori[1][Zona.GRIMORIO][-1].nome]

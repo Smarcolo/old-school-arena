@@ -175,7 +175,9 @@ def vista(p: Partita) -> dict:
     return {
         "id": p.id, "turno": p.turno, "fase": p.fase.value, "attivo": p.giocatore_attivo.nome,
         "priorita": p.giocatore_con_priorita.nome,
-        "pila": [{"id": o.id, "nome": o.descrizione, "controllore": o.controllore, "x": o.x,
+        "pila": [{"id": o.id, "nome": o.descrizione, "controllore": o.controllore, "x": o.x, "carta": o.carta.nome,
+                  "tipo": "abilita" if o.abilita else "innesco" if o.innesco else "magia",
+                  "testo": o.innesco.testo if o.innesco else o.abilita.testo if o.abilita else o.carta.testo,
                   "bersaglio": descrivi_bersaglio(p, o.bersagli[0]) if o.bersagli else None} for o in p.pila],
         "vincitore": p.vincitore, "giocatori": giocatori,
         "combattimento": _vista_combattimento(p),

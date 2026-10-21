@@ -14,7 +14,7 @@ function mostraAnteprima(nome, evento) {
 }
 
 function posizionaAnteprima(evento) {
-  const larghezza = 244, altezza = 340;
+  const larghezza = 280, altezza = 390;
   const x = evento.clientX + 20 + larghezza > innerWidth ? evento.clientX - larghezza - 20 : evento.clientX + 20;
   const y = Math.min(evento.clientY - 40, innerHeight - altezza - 10);
   anteprima.style.left = `${Math.max(10, x)}px`;

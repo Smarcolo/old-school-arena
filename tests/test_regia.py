@@ -55,3 +55,31 @@ def test_fine_turno_con_una_propria_magia_in_pila_la_fa_risolvere():
     esegui_comando(p, "Tu", "AI", "fine turno")
     assert azioni.trova_in_zona(p, "Tu", Zona.CAMPO, "llanowar elves")
     assert p.giocatore_attivo.nome == "AI"
+
+
+def test_attacco_blocco_e_giant_growth_prima_dei_danni():
+    """Il flusso che l'interfaccia spiega: principale 1 → «Vai al combattimento» → attacchi → l'AI blocca →
+    ti fermi con Giant Growth giocabile → la lanci → «Vai ai danni»."""
+    from app.api.main import vista
+    p = partita_con_ai()
+    p.scelte_manuali = {"Tu"}
+    tu, ai = p.giocatore("Tu"), p.giocatore("AI")
+    orso = Carta("Grizzly Bears", "Creature — Bear", "{1}{G}", 2, 2)
+    orso.entrata_nel_turno = 0
+    tu[Zona.CAMPO].extend([orso, Carta("Forest", "Basic Land — Forest")])
+    muro = Carta("Gray Ogre", "Creature — Ogre", "{2}{R}", 2, 2)
+    muro.entrata_nel_turno = 0
+    ai[Zona.CAMPO].append(muro)
+    ai[Zona.MANO].clear()
+    tu[Zona.MANO][:] = [Carta("Giant Growth", "Instant", "{G}", None, None, "Target creature gets +3/+3 until end of turn.")]
+    p.turno = 3
+    esegui_comando(p, "Tu", "AI", "passa")
+    assert vista(p)["richiesta"] == "attaccanti"
+    esegui_comando(p, "Tu", "AI", "attacca con grizzly bears")
+    v = vista(p)  # l'AI ha bloccato con l'ogre: l'umano si ferma prima dei danni
+    assert v["combattimento"]["bloccanti_dichiarati"] and not v["combattimento"]["danni_inflitti"]
+    assert v["priorita"] == "Tu" and v["giocatori"][0]["mano"][0]["giocabile"]
+    esegui_comando(p, "Tu", "AI", "gioca giant growth su grizzly bears")
+    esegui_comando(p, "Tu", "AI", "passa")  # si risolve
+    esegui_comando(p, "Tu", "AI", "passa")  # danni
+    assert orso in tu[Zona.CAMPO] and muro in ai[Zona.CIMITERO]

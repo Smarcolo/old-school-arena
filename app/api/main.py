@@ -15,7 +15,8 @@ from app.engine.eventi import Evento
 from app.engine.abilita import analizza_abilita
 from app.engine.azioni import descrivi_bersaglio
 from app.engine.stato import NOMI_COLORI, PAROLE_CHIAVE, PROTEZIONI_INGLESE, Partita
-from app.engine.validazione import tipo_bersaglio
+from app.engine.effetti import bersaglio_legale
+from app.engine.validazione import puo_attivare, puo_giocare_terra, puo_lanciare, tipo_bersaglio
 from app.engine.zone import Zona
 from app.judge.giudice import Giudice
 from app.ai.sideboard import scegli_cambi
@@ -105,6 +106,28 @@ def _nome_incantata(p: Partita, c) -> str | None:
     return trovato[1].nome if trovato else None
 
 
+def _bersagli_possibili(p: Partita) -> list[str]:
+    rif = [f"giocatore:{g.nome}" for g in p.giocatori]
+    rif += [f"carta:{c.id}" for g in p.giocatori for c in g[Zona.CAMPO]]
+    rif += [f"pila:{o.id}" for o in p.pila]
+    rif += [f"cimitero:{c.id}" for g in p.giocatori for c in g[Zona.CIMITERO]]
+    return rif
+
+
+def _giocabile(p: Partita, c, in_mano: bool) -> bool:
+    """Per evidenziare nell'interfaccia cosa l'umano può usare adesso (con almeno un bersaglio valido)."""
+    if p.vincitore:
+        return False
+    if not in_mano:
+        return any(puo_attivare(p, UMANO, c, a) is None for a in analizza_abilita(c) if a.tipo != "mana")
+    if c.is_terra:
+        return puo_giocare_terra(p, UMANO, c) is None
+    if puo_lanciare(p, UMANO, c) is not None:
+        return False
+    tipo = tipo_bersaglio(c)
+    return tipo is None or any(bersaglio_legale(p, tipo, r, c) for r in _bersagli_possibili(p))
+
+
 def vista(p: Partita) -> dict:
     """Stato visibile al giocatore umano: la mano dell'avversaria resta nascosta."""
     def zona(g, z):
@@ -115,7 +138,9 @@ def vista(p: Partita) -> dict:
                  "incanta": _nome_incantata(p, c), "abilita": _abilita(c), "scudi": c.scudi_rigenerazione,
                  "attivabili": [{"testo": a.testo, "bersaglio": a.bersaglio} for a in analizza_abilita(c)],
                  "x": "X" in c.costo,
-                 "appena_entrata": p.ha_debolezza_da_evocazione(c)} for c in g[z]]
+                 "appena_entrata": p.ha_debolezza_da_evocazione(c),
+                 "giocabile": g.nome == UMANO and z in (Zona.MANO, Zona.CAMPO) and _giocabile(p, c, z == Zona.MANO)}
+                for c in g[z]]
 
     giocatori = []
     for g in p.giocatori:
@@ -167,7 +192,9 @@ def _vista_combattimento(p: Partita) -> dict | None:
         return None
     return {"attaccanti": comb.attaccanti, "bloccanti": sorted(comb.bloccanti()), "blocchi": comb.blocchi,
             "bande": comb.bande,
-            "attesa_bloccanti": comb.attesa_bloccanti}
+            "attesa_bloccanti": comb.attesa_bloccanti,
+            "attaccanti_dichiarati": comb.attaccanti_dichiarati, "bloccanti_dichiarati": comb.bloccanti_dichiarati,
+            "danni_inflitti": comb.danni_inflitti, "primo_passo_fatto": "primo" in comb.passi_fatti}
 
 
 @app.get("/api/salute")

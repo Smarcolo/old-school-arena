@@ -46,19 +46,38 @@ function nomeCarta(id) {
   return id;
 }
 
+// Le carte si mostrano con la loro immagine (cornice 1993, dal server). Se l'immagine non c'è (niente rete),
+// resta una carta disegnata con nome, costo, tipo e testo.
+const immaginiNonDisponibili = new Set();
+
+function facciaTestuale(c) {
+  return el("div", { className: "faccia-testo" },
+    el("div", { className: "riga-nome" }, el("b", { textContent: c.nome }), el("span", { textContent: c.costo || "" })),
+    el("div", { className: "riga-tipo", textContent: c.tipo || "" }),
+    el("div", { className: "riga-testo", textContent: c.testo || "" }));
+}
+
+function faccia(c) {
+  if (immaginiNonDisponibili.has(c.nome)) return facciaTestuale(c);
+  const img = el("img", { src: `/api/immagini/${encodeURIComponent(c.nome)}`, alt: c.nome, loading: "lazy", draggable: false });
+  img.onerror = () => { immaginiNonDisponibili.add(c.nome); img.replaceWith(facciaTestuale(c)); };
+  return img;
+}
+
 function cartaEl(c, azione) {
   const comb = partita.combattimento;
   const inBanda = comb && comb.bande && comb.bande.some((b) => b.includes(c.id));
-  const classi = ["carta", inBanda && "in-banda", c.tappata && "tappata", c.appena_entrata && "appena-entrata", c.danni && "ferita",
+  const classi = ["carta", c.giocabile && "giocabile", inBanda && "in-banda", c.tappata && "tappata", c.appena_entrata && "appena-entrata", c.danni && "ferita",
     comb && comb.attaccanti.includes(c.id) && "attaccante", comb && comb.bloccanti.includes(c.id) && "bloccante",
     (attaccantiScelti.has(c.id) || inFondoScelte.has(c.id) || bloccanteScelto === c.id || blocchiScelti.some(([, b]) => b === c.id)) && "selezionata"];
-  const e = el("span", { className: classi.filter(Boolean).join(" ") }, c.nome);
+  const e = el("div", { className: classi.filter(Boolean).join(" ") }, faccia(c));
   e.dataset.carta = c.nome;
   if (c.forza != null) e.append(el("span", { className: "pt", textContent: `${c.forza}/${c.costituzione - c.danni}` }));
-  if (c.incanta) e.append(el("span", { className: "abilita", textContent: `incanta ${c.incanta}` }));
-  if (c.scudi) e.append(el("span", { className: "abilita scudo", textContent: c.scudi > 1 ? `scudo ×${c.scudi}` : "scudo" }));
-  if (c.abilita && c.abilita.length) e.append(el("span", { className: "abilita", textContent: c.abilita.join(", ") }));
-  e.title = [c.tipo, c.costo, ...(c.attivabili || []).map((a) => "clic: " + a.testo), c.danni ? `${c.danni} danni` : "", c.appena_entrata ? "appena entrata" : ""]
+  const note = [c.incanta && `incanta ${c.incanta}`, c.scudi && (c.scudi > 1 ? `scudo ×${c.scudi}` : "scudo"),
+    comb && comb.attaccanti.includes(c.id) && "attacca", comb && comb.bloccanti.includes(c.id) && "blocca"].filter(Boolean);
+  if (note.length) e.append(el("span", { className: "nota", textContent: note.join(" · ") }));
+  e.title = [c.nome, c.tipo, c.costo, (c.abilita || []).join(", "), ...(c.attivabili || []).map((a) => "clic: " + a.testo),
+    c.danni ? `${c.danni} danni` : "", c.appena_entrata ? "appena entrata" : "", c.tappata ? "tappata" : ""]
     .filter(Boolean).join(" · ");
   e.onclick = () => azione(c);
   return e;
@@ -244,37 +263,142 @@ function suMano(c) {
   invia(`gioca ${c.nome}${x}`);
 }
 
+const FASI = ["stap", "mantenimento", "pescata", "principale 1", "combattimento", "principale 2", "finale"];
+const NOMI_FASI = { "stap": "Stap", "mantenimento": "Mantenimento", "pescata": "Pescata", "principale 1": "Principale 1",
+  "combattimento": "Combattimento", "principale 2": "Principale 2", "finale": "Finale" };
+
+// Spiegazione a parole di dove siamo nel turno, per chi non conosce le fasi.
+function fase() {
+  const p = partita, comb = p.combattimento, mio = p.attivo === "Tu";
+  switch (p.fase) {
+    case "stap": return "Stap: si stappano le carte di chi è di turno.";
+    case "mantenimento": return "Mantenimento: scattano gli effetti di inizio turno.";
+    case "pescata": return mio ? "Pescata: peschi una carta." : "Pescata: l'avversaria pesca.";
+    case "principale 1": return mio
+      ? "Fase principale 1: gioca una terra (una per turno), creature, artefatti, incantesimi e stregonerie."
+      : "Fase principale 1 dell'avversaria: sta giocando le sue carte.";
+    case "combattimento":
+      if (!comb || !comb.attaccanti_dichiarati) return mio ? "Combattimento: scegli chi attacca." : "Combattimento: l'avversaria sceglie chi attacca.";
+      if (!comb.attaccanti.length) return "Combattimento: nessun attacco.";
+      if (!comb.bloccanti_dichiarati) return mio ? "Combattimento: l'avversaria sceglie i bloccanti." : "Combattimento: ti attaccano, scegli i bloccanti.";
+      if (!comb.danni_inflitti) return (comb.primo_passo_fatto ? "Danni di «attacca per primo» fatti. " : "Blocchi fatti. ")
+        + "Ultima occasione per gli istantanei (es. Giant Growth) prima dei danni.";
+      return "Danni del combattimento fatti.";
+    case "principale 2": return mio ? "Fase principale 2: dopo il combattimento puoi ancora giocare carte." : "Fase principale 2 dell'avversaria.";
+    case "finale": return "Fase finale: il turno sta per finire.";
+  }
+  return "";
+}
+
+function giocabiliInMano() {
+  return partita.giocatori[0].mano.filter((c) => c.giocabile && !/\bLand\b/.test(c.tipo)).map((c) => c.nome);
+}
+
+function cosaFare() {
+  const p = partita;
+  if (p.richiesta === "mulligan") return "Guarda la tua mano: «Tengo» o «Mulligan».";
+  if (p.richiesta === "attaccanti") return "Clicca le tue creature che attaccano, poi «Attacca con le scelte» (o «Nessun attacco»).";
+  if (p.richiesta === "bloccanti") return "Clicca una tua creatura e poi l'attaccante che deve bloccare, poi «Conferma blocchi».";
+  if (p.richiesta === "scelta") return "Rispondi alla scelta qui sotto.";
+  if (p.priorita !== "Tu") return "L'avversaria sta giocando…";
+  const carte = [...new Set(giocabiliInMano())];
+  const puoi = carte.length ? ` Ora puoi usare: ${carte.join(", ")} (illuminate in verde).` : "";
+  if (p.pila.length) return `In pila c'è ${p.pila[p.pila.length - 1].nome}.` + puoi + " Altrimenti «Lascia risolvere».";
+  return (puoi || "Non hai carte da giocare in questo momento.").trim();
+}
+
+// I pulsanti dicono cosa succede davvero passando la priorità in quel momento.
+function azioniTurno() {
+  const p = partita, comb = p.combattimento, mio = p.attivo === "Tu";
+  if (p.vincitore || p.richiesta || p.priorita !== "Tu") return [];
+  if (p.pila.length) return [bottone("Lascia risolvere", () => invia("passa"))];
+  if (mio && p.fase === "principale 1") return [bottone("⚔ Vai al combattimento", () => invia("passa")), bottone("Fine turno", () => invia("fine turno"))];
+  if (mio && p.fase === "combattimento" && comb && comb.bloccanti_dichiarati && !comb.danni_inflitti && comb.attaccanti.length)
+    return [bottone("Vai ai danni", () => invia("passa"))];
+  if (mio) return [bottone("Avanti", () => invia("passa")), bottone("Fine turno", () => invia("fine turno"))];
+  if (comb && comb.bloccanti_dichiarati && !comb.danni_inflitti && comb.attaccanti.length) return [bottone("Vai ai danni", () => invia("passa"))];
+  return [bottone("Continua", () => invia("passa"))];
+}
+
+function disegnaTurno() {
+  const banner = $("turno");
+  banner.hidden = false;
+  if (partita.vincitore) {
+    banner.className = "finito";
+    banner.replaceChildren(el("strong", { textContent: partita.vincitore === "Pareggio" ? "PARTITA PARI"
+      : partita.vincitore === "Tu" ? "HAI VINTO LA PARTITA" : "HA VINTO L'AVVERSARIA" }));
+    return;
+  }
+  const mio = partita.attivo === "Tu";
+  const tocca = partita.priorita === "Tu" || ["attaccanti", "bloccanti", "scelta", "mulligan"].includes(partita.richiesta);
+  banner.className = mio ? "mio" : "suo";
+  banner.replaceChildren(
+    el("div", { className: "chi" },
+      el("strong", { textContent: mio ? `IL TUO TURNO (${partita.turno})` : `TURNO DELL'AVVERSARIA (${partita.turno})` }),
+      el("span", { className: "tocca" + (tocca ? " a-te" : ""), textContent: tocca ? "● tocca a te" : "○ aspetta" })),
+    el("ol", { className: "fasi" }, ...FASI.map((f) => el("li", {
+      className: f === partita.fase ? "corrente" : "", textContent: NOMI_FASI[f] }))),
+    el("div", { className: "spiegazione" },
+      el("div", { className: "fase-ora", textContent: fase() }),
+      el("div", { className: "cosa-fare", textContent: cosaFare() })),
+    el("div", { className: "azioni-turno" }, ...azioniTurno()));
+}
+
 function disegnaGiocatore(sezione, g, umano) {
+  const mioTurno = partita.attivo === g.nome && !partita.vincitore;
+  sezione.classList.toggle("di-turno", mioTurno);
   const titolo = el("h2", {
     className: "nome-giocatore",
-    textContent: `${g.nome} — ${g.vita} vita · grimorio ${g.grimorio} · mana ${g.riserva}` + (umano ? "" : ` · mano ${g.mano}`),
     onclick: () => magiaInAttesa && scegliBersaglio(umano ? "me" : "avversaria"),
-  });
-  if (partita.priorita === g.nome && !partita.vincitore) titolo.append(el("span", { className: "priorita", textContent: " · ha la priorità" }));
+  },
+    el("span", { className: "nome", textContent: umano ? "Tu" : "Avversaria" }),
+    el("span", { className: "vita", textContent: `♥ ${g.vita}` }),
+    el("span", { className: "dato", textContent: `grimorio ${g.grimorio}` }),
+    ...(umano ? [] : [el("span", { className: "dato", textContent: `mano ${g.mano}` })]),
+    ...(g.riserva && g.riserva !== "vuota" ? [el("span", { className: "dato", textContent: `mana ${g.riserva}` })] : []),
+    ...(mioTurno ? [el("span", { className: "badge-turno", textContent: umano ? "tuo turno" : "suo turno" })] : []));
   const etichetta = (t) => el("div", { className: "etichetta", textContent: t });
-  const fila = (carte, azione) => el("div", { className: "fila" }, ...carte.map((c) => cartaEl(c, azione)));
-  sezione.replaceChildren(titolo, etichetta("Campo"), fila(g.campo, (c) => suCampo(c, umano)));
-  if (umano) sezione.append(etichetta("Mano"), fila(g.mano, suMano));
+  const fila = (carte, azione, classe = "") => el("div", { className: "fila " + classe }, ...carte.map((c) => cartaEl(c, azione)));
+  const terre = g.campo.filter((c) => /\bLand\b/.test(c.tipo) && c.forza == null);
+  const altri = g.campo.filter((c) => !terre.includes(c));
+  const suQuesto = (c) => suCampo(c, umano);
+  const righe = umano
+    ? [fila(altri, suQuesto, "permanenti"), fila(terre, suQuesto, "terre")]
+    : [fila(terre, suQuesto, "terre"), fila(altri, suQuesto, "permanenti")];
+  sezione.replaceChildren(titolo);
+  if (!umano && g.mano) sezione.append(el("div", { className: "dorsi" },
+    ...Array.from({ length: g.mano }, () => el("span", { className: "dorso" }))));
+  sezione.append(...righe);
+  if (!g.campo.length) sezione.append(el("div", { className: "vuoto", textContent: "Nessun permanente in campo" }));
   if (g.cimitero.length) {
-    const cim = fila(g.cimitero, (c) => magiaInAttesa && scegliBersaglio(c.id));
-    cim.classList.add("cimitero");
+    const cim = el("div", { className: "fila cimitero" }, ...g.cimitero.map((c) => {
+      const e = el("span", { className: "nome-cimitero", textContent: c.nome, onclick: () => magiaInAttesa && scegliBersaglio(c.id) });
+      e.dataset.carta = c.nome;
+      return e;
+    }));
     sezione.append(etichetta(`Cimitero (${g.cimitero.length})`), cim);
   }
 }
 
+function disegnaMano() {
+  const g = partita.giocatori[0];
+  $("mano").replaceChildren(el("div", { className: "etichetta", textContent: `La tua mano (${g.mano.length})` }),
+    el("div", { className: "fila mano-carte" }, ...g.mano.map((c) => cartaEl(c, suMano))));
+}
+
 function disegna() {
   const inc = partita.incontro;
-  const punteggio = inc ? `Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]} · partita ${inc.numero} · ` : "";
-  $("info").textContent = punteggio + (partita.vincitore
-    ? (partita.vincitore === "Pareggio" ? "Partita finita pari" : `Partita finita: vince ${partita.vincitore}`)
-    : `Turno ${partita.turno} · ${partita.fase} · tocca a ${partita.attivo}`);
+  const punteggio = inc ? `Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]} · partita ${inc.numero}` : "";
+  $("info").textContent = punteggio + (inc && inc.mazzo_avversaria ? ` · contro ${inc.mazzo_avversaria}` : "");
+  disegnaTurno();
   disegnaGiocatore($("avversaria"), partita.giocatori[1], false);
   disegnaGiocatore($("tu"), partita.giocatori[0], true);
+  disegnaMano();
   $("pila").replaceChildren(...(partita.pila.length
-    ? partita.pila.slice().reverse().map((o) => el("span", { className: "carta",
-        textContent: `${o.nome}${o.x ? " X=" + o.x : ""}${o.bersaglio ? " → " + o.bersaglio : ""} (${o.controllore})`,
+    ? partita.pila.slice().reverse().map((o) => el("span", { className: "oggetto-pila",
+        textContent: `${o.nome}${o.x ? " X=" + o.x : ""}${o.bersaglio ? " → " + o.bersaglio : ""} (${o.controllore === "Tu" ? "tua" : "avversaria"})`,
         onclick: () => magiaInAttesa && scegliBersaglio(o.id) }))
-    : [el("span", { textContent: "vuota" })]));
+    : [el("span", { className: "dettaglio", textContent: "vuota" })]));
   disegnaBarraCombattimento();
   $("eventi").replaceChildren(...partita.eventi.slice().reverse().map((t) => el("li", { textContent: t })));
 }

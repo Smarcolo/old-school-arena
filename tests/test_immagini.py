@@ -20,9 +20,10 @@ def test_scarica_e_mette_in_cache(conn, tmp_path):
 
     file = immagini.ottieni(conn, "Lightning Bolt", finto, tmp_path)
     assert file.read_bytes().startswith(b"\xff\xd8") and file.name == "lightning-bolt.jpg"
-    assert "exact=Lightning%20Bolt" in chiamate[0]
+    assert "frame%3A1993" in chiamate[0]  # prima cerca la cornice del 1993...
+    assert "exact=Lightning%20Bolt" in chiamate[1]  # ...e qui non la trova (risposta finta), quindi la predefinita
     assert immagini.ottieni(conn, "Lightning Bolt", finto, tmp_path) == file
-    assert len(chiamate) == 1  # la seconda volta dalla cache
+    assert len(chiamate) == 2  # la seconda volta dalla cache
 
 
 def test_usa_l_url_del_database(conn, tmp_path):
@@ -41,7 +42,7 @@ def test_senza_rete_ritorna_none_e_non_riprova(conn, tmp_path):
 
     assert immagini.ottieni(conn, "Hill Giant", rotto, tmp_path) is None
     assert immagini.ottieni(conn, "Hill Giant", rotto, tmp_path) is None
-    assert len(chiamate) == 1
+    assert len(chiamate) == 2  # ricerca della cornice e immagine, una volta sola
 
 
 def test_risposta_non_immagine(conn, tmp_path):
@@ -59,3 +60,27 @@ def test_endpoint_serve_la_cache():
 def test_endpoint_404_se_non_disponibile():
     immagini._falliti.add("carta inesistente")
     assert client.get("/api/immagini/Carta inesistente").status_code == 404
+
+
+def test_sceglie_la_stampa_con_i_bordi_neri(conn, tmp_path):
+    class Ricerca(Risposta):
+        def json(self):
+            return {"data": [{"set": "2ed", "image_uris": {"normal": "https://img/unlimited.jpg"}},
+                             {"set": "leb", "image_uris": {"normal": "https://img/beta.jpg"}},
+                             {"set": "3ed", "image_uris": {"normal": "https://img/revised.jpg"}}]}
+    chiamate = []
+
+    def finto(url, **kw):
+        chiamate.append(url)
+        return Ricerca(tipo="application/json") if "search" in url else Risposta()
+
+    assert immagini.ottieni(conn, "Grizzly Bears", finto, tmp_path) is not None
+    assert chiamate[1] == "https://img/beta.jpg"
+
+
+def test_import_tiene_la_stampa_preferita():
+    from app.cards import scryfall
+    stampe = [{"name": "Bolt", "set": s, "type_line": "Instant", "image_uris": {"normal": f"https://img/{s}.jpg"}}
+              for s in ("2ed", "lea", "leb")]
+    (voce,) = scryfall.converti(stampe, {"2ed", "lea", "leb"})
+    assert voce["immagine_url"] == "https://img/leb.jpg" and "_ordine" not in voce

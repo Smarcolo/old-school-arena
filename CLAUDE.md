@@ -21,6 +21,11 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/cards/immagini.py` — immagini scaricate da Scryfall alla prima richiesta (`/api/immagini/{nome}`), cache in
   `data/immagini/`. Senza rete l'app resta testuale; i fallimenti si ricordano fino al riavvio.
 - `app/web/comune.js` — codice condiviso dalle pagine (anteprima immagine su elementi con `data-carta`).
+- Tavolo (`app/web/app.js`): carte come immagini fisse (`faccia`, ripiego `facciaTestuale`), banner `#turno` con
+  fase spiegata (`fase()`), cosa fare (`cosaFare()`) e pulsanti del momento (`azioniTurno()`); mano in `#mano`.
+  `vista` manda per ogni carta dell'umano `giocabile` (mano: lanciabile ora con almeno un bersaglio valido;
+  campo: abilità attivabile) e per il combattimento i passi fatti. Immagini sempre con cornice 1993
+  (`immagini.STAMPE_PREFERITE`, ricerca `frame:1993`).
 - `app/judge/` — indice FTS5 dei testi in `data/regole/*.md` e risposte del giudice.
 - `app/ai/` — avversaria. Usa solo le funzioni pubbliche di `engine`.
 - `app/commands/` — `parser.py` (testo → Comando) ed `esegui.py` (Comando → azione + messaggio).

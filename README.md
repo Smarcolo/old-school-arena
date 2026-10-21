@@ -21,6 +21,18 @@ pip install -r requirements.txt
 python -m uvicorn app.api.main:app
 ```
 
+## Il tavolo
+- In alto il **banner del turno**: dorato quando è il tuo turno, rosso quando è dell'avversaria. Mostra la fase
+  (Stap → Mantenimento → Pescata → Principale 1 → Combattimento → Principale 2 → Finale), cosa succede adesso,
+  cosa puoi fare e i pulsanti giusti per quel momento: «⚔ Vai al combattimento», «Vai ai danni»,
+  «Lascia risolvere», «Fine turno».
+- Le carte che puoi giocare in quel momento sono **illuminate in verde** (per esempio Giant Growth dopo i blocchi:
+  è l'ultima occasione prima dei danni).
+- Le carte si vedono con la loro immagine, sempre nella cornice originale del 1993 (bordi neri quando esistono):
+  la prima volta si scaricano da Scryfall, poi restano in `data/immagini/93/`. Senza internet compare una carta
+  disegnata con nome, costo e testo. Passando il mouse la vedi ingrandita.
+- Sotto il tuo campo c'è **la tua mano**; dell'avversaria vedi solo i dorsi. Le carte tappate sono girate di lato.
+
 ## Comandi
 - `tengo` / `mulligan` a inizio partita (mulligan London); dopo un mulligan, `in fondo <carte>` per scegliere
   quali carte mettere in fondo al mazzo (oppure i pulsanti e un clic sulle carte).

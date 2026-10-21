@@ -10,6 +10,7 @@ import time
 import httpx
 
 from app.cards import database
+from app.cards.immagini import ordine_stampa
 from app.cards.regole_swedish import carica_regole
 
 HEADERS = {"User-Agent": "OldSchoolArena/0.1", "Accept": "application/json"}
@@ -45,11 +46,17 @@ def converti(carte_scryfall: list[dict], set_ammessi: set[str]) -> list[dict]:
             "costituzione": _intero(c.get("toughness")),
             "testo": c.get("oracle_text", ""),
             "set_codici": set(),
-            "immagine_url": c.get("image_uris", {}).get("normal", ""),
+            "immagine_url": "",
+            "_ordine": 99,
         })
         voce["set_codici"].add(c["set"])
+        # immagine: la stampa preferita (bordi neri prima), non la prima che capita
+        url = c.get("image_uris", {}).get("normal", "")
+        if url and ordine_stampa(c["set"]) < voce["_ordine"]:
+            voce["immagine_url"], voce["_ordine"] = url, ordine_stampa(c["set"])
     for voce in per_nome.values():
         voce["set_codici"] = ",".join(sorted(voce["set_codici"]))
+        voce.pop("_ordine", None)
     return list(per_nome.values())
 
 

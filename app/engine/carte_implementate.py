@@ -337,7 +337,8 @@ def continua_sylvan(partita, chi: str, fatte: int, gestite: tuple) -> None:
 
 # Scelte che riprendono un effetto a metà. Per "sylvan" l'ultimo argomento (carte già gestite) riceve anche
 # la carta appena scelta (vedi azioni.rispondi_scegli).
-SEGUITI = {"balance": continua_balance, "recall": continua_recall, "sylvan": continua_sylvan}
+SEGUITI = {"balance": continua_balance, "recall": continua_recall, "sylvan": continua_sylvan,
+           "fine_turno": lambda partita: _az().passa_fase(partita)}  # scarto a 7 carte: riprende il cambio di turno
 
 
 # --- Creature e potenziamenti ------------------------------------------------------------------

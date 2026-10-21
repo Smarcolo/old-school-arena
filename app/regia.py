@@ -5,7 +5,7 @@ from app.commands.esegui import esegui
 from app.commands.parser import analizza
 from app.engine import azioni, combattimento, mulligan
 from app.engine.abilita import analizza_abilita
-from app.engine.stato import PAREGGIO, Partita
+from app.engine.stato import PAREGGIO, Fase, Partita
 from app.engine.validazione import FASI_PRINCIPALI, puo_attivare, puo_lanciare
 from app.engine.zone import Zona
 
@@ -43,6 +43,12 @@ def _deve_fermarsi(partita: Partita, umano: str) -> bool:
     comb = partita.combattimento
     if comb and comb.bloccanti_dichiarati and not comb.danni_inflitti and comb.attaccanti:
         return ha_istantanei(partita, umano)
+    turno_avversario = partita.giocatore_attivo.nome != umano
+    if (turno_avversario and comb and comb.attaccanti_dichiarati and comb.attaccanti
+            and not comb.bloccanti_dichiarati and not comb.attesa_bloccanti):
+        return ha_istantanei(partita, umano)  # ti attaccano: prima dei blocchi (es. animare Mishra's Factory)
+    if turno_avversario and partita.fase == Fase.FINALE:
+        return ha_istantanei(partita, umano)  # fine del turno avversario: Ancestral Recall, Library of Alexandria...
     return partita.giocatore_attivo.nome == umano and partita.fase in FASI_PRINCIPALI
 
 

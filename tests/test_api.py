@@ -24,7 +24,9 @@ def gioca_fino_al_tuo_prossimo_turno(p):
         elif q["richiesta"] == "attaccanti":
             testo = "non attacco"
         elif q["richiesta"] == "scelta":
-            testo = "non pago" if q["scelta"]["tipo"] == "paga" else f"danni su {q['scelta']['candidate'][0]['id']}"
+            sc = q["scelta"]
+            testo = ("non pago" if sc["tipo"] == "paga" else f"scelgo {sc['carte'][0]['id']}" if sc["tipo"] == "cerca"
+                     else f"danni su {sc['candidate'][0]['id']}")
         elif q["pila"] or q["attivo"] != "Tu":
             testo = "passa"
         else:

@@ -103,3 +103,71 @@ def test_ti_fermi_se_l_avversaria_risponde():
     ai[Zona.MANO][:] = [Carta("Counterspell", "Instant", "{U}{U}")]
     esegui_comando(p, "Tu", "AI", "gioca grizzly bears")
     assert p.pila and p.pila[-1].carta.nome == "Counterspell" and p.giocatore_con_priorita.nome == "Tu"
+
+
+FACTORY = ("{T}: Add {C}.\n{1}: Mishra's Factory becomes a 2/2 Assembly-Worker artifact creature until end of turn. "
+           "It's still a land.\n{T}: Target Assembly-Worker creature gets +1/+2 until end of turn.")
+
+
+def test_mishra_factory_anima_blocca_e_si_pompa():
+    p = partita_con_ai()
+    p.scelte_manuali = {"Tu"}
+    tu, ai = p.giocatore("Tu"), p.giocatore("AI")
+    fac = Carta("Mishra's Factory", "Land", "", None, None, FACTORY)
+    fac.entrata_nel_turno = 0
+    tu[Zona.CAMPO].extend([fac, Carta("Forest", "Basic Land — Forest")])
+    orco = Carta("Hill Giant", "Creature — Giant", "{3}{R}", 3, 3)
+    orco.entrata_nel_turno = 0
+    ai[Zona.CAMPO].append(orco)
+    ai[Zona.MANO].clear()
+    esegui_comando(p, "Tu", "AI", "fine turno")
+    # l'AI attacca: ti fermi prima dei blocchi perché puoi animare la Factory
+    assert p.combattimento and p.combattimento.attaccanti == [orco.id] and not p.combattimento.attesa_bloccanti
+    esegui_comando(p, "Tu", "AI", f"attiva {fac.id} 1")
+    assert fac.is_creatura
+    esegui_comando(p, "Tu", "AI", "passa")  # ai blocchi
+    esegui_comando(p, "Tu", "AI", f"blocca {orco.id} con {fac.id}")
+    esegui_comando(p, "Tu", "AI", f"attiva {fac.id} 2 su {fac.id}")  # si tappa e si dà +1/+2: blocca lo stesso
+    # l'abilità si risolve da sola e si va ai danni: 3/4 contro 3/3
+    assert orco in ai[Zona.CIMITERO] and fac in tu[Zona.CAMPO]
+    assert any("Mishra's Factory prende +1/+2" in e.descrizione for e in p.registro.eventi)
+
+
+def test_ancestral_nella_fase_finale_avversaria():
+    p = partita_con_ai()
+    tu = p.giocatore("Tu")
+    tu[Zona.CAMPO].append(Carta("Island", "Basic Land — Island"))
+    tu[Zona.MANO][:] = [Carta("Ancestral Recall", "Instant", "{U}", None, None, "Target player draws three cards.")]
+    p.giocatore("AI")[Zona.MANO].clear()
+    esegui_comando(p, "Tu", "AI", "fine turno")
+    assert p.giocatore_attivo.nome == "AI" and p.fase == Fase.FINALE and p.giocatore_con_priorita.nome == "Tu"
+    esegui_comando(p, "Tu", "AI", "gioca ancestral recall su me")
+    assert len(tu[Zona.MANO]) == 4 and p.giocatore_attivo.nome == "Tu"  # 3 di Ancestral + la pescata del tuo turno
+
+
+def test_scarto_a_fine_turno():
+    p = partita_con_ai()
+    p.scelte_manuali = {"Tu"}
+    tu = p.giocatore("Tu")
+    tu[Zona.MANO][:] = [Carta(f"Carta{i}", "Instant", "{9}") for i in range(9)]
+    esegui_comando(p, "Tu", "AI", "fine turno")
+    assert p.scelta and "scartane" in p.scelta.testo and p.giocatore_attivo.nome == "Tu"
+    esegui_comando(p, "Tu", "AI", "scelgo carta0")
+    assert p.scelta and "ancora 1" in p.scelta.testo
+    esegui_comando(p, "Tu", "AI", "scelgo carta1")
+    assert len(tu[Zona.MANO]) == 7 and p.giocatore_attivo.nome == "AI"
+    assert [c.nome for c in tu[Zona.CIMITERO]] == ["Carta0", "Carta1"]
+
+
+def test_tappi_city_of_brass_scegliendo_il_colore_e_poi_lanci():
+    p = partita_con_ai()
+    tu = p.giocatore("Tu")
+    city = Carta("City of Brass", "Land", "", None, None,
+                 "Whenever City of Brass becomes tapped, it deals 1 damage to you.\n{T}: Add one mana of any color.")
+    tu[Zona.CAMPO].extend([city, Carta("Island", "Basic Land — Island")])
+    tu[Zona.MANO][:] = [Carta("Ancestral Recall", "Instant", "{U}", None, None, "Target player draws three cards.")]
+    esegui_comando(p, "Tu", "AI", f"tappa {city.id} per u")
+    assert tu.riserva["U"] == 1 and tu.vita == 19
+    esegui_comando(p, "Tu", "AI", "gioca ancestral recall su me")
+    isola = next(c for c in tu[Zona.CAMPO] if c.nome == "Island")
+    assert not isola.tappata and len(tu[Zona.MANO]) == 3  # pagato col mana in riserva

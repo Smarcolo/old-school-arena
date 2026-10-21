@@ -119,9 +119,10 @@ function suCampo(c, mio) {
   (c.attivabili || []).forEach((a, i) => {
     if (a.ora) opzioni.push([`Attiva: ${a.testo}`, () => attivaAbilita(c, a, i)]);
   });
+  // mana a mano: tappi tu le terre (scegliendo il colore) e poi lanci; la magia usa prima il mana in riserva
+  if (c.mana_ora) for (const col of c.mana) opzioni.push([`Tappa per {${col}} ${NOMI_MANA[col] || ""}`.trim(), () => invia(`tappa ${c.id} per ${col.toLowerCase()}`)]);
   if (!opzioni.length) {
-    if (c.forza == null) return invia(`tappa ${c.id}`);  // terre e artefatti di mana: clic = mana
-    return avvisa(`${c.nome} ora non può attaccare né usare abilità.`);
+    return avvisa(c.tappata ? `${c.nome} è già tappata.` : `${c.nome} ora non può attaccare, usare abilità o dare mana.`);
   }
   if (opzioni.length === 1) return opzioni[0][1]();
   apriMenu(c, opzioni);
@@ -295,6 +296,8 @@ function disegnaBarraCombattimento() {
   }
 }
 
+const NOMI_MANA = { W: "bianco", U: "blu", B: "nero", R: "rosso", G: "verde", C: "incolore" };
+
 // Bersagli ovvi: non serve cliccarli (Mind Twist si gioca sempre sull'avversaria).
 const BERSAGLIO_OVVIO = { "Mind Twist": "avversaria", "Millstone": "avversaria", "Mirror Universe": "avversaria" };
 
@@ -305,6 +308,9 @@ function chiediX(c) {
 }
 
 function suMano(c) {
+  // scelte tra le carte della mano (scarto a fine turno, Recall...): basta cliccare la carta
+  const sc = partita.scelta;
+  if (partita.richiesta === "scelta" && sc && sc.carte && sc.carte.some((x) => x.id === c.id)) return invia(`scelgo ${c.id}`);
   if (partita.richiesta === "mulligan") {
     if (!partita.mulligan.tenuta) return;
     inFondoScelte.has(c.id) ? inFondoScelte.delete(c.id) : inFondoScelte.add(c.id);
@@ -340,12 +346,15 @@ function fase() {
     case "combattimento":
       if (!comb || !comb.attaccanti_dichiarati) return mio ? "Combattimento: scegli chi attacca." : "Combattimento: l'avversaria sceglie chi attacca.";
       if (!comb.attaccanti.length) return "Combattimento: nessun attacco.";
-      if (!comb.bloccanti_dichiarati) return mio ? "Combattimento: l'avversaria sceglie i bloccanti." : "Combattimento: ti attaccano, scegli i bloccanti.";
+      if (!comb.bloccanti_dichiarati) return mio ? "Combattimento: l'avversaria sceglie i bloccanti."
+        : partita.richiesta === "bloccanti" ? "Combattimento: ti attaccano, scegli i bloccanti."
+        : "Ti attaccano! Prima dei blocchi puoi usare abilità (es. animare Mishra's Factory) o istantanei.";
       if (!comb.danni_inflitti) return (comb.primo_passo_fatto ? "Danni di «attacca per primo» fatti. " : "Blocchi fatti. ")
         + "Ultima occasione per gli istantanei (es. Giant Growth) prima dei danni.";
       return "Danni del combattimento fatti.";
     case "principale 2": return mio ? "Fase principale 2: dopo il combattimento puoi ancora giocare carte." : "Fase principale 2 dell'avversaria.";
-    case "finale": return "Fase finale: il turno sta per finire.";
+    case "finale": return mio ? "Fase finale: il turno sta per finire (con più di 7 carte in mano scarti)."
+      : "Fase finale dell'avversaria: ultimo momento per i tuoi istantanei (es. Ancestral Recall) prima del tuo turno.";
   }
   return "";
 }
@@ -359,7 +368,7 @@ function cosaFare() {
   if (p.richiesta === "mulligan") return "Guarda la tua mano: «Tengo» o «Mulligan».";
   if (p.richiesta === "attaccanti") return "Clicca le tue creature che attaccano, poi «Attacca con le scelte» (o «Nessun attacco»).";
   if (p.richiesta === "bloccanti") return "Clicca una tua creatura e poi l'attaccante che deve bloccare, poi «Conferma blocchi».";
-  if (p.richiesta === "scelta") return "Rispondi alla scelta qui sotto.";
+  if (p.richiesta === "scelta") return "Rispondi alla scelta qui sotto (se riguarda la tua mano puoi cliccare la carta).";
   if (p.priorita !== "Tu") return "L'avversaria sta giocando…";
   const carte = [...new Set(giocabiliInMano())];
   const puoi = carte.length ? ` Ora puoi usare: ${carte.join(", ")} (illuminate in verde).` : "";
@@ -383,6 +392,8 @@ function azioniTurno() {
     return [bottone("Vai ai danni", () => invia("passa"))];
   if (mio) return [bottone("Avanti", () => invia("passa")), bottone("Fine turno", () => invia("fine turno"))];
   if (comb && comb.bloccanti_dichiarati && !comb.danni_inflitti && comb.attaccanti.length) return [bottone("Vai ai danni", () => invia("passa"))];
+  if (comb && comb.attaccanti_dichiarati && !comb.bloccanti_dichiarati && comb.attaccanti.length) return [bottone("Vai ai blocchi", () => invia("passa"))];
+  if (p.fase === "finale") return [bottone("Passa al mio turno", () => invia("passa"))];
   return [bottone("Continua", () => invia("passa"))];
 }
 

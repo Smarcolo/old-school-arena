@@ -131,7 +131,12 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   «...unless you pay {..}» crea una `Partita.scelta`: finché non si risponde (`azioni.rispondi_scelta`, comandi
   «paga» / «non pago») nessuno può fare altro. L'AI decide in `avversaria.decidi_scelta`.
   La regia non ferma l'umano per un innesco in pila se non può rispondere.
-- Regia: l'umano si ferma anche per dichiarare attaccanti/bloccanti e, dopo i blocchi, se ha un istantaneo lanciabile.
+- Regia: l'umano si ferma anche per dichiarare attaccanti/bloccanti e, dopo i blocchi, se ha un istantaneo lanciabile;
+  nel turno avversario anche dopo la dichiarazione degli attaccanti (prima dei blocchi) e nella fase finale, se ha
+  qualcosa da usare (`ha_istantanei`). Quello che mette in pila l'umano si risolve da solo.
+- Scarto a fine turno (`azioni._scarta_fino_a_sette`): l'AI scarta da sola, l'umano con Scelta "scegli" e seguito
+  "fine_turno" che fa ripartire `passa_fase`. La vista dà per le carte dell'umano in campo `mana`/`mana_ora`:
+  il tavolo fa tappare scegliendo il colore («tappa <id> per <colore>»), `lancia` usa prima la riserva.
   `regia.suggerimento` aggiunge al messaggio cosa può fare adesso.
 - Terminologia 93/94: "rimosse dal gioco" (non esilio), niente fase di cleanup separata. Mana burn: solo come opzione.
 - Il motore è deterministico dato un `seed`: i test devono passare il seed.

@@ -35,6 +35,12 @@ python -m uvicorn app.api.main:app
 - Le tue magie e abilità si risolvono da sole. Quando gioca l'avversaria, la sua carta compare in primo piano:
   «Lascia risolvere» oppure «Rispondi» (se hai qualcosa da giocare). Mind Twist, Millstone e Mirror Universe
   vanno da soli sull'avversaria, senza cliccare il bersaglio.
+- Mana a mano: clicchi una terra (o Mox, Lotus, City of Brass...) e scegli il colore; il mana resta in riserva
+  e la magia che lanci lo usa per primo. Se non tappi niente, il programma tappa da solo.
+- Quando ti attaccano ti fermi prima dei blocchi se puoi fare qualcosa (es. animare Mishra's Factory, che poi può
+  anche tapparsi per darsi +1/+2 mentre blocca); nella fase finale dell'avversaria ti fermi se hai un istantaneo
+  (Ancestral Recall) o un'abilità da usare.
+- A fine turno, con più di 7 carte in mano, scegli cosa scartare cliccando le carte.
 - Con Field of Dreams in campo, accanto al nome di ogni giocatore compare la carta in cima al suo grimorio.
 - Si gioca solo con i clic: carta in mano = giocala; tua creatura = attacca (nella fase principale 1, poi
   «⚔ Attacca con N» in alto) o usa un'abilità (se può fare entrambe compare un piccolo menu); terra = mana.

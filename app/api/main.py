@@ -16,7 +16,7 @@ from app.engine.abilita import analizza_abilita
 from app.engine.azioni import descrivi_bersaglio
 from app.engine.stato import NOMI_COLORI, PAROLE_CHIAVE, PROTEZIONI_INGLESE, Fase, Partita
 from app.engine.effetti import bersaglio_legale
-from app.engine.validazione import puo_attivare, puo_giocare_terra, puo_lanciare, tipo_bersaglio
+from app.engine.validazione import puo_attivare, puo_giocare_terra, puo_lanciare, puo_tappare, tipo_bersaglio
 from app.engine.zone import Zona
 from app.judge.giudice import Giudice
 from app.ai.sideboard import scegli_cambi
@@ -138,6 +138,16 @@ def _giocabile(p: Partita, c, in_mano: bool) -> bool:
     return tipo is None or any(bersaglio_legale(p, tipo, r, c) for r in _bersagli_possibili(p))
 
 
+def _mana_della_carta(p: Partita, g, c, z) -> dict:
+    """Per tappare a mano le terre (e gli artefatti di mana) prima di lanciare: quali colori può dare adesso."""
+    if g.nome != UMANO or z != Zona.CAMPO:
+        return {}
+    fonte = mana.fonte_in_partita(c, p.avversario_di(g.nome)[Zona.CAMPO])
+    if fonte is None:
+        return {}
+    return {"mana": fonte.colori, "mana_ora": puo_tappare(p, UMANO, c) is None}
+
+
 def _puo_attaccare_ora(p: Partita, c) -> bool:
     """Nella tua fase principale 1 (o quando si dichiarano gli attaccanti) questa creatura potrebbe attaccare."""
     if p.vincitore or p.pila or p.scelta or p.giocatore_attivo.nome != UMANO or p.giocatore_con_priorita.nome != UMANO:
@@ -158,6 +168,7 @@ def vista(p: Partita) -> dict:
                                  "ora": g.nome == UMANO and z == Zona.CAMPO and puo_attivare(p, UMANO, c, a) is None}
                                 for a in analizza_abilita(c)],
                  "puo_attaccare": g.nome == UMANO and z == Zona.CAMPO and _puo_attaccare_ora(p, c),
+                 **_mana_della_carta(p, g, c, z),
                  "x": "X" in c.costo,
                  "appena_entrata": p.ha_debolezza_da_evocazione(c),
                  "giocabile": g.nome == UMANO and z in (Zona.MANO, Zona.CAMPO) and _giocabile(p, c, z == Zona.MANO)}

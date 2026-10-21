@@ -763,6 +763,8 @@ def passa_fase(partita: Partita) -> None:
     controlla_sconfitte(partita)
     if partita.vincitore:
         return
+    if partita.fase == ORDINE_FASI[-1] and _scarta_fino_a_sette(partita):
+        return  # l'umano sceglie cosa scartare; dopo la scelta passa_fase riparte (SEGUITI["fine_turno"])
     partita.priorita = partita.attivo
     partita.passaggi = 0
     partita.combattimento = None
@@ -789,6 +791,27 @@ def passa_fase(partita: Partita) -> None:
     azioni_di_stato(partita)  # effetti che scadono a un certo turno (Erhnam Djinn), aure su una Factory tornata terra
     _log(partita, g.nome, "turno", f"Turno {partita.turno} di {g.nome}")
     _automatismi_fase(partita)
+
+
+MANO_MASSIMA = 7
+
+
+def _scarta_fino_a_sette(partita: Partita) -> bool:
+    """A fine turno chi è di turno scarta fino ad avere 7 carte in mano. True se aspetta una scelta dell'umano."""
+    g = partita.giocatore_attivo
+    eccesso = len(g[Zona.MANO]) - MANO_MASSIMA
+    if eccesso <= 0:
+        return False
+    if g.nome in partita.scelte_manuali:
+        scegli_o_decidi(partita, g.nome, "fine turno", "scarta", list(g[Zona.MANO]),
+                        f"Fine turno: hai {len(g[Zona.MANO])} carte in mano, scartane una (ancora {eccesso})",
+                        seguito=("fine_turno",))
+        return True
+    from app.ai.avversaria import scelta_automatica
+    for _ in range(eccesso):
+        _applica_scelta(partita, g.nome, "scarta", scelta_automatica(partita, g.nome, "scarta", list(g[Zona.MANO])),
+                        "fine turno: massimo 7 carte")
+    return False
 
 
 def _automatismi_fase(partita: Partita) -> None:

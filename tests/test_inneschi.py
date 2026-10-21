@@ -87,7 +87,7 @@ def test_howling_mine_solo_se_stappata(p):
     fino_a(p, Fase.PRINCIPALE_1, 3)
     mine.tappata = True  # A la stappa nel suo stap: la ritappo prima della pescata del turno dopo
     fino_a(p, Fase.PRINCIPALE_1, 4)
-    assert len(p.giocatore("B")[Zona.MANO]) == 10
+    assert len(p.giocatore("B")[Zona.MANO]) == 8  # a fine turno 2 è scesa a 7, poi solo la pescata normale
 
 
 def test_ball_lightning_sacrificata_a_fine_turno(p):

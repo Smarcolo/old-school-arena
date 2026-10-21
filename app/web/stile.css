@@ -138,3 +138,9 @@ textarea { font: .95rem/1.4 ui-monospace, Consolas, monospace; padding: .5rem; b
 .punteggio { font-size: .75rem; opacity: .8; }
 .campione { font-size: 1.1rem; color: var(--accento); font-weight: bold; }
 @media (max-width: 900px) { .torneo, .turni { grid-template-columns: 1fr; } }
+#menu-carta { position: absolute; z-index: 20; display: flex; flex-direction: column; gap: .3rem; padding: .5rem; border-radius: 8px;
+  background: #1a110a; border: 1px solid var(--accento); box-shadow: 0 6px 20px #000c; max-width: 280px; }
+#menu-carta[hidden] { display: none; }
+#menu-carta .titolo-menu { font-weight: bold; color: var(--accento); font-size: .85rem; }
+#menu-carta button { text-align: left; font-size: .85rem; padding: .4rem .6rem; }
+#messaggio { margin: .4rem 1rem 0; min-height: 1.3rem; font-size: .9rem; opacity: .9; }

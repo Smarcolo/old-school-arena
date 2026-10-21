@@ -8,6 +8,8 @@ vengono ricordati fino al riavvio, per non riprovare a ogni passaggio del mouse.
 """
 import re
 import sqlite3
+import threading
+import time
 from pathlib import Path
 from urllib.parse import quote
 
@@ -20,7 +22,29 @@ URL_SCRYFALL = "https://api.scryfall.com/cards/named?format=image&version=normal
 URL_RICERCA = "https://api.scryfall.com/cards/search?unique=prints&order=released&dir=asc&q={q}"
 # Stampe preferite per l'immagine: prima i bordi neri, poi Unlimited e Summer Magic
 STAMPE_PREFERITE = ["leb", "lea", "arn", "atq", "leg", "drk", "2ed", "psum"]
-_falliti: set[str] = set()
+_falliti: dict[str, float] = {}  # nome -> fino a quando non riprovare (inf = la carta non esiste su Scryfall)
+RIPROVA_DOPO = 60  # secondi, per i fallimenti di rete o i limiti di Scryfall
+PAUSA = 0.12  # Scryfall chiede al massimo ~10 richieste al secondo
+_un_download_alla_volta = threading.Lock()
+_ultima_richiesta = 0.0
+
+
+def _educato(scarica):
+    """Le richieste a Scryfall una alla volta, distanziate, e ripetute se rispondono 429 (troppe richieste):
+    il tavolo chiede tutte le immagini insieme e senza questo metà finivano senza figura."""
+    def richiesta(url, **kw):
+        global _ultima_richiesta
+        for tentativo in range(4):
+            attesa = _ultima_richiesta + PAUSA - time.monotonic()
+            if attesa > 0:
+                time.sleep(attesa)
+            _ultima_richiesta = time.monotonic()
+            risposta = scarica(url, **kw)
+            if risposta.status_code != 429:
+                return risposta
+            time.sleep(1 + tentativo)
+        return risposta
+    return richiesta
 
 
 def percorso_cache(nome: str, cartella: Path | None = None) -> Path:
@@ -59,15 +83,20 @@ def ottieni(conn: sqlite3.Connection, nome: str, scarica=httpx.get, cartella: Pa
     file = percorso_cache(nome, cartella)
     if file.exists():
         return file
-    if nome.lower() in _falliti:
+    if _falliti.get(nome.lower(), 0) > time.monotonic():
         return None
-    try:
-        risposta = scarica(_url(conn, nome, scarica), headers=HEADERS, follow_redirects=True, timeout=8)
+    with _un_download_alla_volta:
+        if file.exists():  # scaricata nel frattempo da un'altra richiesta
+            return file
+        educato = _educato(scarica)
+        try:
+            risposta = educato(_url(conn, nome, educato), headers=HEADERS, follow_redirects=True, timeout=8)
+        except Exception:
+            _falliti[nome.lower()] = time.monotonic() + RIPROVA_DOPO
+            return None
         if risposta.status_code != 200 or not risposta.headers.get("content-type", "").startswith("image/"):
-            raise ValueError(f"risposta {risposta.status_code}")
-    except Exception:
-        _falliti.add(nome.lower())
-        return None
-    file.parent.mkdir(parents=True, exist_ok=True)
-    file.write_bytes(risposta.content)
-    return file
+            _falliti[nome.lower()] = float("inf") if risposta.status_code == 404 else time.monotonic() + RIPROVA_DOPO
+            return None
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_bytes(risposta.content)
+        return file

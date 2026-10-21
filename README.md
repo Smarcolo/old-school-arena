@@ -32,6 +32,9 @@ python -m uvicorn app.api.main:app
   la prima volta si scaricano da Scryfall, poi restano in `data/immagini/93/`. Senza internet compare una carta
   disegnata con nome, costo e testo. Passando il mouse la vedi ingrandita.
 - Sotto il tuo campo c'è **la tua mano**; dell'avversaria vedi solo i dorsi. Le carte tappate sono girate di lato.
+- Si gioca solo con i clic: carta in mano = giocala; tua creatura = attacca (nella fase principale 1, poi
+  «⚔ Attacca con N» in alto) o usa un'abilità (se può fare entrambe compare un piccolo menu); terra = mana.
+  Per le magie con bersaglio clicchi la magia e poi il bersaglio («Annulla» per ripensarci).
 
 ## Comandi
 - `tengo` / `mulligan` a inizio partita (mulligan London); dopo un mulligan, `in fondo <carte>` per scegliere

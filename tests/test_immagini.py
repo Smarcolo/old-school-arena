@@ -58,7 +58,7 @@ def test_endpoint_serve_la_cache():
 
 
 def test_endpoint_404_se_non_disponibile():
-    immagini._falliti.add("carta inesistente")
+    immagini._falliti["carta inesistente"] = float("inf")
     assert client.get("/api/immagini/Carta inesistente").status_code == 404
 
 
@@ -84,3 +84,10 @@ def test_import_tiene_la_stampa_preferita():
               for s in ("2ed", "lea", "leb")]
     (voce,) = scryfall.converti(stampe, {"2ed", "lea", "leb"})
     assert voce["immagine_url"] == "https://img/leb.jpg" and "_ordine" not in voce
+
+
+def test_ripete_se_scryfall_risponde_troppe_richieste(conn, tmp_path, monkeypatch):
+    monkeypatch.setattr(immagini.time, "sleep", lambda s: None)
+    conn.execute("UPDATE carte SET immagine_url = 'https://img/mammoth.jpg' WHERE nome = 'War Mammoth'")
+    risposte = [Risposta(429, "application/json"), Risposta()]
+    assert immagini.ottieni(conn, "War Mammoth", lambda url, **kw: risposte.pop(0), tmp_path / "x") is not None

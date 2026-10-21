@@ -72,6 +72,7 @@ function cartaEl(c, azione) {
     (attaccantiScelti.has(c.id) || inFondoScelte.has(c.id) || bloccanteScelto === c.id || blocchiScelti.some(([, b]) => b === c.id)) && "selezionata"];
   const e = el("div", { className: classi.filter(Boolean).join(" ") }, faccia(c));
   e.dataset.carta = c.nome;
+  e.dataset.id = c.id;
   if (c.forza != null) e.append(el("span", { className: "pt", textContent: `${c.forza}/${c.costituzione - c.danni}` }));
   const note = [c.incanta && `incanta ${c.incanta}`, c.scudi && (c.scudi > 1 ? `scudo ×${c.scudi}` : "scudo"),
     comb && comb.attaccanti.includes(c.id) && "attacca", comb && comb.bloccanti.includes(c.id) && "blocca"].filter(Boolean);
@@ -101,16 +102,58 @@ function suCampo(c, mio) {
     }
     return disegna();
   }
-  if (mio && c.attivabili && c.attivabili.length) {
-    const ab = c.attivabili[0];
-    if (ab.bersaglio) {
-      magiaInAttesa = `attiva ${c.id}`;
-      document.body.classList.add("mirino");
-      return avvisa(`Scegli il bersaglio dell'abilità di ${c.nome} (Esc per annullare).`);
-    }
-    return invia(`attiva ${c.id}`);
+  if (!mio) return;
+  const opzioni = [];
+  if (c.puo_attaccare) opzioni.push([attaccantiScelti.has(c.id) ? "Non attaccare" : "⚔ Attacca", () => scegliAttaccante(c)]);
+  (c.attivabili || []).forEach((a, i) => {
+    if (a.ora) opzioni.push([`Attiva: ${a.testo}`, () => attivaAbilita(c, a, i)]);
+  });
+  if (!opzioni.length) {
+    if (c.forza == null) return invia(`tappa ${c.id}`);  // terre e artefatti di mana: clic = mana
+    return avvisa(`${c.nome} ora non può attaccare né usare abilità.`);
   }
-  if (mio) invia(`tappa ${c.id}`);
+  if (opzioni.length === 1) return opzioni[0][1]();
+  apriMenu(c, opzioni);
+}
+
+function scegliAttaccante(c) {
+  attaccantiScelti.has(c.id) ? attaccantiScelti.delete(c.id) : attaccantiScelti.add(c.id);
+  avvisa(attaccantiScelti.size ? `Attaccanti scelti: ${attaccantiScelti.size}. Premi «⚔ Attacca» in alto.` : "Nessun attaccante scelto.");
+  disegna();
+}
+
+function attivaAbilita(c, a, i) {
+  const cmd = `attiva ${c.id} ${i + 1}`;
+  if (a.bersaglio) {
+    magiaInAttesa = cmd;
+    document.body.classList.add("mirino");
+    avvisa(`Scegli il bersaglio dell'abilità di ${c.nome}.`);
+    return disegna();
+  }
+  invia(cmd);
+}
+
+// Menu sopra la carta quando un clic può voler dire più cose (attaccare o usare un'abilità).
+function apriMenu(c, opzioni) {
+  const menu = $("menu-carta");
+  menu.replaceChildren(el("div", { className: "titolo-menu", textContent: c.nome }),
+    ...opzioni.map(([testo, fai]) => bottone(testo, () => { chiudiMenu(); fai(); })));
+  const carta = document.querySelector(`.carta[data-id="${c.id}"]`);
+  const r = carta ? carta.getBoundingClientRect() : { left: 20, top: 20, bottom: 20 };
+  menu.hidden = false;
+  menu.style.left = `${Math.max(8, Math.min(r.left + scrollX, innerWidth - menu.offsetWidth - 8))}px`;
+  menu.style.top = `${r.top + scrollY - menu.offsetHeight - 6 < scrollY ? r.bottom + scrollY + 6 : r.top + scrollY - menu.offsetHeight - 6}px`;
+}
+
+function chiudiMenu() {
+  $("menu-carta").hidden = true;
+}
+
+async function attaccaConScelte() {
+  const ids = [...attaccantiScelti];
+  if (partita.richiesta !== "attaccanti") await invia("passa");  // dalla principale 1 si va al combattimento
+  if (partita.richiesta === "attaccanti") await invia(`attacca con ${ids.join(", ")}`);
+  else avvisa("Non si è arrivati alla dichiarazione degli attaccanti: " + ($("messaggio").textContent || ""));
 }
 
 function bottone(testo, azione) {
@@ -304,15 +347,21 @@ function cosaFare() {
   const carte = [...new Set(giocabiliInMano())];
   const puoi = carte.length ? ` Ora puoi usare: ${carte.join(", ")} (illuminate in verde).` : "";
   if (p.pila.length) return `In pila c'è ${p.pila[p.pila.length - 1].nome}.` + puoi + " Altrimenti «Lascia risolvere».";
+  if (p.attivo === "Tu" && p.fase === "principale 1")
+    return ("Clicca una carta della mano per giocarla; clicca una tua creatura per attaccare o usare un'abilità." + puoi).trim();
   return (puoi || "Non hai carte da giocare in questo momento.").trim();
 }
 
 // I pulsanti dicono cosa succede davvero passando la priorità in quel momento.
 function azioniTurno() {
   const p = partita, comb = p.combattimento, mio = p.attivo === "Tu";
+  if (magiaInAttesa) return [bottone("Annulla", annullaBersaglio)];
+  if (attaccantiScelti.size && (p.fase === "principale 1" || p.richiesta === "attaccanti"))
+    return [bottone(`⚔ Attacca con ${attaccantiScelti.size}`, attaccaConScelte), bottone("Annulla attacco", () => { attaccantiScelti = new Set(); disegna(); })];
   if (p.vincitore || p.richiesta || p.priorita !== "Tu") return [];
   if (p.pila.length) return [bottone("Lascia risolvere", () => invia("passa"))];
   if (mio && p.fase === "principale 1") return [bottone("⚔ Vai al combattimento", () => invia("passa")), bottone("Fine turno", () => invia("fine turno"))];
+  if (mio && p.fase === "principale 2") return [bottone("Fine turno", () => invia("fine turno"))];
   if (mio && p.fase === "combattimento" && comb && comb.bloccanti_dichiarati && !comb.danni_inflitti && comb.attaccanti.length)
     return [bottone("Vai ai danni", () => invia("passa"))];
   if (mio) return [bottone("Avanti", () => invia("passa")), bottone("Fine turno", () => invia("fine turno"))];
@@ -462,18 +511,12 @@ $("elimina-salvato").onclick = async () => {
   caricaSalvati();
 };
 
-function attivaComandi() {
-  $("testo").disabled = false;
-  $("comando").querySelectorAll("button").forEach((b) => (b.disabled = false));
-}
-
 // Apertura di un incontro esistente (es. dal torneo): index.html?incontro=<id>
 (async () => {
   const id = new URLSearchParams(location.search).get("incontro");
   if (!id) return;
   try {
     partita = await api(`/api/partite/${id}`);
-    attivaComandi();
     const contro = `${partita.incontro.torneo ? "Incontro del torneo" : "Incontro"} contro ${partita.incontro.mazzo_avversaria}`;
     avvisa(partita.richiesta === "mulligan" ? `${contro}: tieni la mano o fai mulligan.` : `${contro} ripreso.`);
     disegna();
@@ -489,28 +532,25 @@ $("nuova").onclick = async () => {
   } catch (e) {
     return avvisa("Errore: " + e.message);
   }
-  $("testo").disabled = false;
-  $("comando").querySelectorAll("button").forEach((b) => (b.disabled = false));
-  avvisa(partita.richiesta === "mulligan" ? "Partita iniziata: tieni la mano o fai mulligan." : "Partita iniziata. Scrivi «aiuto» per i comandi.");
+  avvisa(partita.richiesta === "mulligan" ? "Partita iniziata: tieni la mano o fai mulligan." : "Partita iniziata.");
   disegna();
-  $("testo").focus();
 };
 
-$("comando").onsubmit = (e) => {
-  e.preventDefault();
-  const testo = $("testo").value.trim();
-  if (testo) invia(testo);
-  $("testo").value = "";
-};
-
-document.querySelectorAll(".rapido").forEach((b) => (b.onclick = () => invia(b.dataset.comando)));
+function annullaBersaglio() {
+  magiaInAttesa = null;
+  document.body.classList.remove("mirino");
+  avvisa("Annullato.");
+  disegna();
+}
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && magiaInAttesa) {
-    magiaInAttesa = null;
-    document.body.classList.remove("mirino");
-    avvisa("Annullato.");
+  if (e.key === "Escape") {
+    chiudiMenu();
+    if (magiaInAttesa) annullaBersaglio();
   }
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#menu-carta") && !e.target.closest(".carta")) chiudiMenu();
 });
 
 $("giudice").onsubmit = async (e) => {

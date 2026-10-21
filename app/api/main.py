@@ -14,7 +14,7 @@ from app.engine import combattimento, mana
 from app.engine.eventi import Evento
 from app.engine.abilita import analizza_abilita
 from app.engine.azioni import descrivi_bersaglio
-from app.engine.stato import NOMI_COLORI, PAROLE_CHIAVE, PROTEZIONI_INGLESE, Partita
+from app.engine.stato import NOMI_COLORI, PAROLE_CHIAVE, PROTEZIONI_INGLESE, Fase, Partita
 from app.engine.effetti import bersaglio_legale
 from app.engine.validazione import puo_attivare, puo_giocare_terra, puo_lanciare, tipo_bersaglio
 from app.engine.zone import Zona
@@ -128,6 +128,14 @@ def _giocabile(p: Partita, c, in_mano: bool) -> bool:
     return tipo is None or any(bersaglio_legale(p, tipo, r, c) for r in _bersagli_possibili(p))
 
 
+def _puo_attaccare_ora(p: Partita, c) -> bool:
+    """Nella tua fase principale 1 (o quando si dichiarano gli attaccanti) questa creatura potrebbe attaccare."""
+    if p.vincitore or p.pila or p.scelta or p.giocatore_attivo.nome != UMANO or p.giocatore_con_priorita.nome != UMANO:
+        return False
+    in_tempo = p.fase == Fase.PRINCIPALE_1 or combattimento.deve_dichiarare_attaccanti(p, UMANO)
+    return c.is_creatura and in_tempo and combattimento.puo_attaccare(p, UMANO, c) is None
+
+
 def vista(p: Partita) -> dict:
     """Stato visibile al giocatore umano: la mano dell'avversaria resta nascosta."""
     def zona(g, z):
@@ -136,7 +144,10 @@ def vista(p: Partita) -> dict:
                  "costituzione": c.costituzione_attuale if c.is_creatura else None,
                  "danni": c.danni, "bersaglio": tipo_bersaglio(c),
                  "incanta": _nome_incantata(p, c), "abilita": _abilita(c), "scudi": c.scudi_rigenerazione,
-                 "attivabili": [{"testo": a.testo, "bersaglio": a.bersaglio} for a in analizza_abilita(c)],
+                 "attivabili": [{"testo": a.testo, "bersaglio": a.bersaglio,
+                                 "ora": g.nome == UMANO and z == Zona.CAMPO and puo_attivare(p, UMANO, c, a) is None}
+                                for a in analizza_abilita(c)],
+                 "puo_attaccare": g.nome == UMANO and z == Zona.CAMPO and _puo_attaccare_ora(p, c),
                  "x": "X" in c.costo,
                  "appena_entrata": p.ha_debolezza_da_evocazione(c),
                  "giocabile": g.nome == UMANO and z in (Zona.MANO, Zona.CAMPO) and _giocabile(p, c, z == Zona.MANO)}

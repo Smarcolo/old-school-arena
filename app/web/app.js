@@ -446,13 +446,8 @@ function disegnaGiocatore(sezione, g, umano) {
   },
     el("span", { className: "nome", textContent: umano ? "Tu" : "Avversaria" }),
     vitaEl(g, umano),
-    el("span", { className: "dato", textContent: `grimorio ${g.grimorio}` }),
     ...(umano ? [] : [el("span", { className: "dato", textContent: `mano ${g.mano}` }),
       el("span", { className: "dorsi" }, ...Array.from({ length: Math.min(g.mano, 12) }, () => el("span", { className: "dorso" })))]),
-    ...(g.cima ? [conCarta(el("span", { className: "cima-rivelata" },
-      el("span", { className: "etichetta-cima", textContent: "in cima al grimorio (Field of Dreams):" }),
-      el("span", { className: "carta mini" }, faccia({ nome: g.cima, tipo: "", costo: "", testo: "" })),
-      el("b", { textContent: g.cima })), g.cima)] : []),
     ...(g.riserva && g.riserva !== "vuota" ? [el("span", { className: "dato", textContent: `mana ${g.riserva}` })] : []),
     ...(mioTurno ? [el("span", { className: "badge-turno", textContent: umano ? "tuo turno" : "suo turno" })] : []));
   const etichetta = (t) => el("div", { className: "etichetta", textContent: t });
@@ -463,13 +458,30 @@ function disegnaGiocatore(sezione, g, umano) {
   const righe = umano
     ? [fila(altri, suQuesto, "permanenti"), fila(terre, suQuesto, "terre")]
     : [fila(terre, suQuesto, "terre"), fila(altri, suQuesto, "permanenti")];
-  // il cimitero è un pulsante nella riga del giocatore: l'elenco si apre solo se serve (o se si sceglie un bersaglio)
+  const campo = el("div", { className: "campo" }, ...righe);
+  if (!g.campo.length) campo.append(el("div", { className: "vuoto", textContent: "Nessun permanente in campo" }));
+  sezione.replaceChildren(titolo, el("div", { className: "area-giocatore" }, campo, mucchi(g, umano)));
+}
+
+// Grimorio e cimitero come sul tavolo vero: il grimorio è coperto (si vede quante carte ha; con Field of Dreams
+// la prima è scoperta), il cimitero mostra l'ultima carta finita lì e si apre con un clic.
+function mucchi(g, umano) {
   const chiave = umano ? "tu" : "avversaria";
-  if (g.cimitero.length) titolo.append(el("button", { type: "button", className: "secondario cimitero-bottone",
-    textContent: `Cimitero (${g.cimitero.length})`,
-    onclick: (e) => { e.stopPropagation(); cimiteroAperto = cimiteroAperto === chiave ? null : chiave; disegna(); } }));
-  sezione.replaceChildren(titolo, ...righe);
-  if (!g.campo.length) sezione.append(el("div", { className: "vuoto", textContent: "Nessun permanente in campo" }));
+  const grimorio = el("div", { className: "mucchio grimorio", title: g.cima
+      ? `Grimorio: ${g.grimorio} carte. In cima, scoperta per Field of Dreams: ${g.cima}` : `Grimorio: ${g.grimorio} carte (coperte)` },
+    g.cima ? conCarta(el("div", { className: "carta mucchio-carta" }, faccia({ nome: g.cima, tipo: "", costo: "", testo: "" })), g.cima)
+      : el("div", { className: "carta mucchio-carta dorso-grande" }),
+    el("span", { className: "conta", textContent: g.grimorio }),
+    el("span", { className: "nome-mucchio", textContent: g.cima ? "Grimorio · cima scoperta" : "Grimorio" }));
+  const ultima = g.cimitero[g.cimitero.length - 1];
+  const cimitero = el("div", { className: "mucchio cimitero" + (g.cimitero.length ? " pieno" : ""),
+    title: g.cimitero.length ? `Cimitero: ${g.cimitero.length} carte — clic per vederle tutte` : "Cimitero vuoto",
+    onclick: (e) => { e.stopPropagation(); if (!g.cimitero.length) return; cimiteroAperto = cimiteroAperto === chiave ? null : chiave; disegna(); } },
+    ultima ? conCarta(el("div", { className: "carta mucchio-carta" }, faccia(ultima)), ultima.nome)
+      : el("div", { className: "carta mucchio-carta vuoto-mucchio" }),
+    el("span", { className: "conta", textContent: g.cimitero.length }),
+    el("span", { className: "nome-mucchio", textContent: "Cimitero" }));
+  return el("div", { className: "mucchi" }, grimorio, cimitero);
 }
 
 // Il cimitero si apre in un riquadro con le immagini delle carte (l'ultima entrata per prima).

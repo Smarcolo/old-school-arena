@@ -45,7 +45,9 @@ python -m uvicorn app.api.main:app
   anche tapparsi per darsi +1/+2 mentre blocca); nella fase finale dell'avversaria ti fermi se hai un istantaneo
   (Ancestral Recall) o un'abilità da usare.
 - A fine turno, con più di 7 carte in mano, scegli cosa scartare cliccando le carte.
-- Con Field of Dreams in campo, accanto al nome di ogni giocatore compare la carta in cima al suo grimorio.
+- Accanto al campo di ogni giocatore ci sono il grimorio (coperto, con il numero di carte) e il cimitero (si vede
+  l'ultima carta, con il numero; clic per vederle tutte), tuoi e dell'avversaria, come sul tavolo vero.
+- Con Field of Dreams in campo la carta in cima a ogni grimorio è scoperta sopra il mazzo.
 - Si gioca solo con i clic: carta in mano = giocala; tua creatura = attacca (nella fase principale 1, poi
   «⚔ Attacca con N» in alto) o usa un'abilità (se può fare entrambe compare un piccolo menu); terra = mana.
   Per le magie con bersaglio clicchi la magia e poi il bersaglio («Annulla» per ripensarci).

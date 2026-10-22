@@ -283,3 +283,20 @@ body.tavolo .scelta-mazzi label { white-space: nowrap; }
 @media (max-width: 1100px) { .editor { grid-template-columns: 1fr; } }
 
 main.editor, main.torneo { display: grid; align-items: start; gap: 1rem; padding: 1rem; }
+
+/* Grimorio e cimitero accanto al campo, come sul tavolo */
+.area-giocatore { display: flex; gap: .8rem; align-items: flex-start; }
+.area-giocatore .campo { flex: 1; min-width: 0; }
+.mucchi { display: flex; gap: .6rem; flex: none; padding-top: 4px; }
+.mucchio { position: relative; display: flex; flex-direction: column; align-items: center; gap: .15rem; }
+.mucchio .mucchio-carta { --l: calc(var(--h) * .7176 * .8); cursor: default; }
+.mucchio.cimitero.pieno .mucchio-carta { cursor: pointer; }
+.mucchio.cimitero.pieno:hover .mucchio-carta { outline: 2px solid var(--accento); }
+.mucchio.grimorio .mucchio-carta { box-shadow: 2px 2px 0 #1a110a, 4px 4px 0 #2a1c10, 0 3px 8px #000a; }
+.dorso-grande { background: radial-gradient(ellipse at center, #b07a3c 0 28%, #5a3a1c 30% 58%, #3a2614 60%); border: 3px solid #1a110a; }
+.vuoto-mucchio { background: transparent; border: 2px dashed #fff3; box-shadow: none; }
+.mucchio .conta { position: absolute; top: calc(var(--h) * .8 * .5 - .8rem); left: 50%; transform: translateX(-50%);
+  background: #000c; color: #fff; font: bold .95rem/1.4 system-ui, sans-serif; padding: 0 .5rem; border-radius: 999px; border: 1px solid var(--accento); }
+.mucchio .nome-mucchio { font-size: .7rem; opacity: .75; text-transform: uppercase; letter-spacing: .04em; }
+.mucchio .mucchio-carta { overflow: hidden; min-height: 0; height: calc(var(--l) / .7176); }
+.mucchio .mucchio-carta .faccia-testo { font-size: 8px; }

@@ -16,10 +16,26 @@ from dataclasses import dataclass, field
 import httpx
 
 from app.cards import mazzi
+from app.config import DATI
 
 BASE = "https://www.tcdecks.net/"
 FORMATO = BASE + "format.php?format=Old+School"
-HEADERS = {"User-Agent": "OldSchoolArena/0.1 (uso personale)"}
+# Intestazioni da browser normale: alcuni siti rifiutano le richieste con un nome di programma sconosciuto
+HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                         "Chrome/124.0 Safari/537.36",
+           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+           "Accept-Language": "it-IT,it;q=0.9,en;q=0.8"}
+DIAGNOSI = DATI / "tcdecks_diagnosi"  # le pagine dell'ultimo tentativo, per capire cosa non va
+
+
+def _ricorda_pagina(nome: str, url: str, stato: int, testo: str) -> None:
+    """Salva la pagina scaricata (url e codice in testa) in data/tcdecks_diagnosi/: se il caricamento non funziona
+    si possono mandare a chi sistema il programma."""
+    try:
+        DIAGNOSI.mkdir(parents=True, exist_ok=True)
+        (DIAGNOSI / f"{nome}.html").write_text(f"<!-- {url} · HTTP {stato} -->\n{testo}", encoding="utf-8")
+    except OSError:
+        pass
 ORIGINE = "tcdecks"
 
 
@@ -48,10 +64,15 @@ def _testo(frammento: str) -> str:
     return " ".join(html_lib.unescape(re.sub(r"<[^>]+>", " ", frammento)).split())
 
 
+# href="deck.php?id=123", 'deck.php?id=123', ./deck.php?id=123, https://www.tcdecks.net/deck.php?id=123 (non i mazzi:
+# quelli hanno &iddeck= dopo il numero)
+_LINK_TORNEO = re.compile(r"""href=["']?(?:[^"'\s>]*/)?deck\.php\?id=(\d+)(?:["'][^>]*)?>(.*?)</a>""", re.S | re.I)
+
+
 def tornei_recenti(pagina: str) -> list[Torneo]:
     """Link ai tornei nell'ordine della pagina (TCDecks li elenca dal più recente)."""
     visti, tornei = set(), []
-    for m in re.finditer(r'href="(?:https?://www\.tcdecks\.net/)?deck\.php\?id=(\d+)"[^>]*>(.*?)</a>', pagina, re.S | re.I):
+    for m in _LINK_TORNEO.finditer(pagina):
         if m.group(1) not in visti and (nome := _testo(m.group(2))):
             visti.add(m.group(1))
             tornei.append(Torneo(m.group(1), nome))
@@ -63,7 +84,8 @@ def mazzi_del_torneo(pagina: str, id_torneo: str, quanti: int = 8) -> list[VoceM
     voci = []
     righe = re.findall(r"<tr[^>]*>(.*?)</tr>", pagina, re.S | re.I) or [pagina]
     for riga in righe:
-        for m in re.finditer(rf'href="[^"]*deck\.php\?id={id_torneo}&(?:amp;)?iddeck=(\d+)"[^>]*>(.*?)</a>', riga, re.S | re.I):
+        for m in re.finditer(rf"""href=["']?[^"'>]*deck\.php\?id={id_torneo}&(?:amp;)?iddeck=(\d+)["']?[^>]*>(.*?)</a>""",
+                             riga, re.S | re.I):
             if any(v.iddeck == m.group(1) for v in voci):
                 continue
             celle = [_testo(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", riga, re.S | re.I)]
@@ -152,31 +174,53 @@ class TopOtto:
 
 
 def carica_torneo(conn, nome: str = "", get=httpx.get, pausa: float = 1.0) -> TopOtto:
-    """La top 8 di un torneo cercato per nome tra quelli della pagina del formato (vuoto = il più recente).
-    I mazzi vengono anche salvati (origine "tcdecks"). Senza rete usa quelli già salvati di quel torneo."""
-    def scarica(url: str) -> str:
+    """La top 8 di un torneo cercato per nome tra quelli della pagina del formato (vuoto = il più recente), oppure
+    dato con l'indirizzo della sua pagina (deck.php?id=...). I mazzi vengono anche salvati (origine "tcdecks").
+    Senza rete usa quelli già salvati di quel torneo. Le pagine scaricate restano in data/tcdecks_diagnosi/."""
+    pagine = 0
+
+    def scarica(url: str, nome_file: str) -> str:
+        nonlocal pagine
         risposta = get(url, headers=HEADERS, timeout=30, follow_redirects=True)
-        risposta.raise_for_status()
+        pagine += 1
+        _ricorda_pagina(f"{pagine:02d}-{nome_file}", url, risposta.status_code, risposta.text)
+        if risposta.status_code != 200:
+            raise ValueError(f"TCDecks ha risposto con il codice {risposta.status_code} a {url}")
         time.sleep(pausa)
         return risposta.text
 
-    try:
-        tornei = tornei_recenti(scarica(FORMATO))
-    except Exception as e:
-        return _top_otto_salvata(conn, nome, f"TCDecks non raggiungibile ({e})")
-    cercato = nome.strip().lower()
-    torneo = next((t for t in tornei if cercato in t.nome.lower()), None) if cercato else (tornei[0] if tornei else None)
-    if torneo is None:
-        return _top_otto_salvata(conn, nome, f"torneo «{nome}» non trovato tra gli ultimi su TCDecks")
+    if m := re.search(r"deck\.php\?id=(\d+)", nome):  # indirizzo della pagina del torneo incollato
+        torneo = Torneo(m.group(1), f"torneo {m.group(1)}")
+    else:
+        try:
+            pagina = scarica(FORMATO, "elenco-tornei")
+        except Exception as e:
+            return _top_otto_salvata(conn, nome, f"TCDecks non raggiungibile ({e})")
+        tornei = tornei_recenti(pagina)
+        if not tornei:
+            return _top_otto_salvata(conn, nome, "nella pagina dei tornei Old School di TCDecks non ho trovato tornei "
+                                                 f"(pagina salvata in {DIAGNOSI})")
+        cercato = nome.strip().lower()
+        torneo = next((t for t in tornei if cercato in t.nome.lower()), None) if cercato else tornei[0]
+        if torneo is None:
+            simili = ", ".join(t.nome for t in tornei[:8])
+            return _top_otto_salvata(conn, nome, f"torneo «{nome}» non trovato tra gli ultimi su TCDecks (ci sono: {simili})")
     risultato = TopOtto(torneo.nome)
     try:
-        voci = mazzi_del_torneo(scarica(f"{BASE}deck.php?id={torneo.id}"), torneo.id, 8)
+        pagina_torneo = scarica(f"{BASE}deck.php?id={torneo.id}", "torneo")
+        voci = mazzi_del_torneo(pagina_torneo, torneo.id, 8)
+        if m := re.search(r"<title>(.*?)</title>", pagina_torneo, re.S | re.I):
+            risultato.torneo = _testo(m.group(1)).split(" - ")[0].strip() or risultato.torneo
     except Exception as e:
         risultato.errori.append(f"pagina del torneo non leggibile: {e}")
         return risultato
+    if not voci:
+        risultato.errori.append(f"nella pagina del torneo non ho trovato i mazzi (pagina salvata in {DIAGNOSI})")
+        return risultato
     for voce in voci:
         try:
-            mazzo, side = lista_dal_mazzo(scarica(f"{BASE}deck.php?id={torneo.id}&iddeck={voce.iddeck}"))
+            mazzo, side = lista_dal_mazzo(scarica(f"{BASE}deck.php?id={torneo.id}&iddeck={voce.iddeck}",
+                                                  f"mazzo-{voce.posizione}"))
         except Exception as e:
             risultato.errori.append(f"{voce.nome}: {e}")
             continue

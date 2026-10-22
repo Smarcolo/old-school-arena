@@ -7,3 +7,4 @@ data/bulk/
 data/immagini/*
 !data/immagini/.gitkeep
 data/password.txt
+data/tcdecks_diagnosi/

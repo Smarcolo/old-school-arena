@@ -53,6 +53,7 @@ def test_lista_dal_mazzo_in_due_formati():
 class Pagina:
     def __init__(self, text):
         self.text = text
+        self.status_code = 200
 
     def raise_for_status(self):
         pass
@@ -143,3 +144,24 @@ def test_nomi_con_accenti_arabi_e_pari_merito():
     assert mazzo == {"Dandân": 4, "Ring of Ma'rûf": 1, "El-Hajjâj": 1}
     righe = "".join(f'<tr><td>5</td><td><a href="deck.php?id=9&iddeck={i}">M{i}</a></td></tr>' for i in range(4))
     assert [v.posizione for v in tcdecks.mazzi_del_torneo(righe, "9")] == [1, 2, 3, 4]
+
+
+def test_carica_torneo_dall_indirizzo_e_diagnosi(conn, tmp_path, monkeypatch):
+    monkeypatch.setattr(tcdecks, "DIAGNOSI", tmp_path / "diagnosi")
+    lista = MAZZO_BR.replace("20 Plateau", "48 Plateau")
+    get = finto_get({"deck.php?id=43448": TORNEO, "iddeck=900001": lista, "iddeck=900002": lista, "iddeck=900003": lista})
+    top = tcdecks.carica_torneo(conn, "https://www.tcdecks.net/deck.php?id=43448", get=get, pausa=0)
+    assert len(top.mazzi) == 3  # senza passare dall'elenco dei tornei
+    salvate = sorted(f.name for f in (tmp_path / "diagnosi").iterdir())
+    assert salvate[0] == "01-torneo.html" and len(salvate) == 4
+
+
+def test_carica_torneo_spiega_cosa_non_va(conn, tmp_path, monkeypatch):
+    monkeypatch.setattr(tcdecks, "DIAGNOSI", tmp_path / "diagnosi")
+    top = tcdecks.carica_torneo(conn, "plague", get=finto_get({"format=Old+School": FORMATO}), pausa=0)
+    assert any("non trovato" in e and "ci sono:" in e for e in top.errori)
+
+    class Bloccato:
+        status_code, text = 403, "Just a moment..."
+    top = tcdecks.carica_torneo(conn, "", get=lambda url, **kw: Bloccato(), pausa=0)
+    assert any("codice 403" in e for e in top.errori)

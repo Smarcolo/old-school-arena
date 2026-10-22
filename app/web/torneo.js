@@ -54,7 +54,9 @@ $("crea").onclick = async () => {
     avvisa(torneo.avvisi && torneo.avvisi.length ? "Attenzione: " + torneo.avvisi.join("; ") : "Top 8 pronta.");
     disegna();
   } catch (e) {
-    avvisa("Errore: " + e.message);
+    avvisa("Errore: " + e.message + " — Se non si risolve, le pagine ricevute da TCDecks sono nella cartella " +
+      "data\\tcdecks_diagnosi del gioco: mandale a chi sistema il programma. Puoi anche incollare qui l'indirizzo " +
+      "della pagina del torneo su tcdecks.net.");
   } finally {
     $("crea").disabled = false;
   }

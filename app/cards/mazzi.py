@@ -147,6 +147,8 @@ def analizza(conn: sqlite3.Connection, mazzo: dict[str, int], sideboard: dict[st
         "problemi": problemi, "avvisi": avvisi, "legale": not problemi,
         "giocabile": not sconosciute and totale >= MINIMO_PER_GIOCARE,
         "curva": {str(k): curva[k] for k in range(7)}, "colori": dict(colori),
+        "carte": {n: {"tipo": c.tipo, "costo": c.costo, "forza": c.forza, "costituzione": c.costituzione, "testo": c.testo}
+                  for n in list(mazzo) + list(sideboard) if (c := database.cerca(conn, n))},  # per il deck builder
     }
 
 

@@ -29,6 +29,11 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   `vista` manda per ogni carta dell'umano `giocabile` (mano: lanciabile ora con almeno un bersaglio valido;
   campo: abilità attivabile) e per il combattimento i passi fatti. Immagini sempre con cornice 1993
   (`immagini.STAMPE_PREFERITE`, ricerca `frame:1993`).
+- Deck builder (`mazzi.js`): modello `mazzo`/`side` in JS, testo sempre allineato (si salva quello);
+  `analizza` manda `carte` (tipo, costo...) per raggruppare; `/api/carte` ha i filtri `colore` e `tipo`.
+- Consiglio di sideboard (`ai/consigli.py`, `/api/partite/{id}/consiglio-sideboard`): giudica le carte dal testo
+  Oracle (odio di colore, distruzione artefatti/incantesimi, rimozioni, minacce, contromagie) contro le carte
+  dell'avversaria viste (`Incontro.viste`); pop-up a fine partita nel tavolo.
 - `app/judge/` — indice FTS5 dei testi in `data/regole/*.md` e risposte del giudice.
 - `app/ai/` — avversaria. Usa solo le funzioni pubbliche di `engine`.
 - `app/commands/` — `parser.py` (testo → Comando) ed `esegui.py` (Comando → azione + messaggio).

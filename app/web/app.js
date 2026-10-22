@@ -248,7 +248,8 @@ function disegnaBarraCombattimento() {
         ? `Partita ${inc.numero} finita pari (non conta). Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}.`
         : `Partita ${inc.numero} vinta da ${partita.vincitore}. Incontro ${inc.vittorie["Tu"]}-${inc.vittorie["Avversaria"]}.`;
     barra.replaceChildren(el("span", { textContent: fine }),
-      ...(inc.prossima_possibile ? [bottone("Sideboard", apriSideboard), bottone(`Partita ${inc.numero + 1}`, prossimaPartita)] : []),
+      ...(inc.prossima_possibile ? [bottone("Consiglio sideboard", mostraConsiglio), bottone("Sideboard", apriSideboard),
+        bottone(`Partita ${inc.numero + 1}`, prossimaPartita)] : []),
       ...(inc.torneo && inc.vincitore ? [bottone("Torna al torneo", () => { location.href = `torneo.html?id=${inc.torneo}`; })] : []));
     return;
   }
@@ -509,6 +510,10 @@ function disegna() {
     : [el("span", { className: "dettaglio", textContent: "vuota" })]));
   disegnaBarraCombattimento();
   disegnaGiocataAvversaria();
+  if (inc && inc.prossima_possibile && consiglioMostratoPer !== `${partita.id}:${inc.numero}`) {
+    consiglioMostratoPer = `${partita.id}:${inc.numero}`;  // a fine partita il consiglio compare da solo, una volta
+    mostraConsiglio();
+  }
   disegnaCimitero();
   $("eventi").replaceChildren(...partita.eventi.slice().reverse().map((t) => el("li", { textContent: t })));
 }
@@ -679,3 +684,44 @@ function disegnaGiocataAvversaria() {
 $("vista-cimitero").addEventListener("click", (e) => {
   if (e.target.id === "vista-cimitero") { cimiteroAperto = null; disegna(); }  // clic fuori dal riquadro
 });
+
+// Consiglio di sideboard tra una partita e l'altra (dalle carte dell'avversaria viste finora)
+let consiglioMostratoPer = null;
+
+async function mostraConsiglio() {
+  let c;
+  try {
+    c = await api(`/api/partite/${partita.id}/consiglio-sideboard`);
+  } catch (e) {
+    return avvisa("Errore: " + e.message);
+  }
+  const box = $("consiglio-sideboard");
+  const riga = (nome, n, motivo, segno) => el("li", {},
+    conCarta(el("b", { textContent: `${segno} ${n} ${nome}` }), nome), el("span", { className: "dettaglio", textContent: ` — ${motivo}` }));
+  const prossima = partita.incontro.numero + 1;
+  const vuoto = !Object.keys(c.entra).length;
+  box.replaceChildren(el("div", { className: "riquadro" },
+    el("h2", { textContent: `Sideboard per la partita ${prossima}` }),
+    el("p", { className: "dettaglio", textContent: c.carte_viste
+      ? `Hai visto ${c.carte_viste} carte dell'avversaria (${c.visto}).` : "Non hai ancora visto carte dell'avversaria." }),
+    ...(vuoto ? [el("p", { textContent: "Consiglio: nessun cambio. Le carte della tua sideboard non servono più di quelle che hai nel mazzo contro quello che hai visto." })]
+      : [el("h3", { textContent: "Metti dentro" }),
+         el("ul", {}, ...Object.entries(c.entra).map(([n, q]) => riga(n, q, c.motivi_entra[n], "+"))),
+         el("h3", { textContent: "Togli" }),
+         el("ul", {}, ...Object.entries(c.esce).map(([n, q]) => riga(n, q, c.motivi_esce[n], "−")))]),
+    el("div", { className: "riga-bottoni" },
+      ...(vuoto ? [] : [
+        bottone(`Applica e gioca la partita ${prossima}`, async () => { box.hidden = true; await applicaConsiglio(c); prossimaPartita(); }),
+        bottone("Applica e ritocca", async () => { box.hidden = true; cambi = { entra: { ...c.entra }, esce: { ...c.esce } }; disegnaSideboard(); })]),
+      bottone(vuoto ? "Ok" : "Lo faccio io", () => { box.hidden = true; }))));
+  box.hidden = false;
+}
+
+async function applicaConsiglio(c) {
+  try {
+    partita = await api(`/api/partite/${partita.id}/sideboard`, { method: "POST", body: JSON.stringify({ entra: c.entra, esce: c.esce }) });
+    avvisa("Sideboard fatta come consigliato.");
+  } catch (e) {
+    avvisa("Errore: " + e.message);
+  }
+}

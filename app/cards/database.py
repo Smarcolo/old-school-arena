@@ -94,10 +94,21 @@ class CostruttoreMazzi:
         return mazzo_da_lista(self._connessioni[percorso], lista)
 
 
-def cerca_per_testo(conn: sqlite3.Connection, testo: str, limite: int = 30) -> list[dict]:
+def cerca_per_testo(conn: sqlite3.Connection, testo: str, limite: int = 30, colore: str = "", tipo: str = "") -> list[dict]:
+    """Carte per nome (o pezzo di nome), con filtri facoltativi: colore W/U/B/R/G (nel costo) o C (incolore,
+    terre comprese) e tipo (es. «Creature», «Instant», «Land»)."""
+    condizioni, parametri = ["nome LIKE ?"], [f"%{testo.strip()}%"]
+    if colore in ("W", "U", "B", "R", "G"):
+        condizioni.append("costo LIKE ?")
+        parametri.append(f"%{{{colore}}}%")
+    elif colore == "C":
+        condizioni.append(" AND ".join(f"costo NOT LIKE '%{{{c}}}%'" for c in "WUBRG"))
+    if tipo:
+        condizioni.append("tipo LIKE ?")
+        parametri.append(f"%{tipo}%")
     righe = conn.execute(
-        "SELECT nome, tipo, costo, forza, costituzione, testo FROM carte WHERE nome LIKE ? "
+        f"SELECT nome, tipo, costo, forza, costituzione, testo FROM carte WHERE {' AND '.join(condizioni)} "
         "ORDER BY nome LIKE ? DESC, nome LIMIT ?",
-        (f"%{testo.strip()}%", f"{testo.strip()}%", limite),
+        (*parametri, f"{testo.strip()}%", limite),
     ).fetchall()
     return [dict(r) for r in righe]

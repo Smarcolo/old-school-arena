@@ -50,6 +50,19 @@ python -m uvicorn app.api.main:app
   «⚔ Attacca con N» in alto) o usa un'abilità (se può fare entrambe compare un piccolo menu); terra = mana.
   Per le magie con bersaglio clicchi la magia e poi il bersaglio («Annulla» per ripensarci).
 
+## Deck builder («Mazzi» in alto)
+- Scheda «Carte»: il mazzo diviso per tipo (creature, istantanei, stregonerie, artefatti, incantesimi, terre) con
+  la miniatura di ogni carta e i pulsanti − / + / «→ SB» (sposta in sideboard), e la sideboard sotto.
+- A destra «Aggiungi carte»: cerca per nome, filtra per colore (W U B R G, ◇ = incolore e terre) e tipo; clic
+  sull'immagine aggiunge una copia al mazzo, «SB» alla sideboard.
+- Scheda «Testo / incolla lista»: incolli una lista intera (anche copiata da TCDecks) e la scheda «Carte» si aggiorna.
+- Sotto, l'analisi: legalità Swedish, curva di mana, carte che il motore non sa ancora giocare.
+
+## Sideboard tra una partita e l'altra
+A fine partita compare il consiglio: cosa mettere dentro e cosa togliere contro l'avversaria, con il motivo
+(es. «+3 Red Elemental Blast — l'avversaria gioca blu (Counterspell, Ancestral Recall)»), basato sulle carte sue
+che hai visto finora. «Applica e gioca», «Applica e ritocca» (apre il pannello Sideboard già compilato) o «Lo faccio io».
+
 ## Mazzi pronti
 - «Millstone Dreams (Mr. Pox)»: 2° posto TCDecks, con sideboard. Chaos Orb non si può lanciare sul tavolo: qui
   distrugge un permanente a tua scelta e poi se stesso. Sylvan Library pesca sempre le due carte in più (poi scegli

@@ -19,6 +19,7 @@ from app.engine.effetti import bersaglio_legale
 from app.engine.validazione import puo_attivare, puo_giocare_terra, puo_lanciare, puo_tappare, tipo_bersaglio
 from app.engine.zone import Zona
 from app.judge.giudice import Giudice
+from app.ai import consigli
 from app.ai.sideboard import scegli_cambi
 from app.incontro import Incontro, Lista
 from app.torneo import Partecipante, Torneo
@@ -330,6 +331,17 @@ def cambia_sideboard(id_partita: str, cambi: CambiSideboard) -> dict:
     return vista_incontro(inc)
 
 
+@app.get("/api/partite/{id_partita}/consiglio-sideboard")
+def consiglio_sideboard(id_partita: str) -> dict:
+    """Cosa mettere e togliere contro l'avversaria, dalle carte sue viste finora nell'incontro."""
+    inc = _incontro(id_partita)
+    lista = inc.liste[UMANO]
+    viste = inc.viste[AI]
+    nomi = set(lista.mazzo) | set(lista.sideboard) | set(viste)
+    info = {n: c for n in nomi if (c := database.cerca(conn_carte, n))}
+    return consigli.consiglia(lista.sideboard, lista.mazzo, viste, info)
+
+
 def _sideboard_avversaria(inc: Incontro) -> None:
     lista = inc.liste[AI]
     nomi = set(lista.mazzo) | set(lista.sideboard) | set(inc.viste[UMANO])
@@ -356,8 +368,8 @@ def prossima_partita(id_partita: str) -> dict:
 
 
 @app.get("/api/carte")
-def cerca_carte(q: str = "", limite: int = 30) -> list[dict]:
-    return database.cerca_per_testo(conn_carte, q, min(limite, 100))
+def cerca_carte(q: str = "", limite: int = 30, colore: str = "", tipo: str = "") -> list[dict]:
+    return database.cerca_per_testo(conn_carte, q, min(limite, 100), colore, tipo)
 
 
 @app.get("/api/mazzi")

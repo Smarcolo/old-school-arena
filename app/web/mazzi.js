@@ -35,9 +35,13 @@ function mostraAnalisi(a) {
   $("analisi").replaceChildren(...blocchi);
 }
 
-async function analizza() {
+async function analizza(dalTesto = false) {
   try {
-    mostraAnalisi(await api("/api/mazzi/analizza", { method: "POST", body: JSON.stringify({ testo: $("lista").value }) }));
+    const a = await api("/api/mazzi/analizza", { method: "POST", body: JSON.stringify({ testo: $("lista").value }) });
+    Object.assign(infoCarte, a.carte || {});
+    if (dalTesto) { mazzo = { ...a.mazzo }; side = { ...a.sideboard }; }
+    disegnaLista();
+    mostraAnalisi(a);
   } catch (e) {
     avvisa("Errore: " + e.message);
   }
@@ -76,36 +80,126 @@ async function apri(nome) {
   const m = await api(`/api/mazzi/${encodeURIComponent(nome)}`);
   $("nome").value = m.nome;
   $("lista").value = m.testo;
-  mostraAnalisi(m);
+  caricaModello(m);
   avvisa(`Aperto «${m.nome}».`);
 }
 
-function aggiungi(nome) {
-  const righe = $("lista").value.split("\n");
-  const i = righe.findIndex((r) => r.replace(/^\d+\s*x?\s+/i, "").trim().toLowerCase() === nome.toLowerCase());
-  if (i >= 0) {
-    const n = parseInt(righe[i], 10) || 1;
-    righe[i] = `${n + 1} ${nome}`;
-  } else {
-    const sb = righe.findIndex((r) => /^(sideboard|sb):?$/i.test(r.trim()));
-    righe.splice(sb >= 0 ? sb : righe.length, 0, `1 ${nome}`);
-  }
-  $("lista").value = righe.join("\n").replace(/^\n+/, "");
-  analizza();
+// --- Deck builder: la lista vive in `mazzo`/`side`; il testo è sempre allineato (si salva quello) ---------
+let mazzo = {}, side = {}, infoCarte = {};
+const GRUPPI = [["Creature", "Creature"], ["Instant", "Istantanei"], ["Sorcery", "Stregonerie"], ["Artifact", "Artefatti"],
+  ["Enchantment", "Incantesimi"], ["Land", "Terre"]];
+
+function gruppoDi(nome) {
+  const tipo = (infoCarte[nome] || {}).tipo || "";
+  const g = GRUPPI.find(([chiave]) => tipo.includes(chiave));
+  return g ? g[1] : "Altro";
 }
 
-$("lista").addEventListener("input", () => {
-  clearTimeout(ritardoAnalisi);
-  ritardoAnalisi = setTimeout(analizza, 400);
-});
+function testoDaLista() {
+  const righe = (lista) => Object.entries(lista).filter(([, n]) => n > 0).map(([nome, n]) => `${n} ${nome}`);
+  return [...righe(mazzo), ...(Object.keys(side).length ? ["", "Sideboard", ...righe(side)] : [])].join("\n");
+}
 
-$("cerca").addEventListener("input", async () => {
-  const carte = await api(`/api/carte?q=${encodeURIComponent($("cerca").value)}`);
-  $("risultati").replaceChildren(...carte.map((c) => conCarta(el("li", {},
-    el("button", { type: "button", className: "link", textContent: `+ ${c.nome}`,
-      title: `${c.tipo} ${c.costo || ""}\n${c.testo || ""}`, onclick: () => aggiungi(c.nome) }),
-    el("span", { className: "dettaglio", textContent: ` ${c.costo || ""} ${c.forza != null ? c.forza + "/" + c.costituzione : ""}` })), c.nome)));
-});
+function cambia(dove, nome, delta) {
+  const lista = dove === "side" ? side : mazzo;
+  lista[nome] = Math.max(0, (lista[nome] || 0) + delta);
+  if (!lista[nome]) delete lista[nome];
+  $("lista").value = testoDaLista();
+  disegnaLista();
+  clearTimeout(ritardoAnalisi);
+  ritardoAnalisi = setTimeout(analizza, 300);
+}
+
+function sposta(da, a, nome) {
+  cambia(da, nome, -1);
+  cambia(a, nome, +1);
+}
+
+function miniatura(nome) {
+  const img = el("img", { src: urlImmagine(nome), alt: "", loading: "lazy" });
+  img.onerror = () => img.remove();
+  return conCarta(el("span", { className: "miniatura" }, img), nome);
+}
+
+function rigaCarta(nome, n, dove) {
+  const info = infoCarte[nome] || {};
+  return conCarta(el("div", { className: "riga-carta" },
+    miniatura(nome),
+    el("span", { className: "quante", textContent: n }),
+    el("span", { className: "nome-carta", textContent: nome }),
+    el("span", { className: "costo-carta", textContent: info.costo || "" }),
+    el("button", { type: "button", textContent: "−", title: "Togli una copia", onclick: () => cambia(dove, nome, -1) }),
+    el("button", { type: "button", textContent: "+", title: "Aggiungi una copia", onclick: () => cambia(dove, nome, +1) }),
+    el("button", { type: "button", className: "secondario", textContent: dove === "side" ? "→ Mazzo" : "→ SB",
+      title: dove === "side" ? "Sposta una copia nel mazzo" : "Sposta una copia in sideboard",
+      onclick: () => sposta(dove, dove === "side" ? "mazzo" : "side", nome) })), nome);
+}
+
+function disegnaLista() {
+  const tot = (l) => Object.values(l).reduce((a, b) => a + b, 0);
+  $("totali").textContent = `Mazzo ${tot(mazzo)} · Sideboard ${tot(side)}`;
+  const blocchi = [];
+  const perGruppo = {};
+  for (const [nome, n] of Object.entries(mazzo)) (perGruppo[gruppoDi(nome)] ||= []).push([nome, n]);
+  for (const [, titolo] of [...GRUPPI, ["", "Altro"]]) {
+    const voci = perGruppo[titolo];
+    if (!voci) continue;
+    blocchi.push(el("h3", { textContent: `${titolo} (${voci.reduce((a, [, n]) => a + n, 0)})` }),
+      ...voci.sort((a, b) => a[0].localeCompare(b[0])).map(([nome, n]) => rigaCarta(nome, n, "mazzo")));
+  }
+  if (!blocchi.length) blocchi.push(el("p", { className: "dettaglio", textContent:
+    "Mazzo vuoto: aggiungi carte dalla ricerca a destra, oppure incolla una lista nella scheda «Testo»." }));
+  const voci = Object.entries(side).sort((a, b) => a[0].localeCompare(b[0]));
+  blocchi.push(el("h3", { className: "titolo-side", textContent: `Sideboard (${tot(side)})` }),
+    ...(voci.length ? voci.map(([nome, n]) => rigaCarta(nome, n, "side")) : [el("p", { className: "dettaglio", textContent: "Vuota." })]));
+  $("vista-carte").replaceChildren(...blocchi);
+}
+
+let ultimaRicerca = 0;  // le risposte arrivate in ritardo (ricerca già cambiata) si scartano
+
+async function cercaCarte() {
+  const numero = ++ultimaRicerca;
+  const colore = document.querySelector("#filtri-colore .filtro.attivo")?.dataset.colore || "";
+  const parametri = new URLSearchParams({ q: $("cerca").value, limite: 60, colore, tipo: $("filtro-tipo").value });
+  const carte = await api(`/api/carte?${parametri}`);
+  if (numero !== ultimaRicerca) return;
+  $("risultati").replaceChildren(...carte.map((c) => {
+    infoCarte[c.nome] = c;
+    return conCarta(el("div", { className: "tessera", title: `${c.tipo} ${c.costo || ""}\n${c.testo || ""}` },
+      el("div", { className: "carta-tessera", onclick: () => { cambia("mazzo", c.nome, +1); avvisa(`+1 ${c.nome} nel mazzo`); } },
+        faccia(c)),
+      el("div", { className: "bottoni-tessera" },
+        el("button", { type: "button", textContent: "+ Mazzo", onclick: () => cambia("mazzo", c.nome, +1) }),
+        el("button", { type: "button", className: "secondario", textContent: "SB", onclick: () => cambia("side", c.nome, +1) }))), c.nome);
+  }));
+}
+
+// faccia della carta: disegnata sotto, immagine sopra quando arriva
+function faccia(c) {
+  const contenitore = el("div", { className: "faccia" }, el("div", { className: "faccia-testo" },
+    el("div", { className: "riga-nome" }, el("b", { textContent: c.nome }), el("span", { textContent: c.costo || "" })),
+    el("div", { className: "riga-tipo", textContent: c.tipo || "" }),
+    el("div", { className: "riga-testo", textContent: c.testo || "" })));
+  const img = el("img", { src: urlImmagine(c.nome), alt: c.nome, loading: "lazy" });
+  img.onload = () => img.classList.add("caricata");
+  img.onerror = () => img.remove();
+  contenitore.append(img);
+  return contenitore;
+}
+
+let ritardoRicerca = null;
+$("cerca").addEventListener("input", () => { clearTimeout(ritardoRicerca); ritardoRicerca = setTimeout(cercaCarte, 250); });
+$("filtro-tipo").onchange = cercaCarte;
+document.querySelectorAll("#filtri-colore .filtro").forEach((b) => (b.onclick = () => {
+  const era = b.classList.contains("attivo");
+  document.querySelectorAll("#filtri-colore .filtro").forEach((x) => x.classList.remove("attivo"));
+  if (!era) b.classList.add("attivo");
+  cercaCarte();
+}));
+document.querySelectorAll(".scheda").forEach((b) => (b.onclick = () => {
+  document.querySelectorAll(".scheda").forEach((x) => x.classList.toggle("attiva", x === b));
+  document.querySelectorAll(".vista-scheda").forEach((v) => (v.hidden = v.id !== b.dataset.scheda));
+}));
 
 $("salva").onclick = async () => {
   const nome = $("nome").value.trim();
@@ -113,7 +207,7 @@ $("salva").onclick = async () => {
   try {
     const m = await api(`/api/mazzi/${encodeURIComponent(nome)}`, { method: "PUT", body: JSON.stringify({ testo: $("lista").value }) });
     $("lista").value = m.testo;
-    mostraAnalisi(m);
+    caricaModello(m);
     avvisa(`Salvato «${nome}».`);
     caricaElenco();
   } catch (e) {
@@ -128,6 +222,8 @@ $("elimina").onclick = async () => {
     await api(`/api/mazzi/${encodeURIComponent(nome)}`, { method: "DELETE" });
     $("nome").value = "";
     $("lista").value = "";
+    mazzo = {}; side = {};
+    disegnaLista();
     $("analisi").replaceChildren();
     avvisa(`Eliminato «${nome}».`);
     caricaElenco();
@@ -139,12 +235,23 @@ $("elimina").onclick = async () => {
 $("nuovo").onclick = () => {
   $("nome").value = "";
   $("lista").value = "";
+  mazzo = {}; side = {};
+  disegnaLista();
   $("analisi").replaceChildren();
   $("nome").focus();
 };
 
 caricaElenco();
-$("cerca").dispatchEvent(new Event("input"));
+cercaCarte();
+disegnaLista();
+
+function caricaModello(m) {
+  Object.assign(infoCarte, m.carte || {});
+  mazzo = { ...m.mazzo };
+  side = { ...m.sideboard };
+  disegnaLista();
+  mostraAnalisi(m);
+}
 
 $("url-tc").addEventListener("keydown", async (e) => {
   if (e.key !== "Enter" || !$("url-tc").value.trim()) return;

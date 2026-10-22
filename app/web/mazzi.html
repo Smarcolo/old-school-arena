@@ -25,10 +25,18 @@
     <ul id="elenco-tc"></ul>
   </section>
   <section class="pannello">
-    <label>Nome <input id="nome" autocomplete="off"></label>
-    <label>Lista (una carta per riga, es. «4 Lightning Bolt»; poi una riga «Sideboard»)
-      <textarea id="lista" rows="22" spellcheck="false"></textarea>
-    </label>
+    <label>Nome <input id="nome" autocomplete="off" placeholder="Nome del mazzo"></label>
+    <div class="schede">
+      <button type="button" class="scheda attiva" data-scheda="vista-carte">Carte</button>
+      <button type="button" class="scheda" data-scheda="vista-testo">Testo / incolla lista</button>
+      <span id="totali" class="dettaglio"></span>
+    </div>
+    <div id="vista-carte" class="vista-scheda"></div>
+    <div id="vista-testo" class="vista-scheda" hidden>
+      <label>Incolla qui una lista (anche copiata da TCDecks) o scrivila: «4 Lightning Bolt», poi una riga «Sideboard»
+        <textarea id="lista" rows="22" spellcheck="false"></textarea>
+      </label>
+    </div>
     <div class="riga-bottoni">
       <button id="salva" type="button">Salva</button>
       <button id="elimina" type="button">Elimina</button>
@@ -36,9 +44,23 @@
     <div id="analisi"></div>
   </section>
   <section class="pannello">
-    <h2>Cerca carte</h2>
-    <input id="cerca" placeholder="Nome della carta…" autocomplete="off">
-    <ul id="risultati"></ul>
+    <h2>Aggiungi carte</h2>
+    <input id="cerca" placeholder="Cerca per nome…" autocomplete="off">
+    <div class="filtri" id="filtri-colore">
+      <button type="button" class="filtro" data-colore="W" title="Bianco">W</button>
+      <button type="button" class="filtro" data-colore="U" title="Blu">U</button>
+      <button type="button" class="filtro" data-colore="B" title="Nero">B</button>
+      <button type="button" class="filtro" data-colore="R" title="Rosso">R</button>
+      <button type="button" class="filtro" data-colore="G" title="Verde">G</button>
+      <button type="button" class="filtro" data-colore="C" title="Incolore e terre">◇</button>
+    </div>
+    <select id="filtro-tipo">
+      <option value="">Tutti i tipi</option><option value="Creature">Creature</option><option value="Instant">Istantanei</option>
+      <option value="Sorcery">Stregonerie</option><option value="Artifact">Artefatti</option>
+      <option value="Enchantment">Incantesimi</option><option value="Land">Terre</option>
+    </select>
+    <p class="dettaglio">Clic sulla carta: una copia nel mazzo. «SB»: in sideboard.</p>
+    <div id="risultati" class="griglia-ricerca"></div>
   </section>
 </main>
 <p id="messaggio" role="status"></p>

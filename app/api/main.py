@@ -191,7 +191,8 @@ def vista(p: Partita) -> dict:
                  "danni": c.danni, "bersaglio": tipo_bersaglio(c),
                  "incanta": _nome_incantata(p, c), "abilita": _abilita(c), "scudi": c.scudi_rigenerazione,
                  "attivabili": [{"testo": a.testo, "bersaglio": a.bersaglio,
-                                 "ora": g.nome == UMANO and z == Zona.CAMPO and puo_attivare(p, UMANO, c, a) is None}
+                                 "ora": not (motivo := puo_attivare(p, UMANO, c, a)) if g.nome == UMANO and z == Zona.CAMPO else False,
+                                 "motivo": motivo if g.nome == UMANO and z == Zona.CAMPO else None}
                                 for a in analizza_abilita(c)],
                  "puo_attaccare": g.nome == UMANO and z == Zona.CAMPO and _puo_attaccare_ora(p, c),
                  **_mana_della_carta(p, g, c, z),

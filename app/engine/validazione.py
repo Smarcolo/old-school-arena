@@ -196,8 +196,14 @@ def puo_attivare(partita: Partita, nome_giocatore: str, carta: Carta, abilita, b
         return f"{carta.nome}: si attiva solo con esattamente sette carte in mano"
     if abilita.sacrifica_tipo and not da_sacrificare(partita, nome_giocatore, carta, abilita.sacrifica_tipo):
         return f"non hai un {'artefatto' if abilita.sacrifica_tipo == 'artefatto' else 'creatura'} da sacrificare"
-    fonti = fonti_di_mana(partita, nome_giocatore, carta if abilita.tappa else None)
+    # una terra che si anima (Mishra's Factory) non si paga col proprio mana: resterebbe tappata e non potrebbe
+    # né attaccare né bloccare
+    esclusa = carta if abilita.tappa or abilita.tipo == "anima" else None
+    fonti = fonti_di_mana(partita, nome_giocatore, esclusa)
     if mana.piano_pagamento(partita.giocatore(nome_giocatore).riserva, fonti, mana.analizza_costo(abilita.costo_mana)) is None:
+        if abilita.tipo == "anima":
+            return (f"per animare {carta.nome} serve un altro mana ({abilita.costo_mana}): se la tappi per pagare "
+                    "resta tappata e non può né attaccare né bloccare")
         return f"non hai abbastanza mana per l'abilità di {carta.nome} ({abilita.costo_mana})"
     if bersagli is not None:
         if abilita.bersaglio and len(bersagli) != 1:

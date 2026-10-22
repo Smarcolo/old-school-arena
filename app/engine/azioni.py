@@ -251,7 +251,7 @@ def attiva(partita: Partita, giocatore: str, carta: Carta, abilita, bersagli: li
     costo = mana.analizza_costo(abilita.costo_mana)
     # prima prova senza tappare la carta stessa (es. Mishra's Factory che si anima per attaccare)
     piano = mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore, carta), costo)
-    if piano is None:
+    if piano is None and abilita.tipo != "anima":  # animarsi col proprio mana non serve (vedi puo_attivare)
         piano = mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore, carta if abilita.tappa else None), costo)
     for fonte, colore in piano:
         tappa(partita, giocatore, fonte.carta, colore)

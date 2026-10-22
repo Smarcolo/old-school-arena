@@ -106,6 +106,10 @@ function suCampo(c, mio) {
       bloccanteScelto = c.id;
       blocchiScelti = blocchiScelti.filter(([, b]) => b !== c.id);
       avvisa(`Ora clicca la creatura attaccante che ${c.nome} deve bloccare.`);
+    } else if (mio) {
+      avvisa(c.tappata ? `${c.nome} è tappata e non può bloccare.`
+        : `${c.nome} non è una creatura: non può bloccare.` + (c.attivabili && c.attivabili.length
+          ? " Mishra's Factory va animata prima dei blocchi, quando ti fermi con «Ti attaccano!»." : ""));
     } else if (!mio && bloccanteScelto && partita.combattimento.attaccanti.includes(c.id)) {
       blocchiScelti.push([c.id, bloccanteScelto]);
       bloccanteScelto = null;
@@ -118,6 +122,8 @@ function suCampo(c, mio) {
   if (c.puo_attaccare) opzioni.push([attaccantiScelti.has(c.id) ? "Non attaccare" : "⚔ Attacca", () => scegliAttaccante(c)]);
   (c.attivabili || []).forEach((a, i) => {
     if (a.ora) opzioni.push([`Attiva ${descriviAbilita(a.testo)}`, () => attivaAbilita(c, a, i)]);
+    // abilità che ora non si può usare per mancanza di mana: si vede lo stesso, con il motivo
+    else if (a.motivo && a.motivo.includes("mana")) opzioni.push([`✕ ${descriviAbilita(a.testo)}`, () => avvisa(a.motivo)]);
   });
   // mana a mano: tappi tu le terre (scegliendo il colore) e poi lanci; la magia usa prima il mana in riserva
   // per le terre (Mishra's Factory, City of Brass...) il mana viene per primo nel menu: è l'uso più frequente

@@ -171,3 +171,19 @@ def test_tappi_city_of_brass_scegliendo_il_colore_e_poi_lanci():
     esegui_comando(p, "Tu", "AI", "gioca ancestral recall su me")
     isola = next(c for c in tu[Zona.CAMPO] if c.nome == "Island")
     assert not isola.tappata and len(tu[Zona.MANO]) == 3  # pagato col mana in riserva
+
+
+def test_mishra_factory_non_si_paga_da_sola_per_animarsi():
+    from app.engine.abilita import analizza_abilita
+    from app.engine.validazione import puo_attivare
+    p = partita_con_ai()
+    tu = p.giocatore("Tu")
+    fac = Carta("Mishra's Factory", "Land", "", None, None, FACTORY)
+    fac.entrata_nel_turno = 0
+    tu[Zona.CAMPO].append(fac)  # nessun altro mana
+    anima = analizza_abilita(fac)[0]
+    assert "serve un altro mana" in puo_attivare(p, "Tu", fac, anima)
+    tu[Zona.CAMPO].append(Carta("Forest", "Basic Land — Forest"))
+    assert puo_attivare(p, "Tu", fac, anima) is None
+    azioni.attiva(p, "Tu", fac, anima)
+    assert not fac.tappata

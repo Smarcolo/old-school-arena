@@ -57,6 +57,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   in `data/password.txt` creata la prima volta, indirizzo per l'iPad). Il middleware `password_dalla_rete` in
   main.py chiede la password (HTTP Basic) a chi non arriva da 127.0.0.1, solo se `OSA_PASSWORD` è impostata.
   `comune.js`: pressione lunga = anteprima della carta (iPad), il clic dopo la pressione si annulla.
+- `app/versione.py` — `VERSIONE` mostrata in alto nel tavolo (`/api/versione`): **aggiornarla a ogni consegna**.
+  I file del sito si servono con `Cache-Control: no-cache` (`FileDelSito`) perché Safari non tenga i vecchi.
 - `data/` — database, cache immagini, bulk Scryfall: generati, non versionati (vedi `.gitignore`).
 
 ## Regole del motore

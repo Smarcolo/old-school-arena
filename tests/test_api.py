@@ -112,3 +112,10 @@ def test_pesca_e_vita_bloccate_a_partita_finita():
     comando(p["id"], "concedo")
     r = comando(p["id"], "pesca 80")
     assert "Ora no" in r["messaggio"] and r["partita"]["vincitore"] == "Avversaria"
+
+
+def test_file_del_sito_sempre_ricontrollati_e_versione():
+    from app.versione import VERSIONE
+    for percorso in ("/index.html", "/app.js", "/stile.css", "/comune.js"):
+        assert client.get(percorso).headers["cache-control"] == "no-cache"
+    assert client.get("/api/versione").json() == {"versione": VERSIONE}

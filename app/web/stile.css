@@ -322,3 +322,5 @@ main.editor, main.torneo { display: grid; align-items: start; gap: 1rem; padding
   button { min-height: 2.2rem; }  /* più facili da toccare */
   #menu-carta button { min-height: 2.6rem; }
 }
+
+.versione { font-size: .7rem; opacity: .55; white-space: nowrap; }

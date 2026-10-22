@@ -28,6 +28,7 @@ from app.incontro import Incontro, Lista
 from app.torneo import Partecipante, Torneo
 from app.regia import avanza, esegui_comando
 from app.salvataggio import Archivio
+from app.versione import VERSIONE
 
 UMANO = "Tu"
 AI = "Avversaria"
@@ -592,4 +593,19 @@ def chiedi_al_giudice(q: str) -> dict:
     return giudice.rispondi(q)
 
 
-app.mount("/", StaticFiles(directory=Path(__file__).resolve().parent.parent / "web", html=True), name="web")
+class FileDelSito(StaticFiles):
+    """Pagine, script e stili si ricontrollano a ogni apertura (Cache-Control: no-cache, poi ETag): così dopo un
+    aggiornamento il browser — Safari sull'iPad in particolare — non continua a usare i file vecchi."""
+
+    async def get_response(self, path, scope):
+        risposta = await super().get_response(path, scope)
+        risposta.headers["Cache-Control"] = "no-cache"
+        return risposta
+
+
+@app.get("/api/versione")
+def versione() -> dict:
+    return {"versione": VERSIONE}
+
+
+app.mount("/", FileDelSito(directory=Path(__file__).resolve().parent.parent / "web", html=True), name="web")

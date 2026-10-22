@@ -117,15 +117,25 @@ function suCampo(c, mio) {
   const opzioni = [];
   if (c.puo_attaccare) opzioni.push([attaccantiScelti.has(c.id) ? "Non attaccare" : "⚔ Attacca", () => scegliAttaccante(c)]);
   (c.attivabili || []).forEach((a, i) => {
-    if (a.ora) opzioni.push([`Attiva: ${a.testo}`, () => attivaAbilita(c, a, i)]);
+    if (a.ora) opzioni.push([`Attiva ${descriviAbilita(a.testo)}`, () => attivaAbilita(c, a, i)]);
   });
   // mana a mano: tappi tu le terre (scegliendo il colore) e poi lanci; la magia usa prima il mana in riserva
-  if (c.mana_ora) for (const col of c.mana) opzioni.push([[pallino(col), ` ${NOMI_MANA[col] || ""}`], () => invia(`tappa ${c.id} per ${col.toLowerCase()}`)]);
+  // per le terre (Mishra's Factory, City of Brass...) il mana viene per primo nel menu: è l'uso più frequente
+  const voci_mana = c.mana_ora ? [...c.mana].map((col) => [[pallino(col), ` mana ${NOMI_MANA[col] || ""}`],
+    () => invia(`tappa ${c.id} per ${col.toLowerCase()}`)]) : [];
+  if (/\bLand\b/.test(c.tipo)) opzioni.unshift(...voci_mana); else opzioni.push(...voci_mana);
   if (!opzioni.length) {
     return avvisa(c.tappata ? `${c.nome} è già tappata.` : `${c.nome} ora non può attaccare, usare abilità o dare mana.`);
   }
   if (opzioni.length === 1) return opzioni[0][1]();
   apriMenu(c, opzioni);
+}
+
+// «{1}: Mishra's Factory becomes a 2/2 ...» -> «{1}: becomes a 2/2 ...» accorciato per il menu
+function descriviAbilita(testo) {
+  const [costo, ...resto] = testo.split(":");
+  const effetto = resto.join(":").trim();
+  return `${costo}: ${effetto.length > 55 ? effetto.slice(0, 52) + "…" : effetto}`;
 }
 
 function scegliAttaccante(c) {
@@ -747,3 +757,8 @@ async function applicaConsiglio(c) {
     avvisa("Errore: " + e.message);
   }
 }
+
+// Versione in alto: se non corrisponde a quella dello zip, il browser sta usando file vecchi (ricaricare la pagina)
+api("/api/versione").then((v) => {
+  $("versione").textContent = `v ${v.versione}`;
+}).catch(() => {});

@@ -300,3 +300,15 @@ main.editor, main.torneo { display: grid; align-items: start; gap: 1rem; padding
 .mucchio .nome-mucchio { font-size: .7rem; opacity: .75; text-transform: uppercase; letter-spacing: .04em; }
 .mucchio .mucchio-carta { overflow: hidden; min-height: 0; height: calc(var(--l) / .7176); }
 .mucchio .mucchio-carta .faccia-testo { font-size: 8px; }
+
+/* Pallini del mana */
+.pallino { display: inline-block; width: 1.05em; height: 1.05em; border-radius: 50%; vertical-align: -.15em;
+  border: 1.5px solid #000a; box-shadow: inset -2px -2px 3px #0004, inset 2px 2px 3px #fff6; margin: 0 .08em; }
+.pallino-W { background: #f8f3d8; }
+.pallino-U { background: #3f8fd9; }
+.pallino-B { background: #2b2620; border-color: #888; }
+.pallino-R { background: #d9452f; }
+.pallino-G { background: #2f9a4a; }
+.pallino-C { background: #b9b2a5; }
+#menu-carta button .pallino { width: 1.2em; height: 1.2em; }
+.riserva { display: inline-flex; align-items: center; gap: .1rem; }

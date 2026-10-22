@@ -120,7 +120,7 @@ function suCampo(c, mio) {
     if (a.ora) opzioni.push([`Attiva: ${a.testo}`, () => attivaAbilita(c, a, i)]);
   });
   // mana a mano: tappi tu le terre (scegliendo il colore) e poi lanci; la magia usa prima il mana in riserva
-  if (c.mana_ora) for (const col of c.mana) opzioni.push([`Tappa per {${col}} ${NOMI_MANA[col] || ""}`.trim(), () => invia(`tappa ${c.id} per ${col.toLowerCase()}`)]);
+  if (c.mana_ora) for (const col of c.mana) opzioni.push([[pallino(col), ` ${NOMI_MANA[col] || ""}`], () => invia(`tappa ${c.id} per ${col.toLowerCase()}`)]);
   if (!opzioni.length) {
     return avvisa(c.tappata ? `${c.nome} è già tappata.` : `${c.nome} ora non può attaccare, usare abilità o dare mana.`);
   }
@@ -150,7 +150,11 @@ function attivaAbilita(c, a, i) {
 function apriMenu(c, opzioni) {
   const menu = $("menu-carta");
   menu.replaceChildren(el("div", { className: "titolo-menu", textContent: c.nome }),
-    ...opzioni.map(([testo, fai]) => bottone(testo, () => { chiudiMenu(); fai(); })));
+    ...opzioni.map(([testo, fai]) => {
+      const b = bottone("", () => { chiudiMenu(); fai(); });
+      b.append(...(Array.isArray(testo) ? testo : [testo]));  // testo o elementi (pallini del mana)
+      return b;
+    }));
   const carta = document.querySelector(`.carta[data-id="${c.id}"]`);
   const r = carta ? carta.getBoundingClientRect() : { left: 20, top: 20, bottom: 20 };
   menu.hidden = false;
@@ -295,6 +299,11 @@ function disegnaBarraCombattimento() {
       bottone("Nessun blocco", () => invia("nessun blocco")),
       bottone("Ricomincia", () => { azzeraScelteCombattimento(); disegna(); }));
   }
+}
+
+// Pallino colorato al posto della lettera del mana (W bianco, U blu, B nero, R rosso, G verde, C incolore)
+function pallino(colore) {
+  return el("span", { className: `pallino pallino-${colore}`, title: NOMI_MANA[colore] || colore });
 }
 
 const NOMI_MANA = { W: "bianco", U: "blu", B: "nero", R: "rosso", G: "verde", C: "incolore" };
@@ -448,7 +457,8 @@ function disegnaGiocatore(sezione, g, umano) {
     vitaEl(g, umano),
     ...(umano ? [] : [el("span", { className: "dato", textContent: `mano ${g.mano}` }),
       el("span", { className: "dorsi" }, ...Array.from({ length: Math.min(g.mano, 12) }, () => el("span", { className: "dorso" })))]),
-    ...(g.riserva && g.riserva !== "vuota" ? [el("span", { className: "dato", textContent: `mana ${g.riserva}` })] : []),
+    ...(g.riserva && g.riserva !== "vuota" ? [el("span", { className: "dato riserva", title: "Mana in riserva" },
+      "mana ", ...[...g.riserva.matchAll(/\{(\w)\}/g)].map((m) => pallino(m[1])))] : []),
     ...(mioTurno ? [el("span", { className: "badge-turno", textContent: umano ? "tuo turno" : "suo turno" })] : []));
   const etichetta = (t) => el("div", { className: "etichetta", textContent: t });
   const fila = (carte, azione, classe = "") => el("div", { className: "fila " + classe }, ...carte.map((c) => cartaEl(c, azione)));

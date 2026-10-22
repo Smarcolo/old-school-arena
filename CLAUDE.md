@@ -53,6 +53,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/api/main.py` — FastAPI; serve anche il frontend statico in `app/web/`. Le richieste `/api/` si servono una
   alla volta (dipendenza globale `_serializza` con un lock): stato e connessione SQLite sono condivisi.
   Le liste dell'`Incontro` sono copie: la sideboard non cambia il mazzo del partecipante nei turni successivi.
+- `app/avvio.py` — avvio: `python -m app.avvio` (solo questo PC) o `--rete` (`avvia_ipad.bat`: host 0.0.0.0, password
+  in `data/password.txt` creata la prima volta, indirizzo per l'iPad). Il middleware `password_dalla_rete` in
+  main.py chiede la password (HTTP Basic) a chi non arriva da 127.0.0.1, solo se `OSA_PASSWORD` è impostata.
+  `comune.js`: pressione lunga = anteprima della carta (iPad), il clic dopo la pressione si annulla.
 - `data/` — database, cache immagini, bulk Scryfall: generati, non versionati (vedi `.gitignore`).
 
 ## Regole del motore

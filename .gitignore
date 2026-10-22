@@ -6,3 +6,4 @@ data/*.sqlite
 data/bulk/
 data/immagini/*
 !data/immagini/.gitkeep
+data/password.txt

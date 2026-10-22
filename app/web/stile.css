@@ -312,3 +312,13 @@ main.editor, main.torneo { display: grid; align-items: start; gap: 1rem; padding
 .pallino-C { background: #b9b2a5; }
 #menu-carta button .pallino { width: 1.2em; height: 1.2em; }
 .riserva { display: inline-flex; align-items: center; gap: .1rem; }
+
+/* iPad: niente menu del sistema tenendo premuta una carta, misure sull'altezza visibile vera di Safari */
+.carta, .carta img, [data-carta] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+@supports (height: 100dvh) {
+  :root { --h: clamp(60px, calc((100dvh - 305px) / 4.9), 200px); }
+}
+@media (hover: none) {
+  button { min-height: 2.2rem; }  /* più facili da toccare */
+  #menu-carta button { min-height: 2.6rem; }
+}

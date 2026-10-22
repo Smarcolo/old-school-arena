@@ -42,3 +42,43 @@ document.addEventListener("mousemove", (e) => {
 document.addEventListener("mouseout", (e) => {
   if (e.target.closest("[data-carta]")) nascondiAnteprima();
 });
+
+// iPad e telefoni: niente passaggio del mouse. Tenendo premuta una carta compare grande al centro finché non si
+// alza il dito; il tocco normale resta un clic (gioca, attacca...). Dopo una pressione lunga il clic si annulla.
+let pressioneLunga = null;
+let mostrataColTocco = false;
+
+document.addEventListener("touchstart", (e) => {
+  const t = e.target.closest("[data-carta]");
+  if (!t) return;
+  clearTimeout(pressioneLunga);
+  pressioneLunga = setTimeout(() => {
+    const nome = t.dataset.carta;
+    if (immaginiMancanti.has(nome)) return;
+    anteprima.src = urlImmagine(nome);
+    anteprima.onload = () => anteprima.classList.add("visibile");
+    if (anteprima.complete && anteprima.naturalWidth) anteprima.classList.add("visibile");
+    const larghezza = Math.min(320, innerWidth - 40);
+    anteprima.style.width = `${larghezza}px`;
+    anteprima.style.left = `${(innerWidth - larghezza) / 2}px`;
+    anteprima.style.top = `${Math.max(10, (innerHeight - larghezza * 1.394) / 2)}px`;
+    mostrataColTocco = true;
+  }, 450);
+}, { passive: true });
+
+function fineTocco() {
+  clearTimeout(pressioneLunga);
+  if (!mostrataColTocco) return;
+  nascondiAnteprima();
+  setTimeout(() => { mostrataColTocco = false; }, 500);  // il clic che segue l'alzata del dito arriva prima
+}
+document.addEventListener("touchend", fineTocco);
+document.addEventListener("touchcancel", fineTocco);
+document.addEventListener("touchmove", () => clearTimeout(pressioneLunga), { passive: true });
+document.addEventListener("click", (e) => {
+  if (mostrataColTocco) {  // il dito si è alzato dopo una pressione lunga: non è un clic sulla carta
+    mostrataColTocco = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }
+}, true);

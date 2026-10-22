@@ -1,10 +1,13 @@
 """API FastAPI e server del frontend statico. Avvio: uvicorn app.api.main:app"""
+import base64
+import os
 import random
+import secrets
 import threading
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -50,6 +53,27 @@ def _serializza(request: Request):
 
 
 app = FastAPI(title="Old School Arena", dependencies=[Depends(_serializza)])
+LOCALI = {"127.0.0.1", "::1", "localhost"}
+
+
+@app.middleware("http")
+async def password_dalla_rete(request: Request, call_next):
+    """Con «avvia_ipad.bat» il gioco si apre alla rete di casa (OSA_PASSWORD impostata da app/avvio.py): chi si
+    collega da un altro dispositivo deve dare la password (autenticazione HTTP Basic: Safari la chiede una volta
+    e la ricorda; il nome utente non conta). Dal PC stesso non serve."""
+    attesa = os.environ.get("OSA_PASSWORD")
+    if not attesa or (request.client and request.client.host in LOCALI):
+        return await call_next(request)
+    intestazione = request.headers.get("authorization", "")
+    if intestazione.lower().startswith("basic "):
+        try:
+            _, _, data = base64.b64decode(intestazione[6:]).decode("utf-8").partition(":")
+        except (ValueError, UnicodeDecodeError):
+            data = ""
+        if secrets.compare_digest(data.encode(), attesa.encode()):
+            return await call_next(request)
+    return Response("Serve la password (è nel file data\\password.txt sul PC)", status_code=401,
+                    headers={"WWW-Authenticate": 'Basic realm="Old School Arena", charset="UTF-8"'})
 
 # Incontri e tornei si salvano dopo ogni mossa e si ricaricano all'avvio (app/salvataggio.py).
 archivio = Archivio()

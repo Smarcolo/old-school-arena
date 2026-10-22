@@ -6,6 +6,15 @@ Gioca a Magic Old School 93/94 (regole Swedish) sul tuo PC contro un'avversaria 
 1. Installa Python 3.11 o superiore (spunta "Add Python to PATH").
 2. Fai doppio clic su `avvia.bat`. La prima volta installa tutto, poi apre il browser su http://127.0.0.1:8000.
 
+## Giocare dall'iPad (stessa rete Wi-Fi di casa)
+1. Sul PC fai doppio clic su **`avvia_ipad.bat`** (invece di `avvia.bat`).
+2. La finestra nera mostra l'indirizzo da aprire in Safari sull'iPad (tipo `http://192.168.1.23:8000`) e la password.
+   La prima volta Windows può chiedere il permesso per Python sulle reti private: «Consenti».
+3. Sull'iPad apri quell'indirizzo, metti la password (il nome utente non conta): Safari la ricorda.
+- La password è nel file `data\password.txt`: puoi cambiarla scrivendone un'altra. Dal PC stesso non serve.
+- Sull'iPad: tocco = clic; **tieni premuta una carta** per vederla grande.
+- Funziona solo in casa (stessa rete). Il PC deve restare acceso con la finestra nera aperta.
+
 ## Primo avvio: carte e mazzi dei tornei
 Nell'editor dei mazzi («Mazzi» in alto):
 1. «Importa carte da Scryfall»: scarica tutte le carte dei set ammessi (pochi secondi, serve internet).

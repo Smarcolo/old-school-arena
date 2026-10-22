@@ -53,6 +53,8 @@ python -m uvicorn app.api.main:app
 - Quando ti attaccano ti fermi prima dei blocchi se puoi fare qualcosa (es. animare Mishra's Factory, che poi può
   anche tapparsi per darsi +1/+2 mentre blocca); nella fase finale dell'avversaria ti fermi se hai un istantaneo
   (Ancestral Recall) o un'abilità da usare.
+- **↶ Annulla** (in alto nel banner, anche nel riquadro della giocata avversaria; Ctrl+Z sul PC): torna a prima
+  della tua ultima mossa, con tutto quello che è successo dopo. Fino a 15 mosse indietro, dentro la partita in corso.
 - A fine turno, con più di 7 carte in mano, scegli cosa scartare cliccando le carte.
 - Accanto al campo di ogni giocatore ci sono il grimorio (coperto, con il numero di carte) e il cimitero (si vede
   l'ultima carta, con il numero; clic per vederle tutte), tuoi e dell'avversaria, come sul tavolo vero.

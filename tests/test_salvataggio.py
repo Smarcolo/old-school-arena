@@ -48,6 +48,7 @@ def test_partita_sopravvive_al_riavvio_del_server():
     riavviato = importlib.reload(main)  # come un nuovo avvio: rilegge i salvataggi dal disco
     client = TestClient(riavviato.app)
     dopo = client.get(f"/api/partite/{p['id']}").json()
+    prima["incontro"].pop("annullabili"), dopo["incontro"].pop("annullabili")  # la storia per «Annulla» è in memoria
     assert dopo == prima
     assert client.delete(f"/api/salvataggi/{p['id']}").json()["ok"]
     assert client.get(f"/api/partite/{p['id']}").status_code == 404

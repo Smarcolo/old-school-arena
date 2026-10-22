@@ -429,7 +429,9 @@ function disegnaTurno() {
   if (partita.vincitore) {
     banner.className = "finito";
     banner.replaceChildren(el("strong", { textContent: partita.vincitore === "Pareggio" ? "PARTITA PARI"
-      : partita.vincitore === "Tu" ? "HAI VINTO LA PARTITA" : "HA VINTO L'AVVERSARIA" }));
+      : partita.vincitore === "Tu" ? "HAI VINTO LA PARTITA" : "HA VINTO L'AVVERSARIA" }),
+      ...(partita.incontro && partita.incontro.annullabili ? [el("div", { className: "azioni-turno" },
+        bottone("↶ Annulla l'ultima mossa", annullaMossa))] : []));
     return;
   }
   const mio = partita.attivo === "Tu";
@@ -444,7 +446,9 @@ function disegnaTurno() {
     el("div", { className: "spiegazione" },
       el("div", { className: "fase-ora", textContent: fase() }),
       el("div", { className: "cosa-fare", textContent: cosaFare() })),
-    el("div", { className: "azioni-turno" }, ...azioniTurno()));
+    el("div", { className: "azioni-turno" }, ...azioniTurno(),
+      ...(partita.incontro && partita.incontro.annullabili ? [el("button", { type: "button", className: "secondario",
+        textContent: "↶ Annulla", title: "Torna a prima della tua ultima mossa (Ctrl+Z)", onclick: annullaMossa })] : [])));
 }
 
 const vitaPrima = {};  // per far lampeggiare i punti vita quando cambiano
@@ -715,6 +719,7 @@ function disegnaGiocataAvversaria() {
     ...(sceltaRisposta ? [sceltaRisposta] : []),
     el("div", { className: "azioni-giocata" },
       bottone("Lascia risolvere", () => invia("passa")),
+      ...(partita.incontro && partita.incontro.annullabili ? [bottone("↶ Annulla la mia ultima mossa", annullaMossa)] : []),
       ...(risposte.length ? [bottone("Guarda il tavolo", () => { rispostaPer = cima.id; disegna();
         avvisa("Clicca la carta con cui rispondi (illuminata in verde), oppure «Lascia risolvere» in alto."); })] : []))));
 }
@@ -768,3 +773,31 @@ async function applicaConsiglio(c) {
 api("/api/versione").then((v) => {
   $("versione").textContent = `v ${v.versione}`;
 }).catch(() => {});
+
+// «Annulla»: torna a prima della tua ultima mossa (anche più volte, dentro la partita in corso)
+async function annullaMossa() {
+  if (inAttesa) return;
+  inAttesa = true;
+  try {
+    const r = await api(`/api/partite/${partita.id}/annulla`, { method: "POST" });
+    azzeraScelteCombattimento();
+    magiaInAttesa = null;
+    rispostaPer = null;
+    document.body.classList.remove("mirino");
+    partita = r.partita;
+    avvisa(r.messaggio);
+    disegna();
+  } catch (e) {
+    avvisa("Errore: " + e.message);
+  } finally {
+    inAttesa = false;
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && partita && partita.incontro && partita.incontro.annullabili
+      && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    annullaMossa();
+  }
+});

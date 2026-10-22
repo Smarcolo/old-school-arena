@@ -119,3 +119,15 @@ def test_file_del_sito_sempre_ricontrollati_e_versione():
     for percorso in ("/index.html", "/app.js", "/stile.css", "/comune.js"):
         assert client.get(percorso).headers["cache-control"] == "no-cache"
     assert client.get("/api/versione").json() == {"versione": VERSIONE}
+
+
+def test_annulla_l_ultima_mossa():
+    p = client.post("/api/partite").json()
+    assert p["incontro"]["annullabili"] == 0
+    r = comando(p["id"], "tengo")
+    assert r["partita"]["incontro"]["annullabili"] == 1
+    comando(p["id"], "mano")  # una domanda non si annulla
+    assert client.get(f"/api/partite/{p['id']}").json()["incontro"]["annullabili"] == 1
+    r = client.post(f"/api/partite/{p['id']}/annulla").json()
+    assert r["partita"]["richiesta"] == "mulligan" and r["partita"]["incontro"]["annullabili"] == 0
+    assert client.post(f"/api/partite/{p['id']}/annulla").status_code == 400

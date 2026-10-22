@@ -1,6 +1,7 @@
 """API FastAPI e server del frontend statico. Avvio: uvicorn app.api.main:app"""
 import base64
 import os
+import pickle
 import random
 import secrets
 import threading
@@ -283,6 +284,7 @@ def vista_incontro(inc: Incontro) -> dict:
     return {**vista(inc.partita), "id": inc.id, "incontro": {
         "numero": inc.numero, "vittorie": inc.vittorie, "esiti": inc.esiti, "lancio_moneta": inc.lancio_moneta,
         "vincitore": inc.vincitore, "prossima_possibile": bool(inc.partita.vincitore and not inc.vincitore),
+        "annullabili": len(storia.get(inc.id, [])),
         "mazzo_avversaria": inc.avversaria,
         "torneo": inc.torneo or None,
         "liste": ({"mazzo": inc.liste[UMANO].mazzo, "sideboard": inc.liste[UMANO].sideboard}
@@ -338,12 +340,38 @@ def leggi_partita(id_partita: str) -> dict:
 @app.post("/api/partite/{id_partita}/comando")
 def comando(id_partita: str, richiesta: RichiestaComando) -> dict:
     inc = _incontro(id_partita)
+    prima = pickle.dumps(inc)
     messaggio = esegui_comando(inc.partita, UMANO, AI, richiesta.testo, giudice)
     inc.registra_esito()
-    if inc.vincitore and inc.torneo in tornei:
-        tornei[inc.torneo].registra_incontro(inc)
+    if pickle.dumps(inc) != prima:  # le mosse non valide o le domande («mano», «giudice») non si annullano
+        storia.setdefault(inc.id, []).append(prima)
+        del storia[inc.id][:-MOSSE_ANNULLABILI]
+    if inc.vincitore:
+        storia.pop(inc.id, None)  # incontro finito (e magari torneo avanzato): non si torna indietro
+        if inc.torneo in tornei:
+            tornei[inc.torneo].registra_incontro(inc)
     _salva(inc)
     return {"messaggio": messaggio, "partita": vista_incontro(inc)}
+
+
+# «Annulla»: lo stato dell'incontro prima di ognuna delle ultime mosse dell'umano (in memoria, non nei salvataggi)
+MOSSE_ANNULLABILI = 15
+storia: dict[str, list[bytes]] = {}
+
+
+@app.post("/api/partite/{id_partita}/annulla")
+def annulla_mossa(id_partita: str) -> dict:
+    """Riporta l'incontro a prima dell'ultima mossa dell'umano (con tutto quello che è successo dopo, comprese le
+    risposte dell'avversaria). Solo dentro la partita in corso."""
+    inc = _incontro(id_partita)
+    if not storia.get(inc.id):
+        raise HTTPException(400, "non c'è niente da annullare")
+    precedente = pickle.loads(storia[inc.id].pop())
+    partite[inc.id] = precedente
+    if precedente.torneo in tornei:
+        tornei[precedente.torneo].incontri[inc.id] = precedente
+    _salva(precedente)
+    return {"messaggio": "Mossa annullata: sei tornato a prima della tua ultima mossa.", "partita": vista_incontro(precedente)}
 
 
 @app.post("/api/partite/{id_partita}/sideboard")
@@ -389,6 +417,7 @@ def prossima_partita(id_partita: str) -> dict:
     except ValueError as e:
         raise HTTPException(400, str(e))
     avanza(inc.partita, UMANO, AI)
+    storia.pop(inc.id, None)  # nuova partita dell'incontro: si annulla solo dentro la partita
     _salva(inc)
     return vista_incontro(inc)
 

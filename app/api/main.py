@@ -1,5 +1,6 @@
 """API FastAPI e server del frontend statico. Avvio: uvicorn app.api.main:app"""
 import base64
+from collections import Counter
 import os
 import pickle
 import random
@@ -391,9 +392,18 @@ def consiglio_sideboard(id_partita: str) -> dict:
     inc = _incontro(id_partita)
     lista = inc.liste[UMANO]
     viste = inc.viste[AI]
-    nomi = set(lista.mazzo) | set(lista.sideboard) | set(viste)
+    nomi = set(lista.mazzo) | set(lista.sideboard) | set(viste) | set(inc.liste[AI].mazzo)
     info = {n: c for n in nomi if (c := database.cerca(conn_carte, n))}
-    return consigli.consiglia(lista.sideboard, lista.mazzo, viste, info)
+    magie_viste = sum(n for nome, n in viste.items() if nome in info and not info[nome].is_terra)
+    if magie_viste >= MAGIE_VISTE_PER_CONSIGLIO:
+        base = f"le carte dell'avversaria che hai visto ({magie_viste} magie e permanenti)"
+    else:  # visto troppo poco (partita corta o concessa): si usa la lista del suo mazzo, che si conosce dal nome
+        viste = Counter(inc.liste[AI].mazzo)
+        base = f"la lista del mazzo dell'avversaria («{inc.avversaria}»): delle sue carte ne hai viste troppo poche"
+    return {**consigli.consiglia(lista.sideboard, lista.mazzo, viste, info), "base": base}
+
+
+MAGIE_VISTE_PER_CONSIGLIO = 6
 
 
 def _sideboard_avversaria(inc: Incontro) -> None:

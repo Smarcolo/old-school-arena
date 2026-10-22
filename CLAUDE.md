@@ -33,7 +33,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   `analizza` manda `carte` (tipo, costo...) per raggruppare; `/api/carte` ha i filtri `colore` e `tipo`.
 - Consiglio di sideboard (`ai/consigli.py`, `/api/partite/{id}/consiglio-sideboard`): giudica le carte dal testo
   Oracle (odio di colore, distruzione artefatti/incantesimi, rimozioni, minacce, contromagie) contro le carte
-  dell'avversaria viste (`Incontro.viste`); pop-up a fine partita nel tavolo.
+  dell'avversaria viste (`Incontro.viste`); se ne ha viste meno di 6 non terre usa la lista del mazzo avversario
+  (campo `base` nella risposta); pop-up a fine partita nel tavolo.
 - `app/judge/` — indice FTS5 dei testi in `data/regole/*.md` e risposte del giudice.
 - `app/ai/` — avversaria. Usa solo le funzioni pubbliche di `engine`.
 - `app/commands/` — `parser.py` (testo → Comando) ed `esegui.py` (Comando → azione + messaggio).

@@ -745,8 +745,7 @@ async function mostraConsiglio() {
   const vuoto = !Object.keys(c.entra).length;
   box.replaceChildren(el("div", { className: "riquadro" },
     el("h2", { textContent: `Sideboard per la partita ${prossima}` }),
-    el("p", { className: "dettaglio", textContent: c.carte_viste
-      ? `Hai visto ${c.carte_viste} carte dell'avversaria (${c.visto}).` : "Non hai ancora visto carte dell'avversaria." }),
+    el("p", { className: "dettaglio", textContent: `Basato su ${c.base}: ${c.visto}.` }),
     ...(vuoto ? [el("p", { textContent: "Consiglio: nessun cambio. Le carte della tua sideboard non servono più di quelle che hai nel mazzo contro quello che hai visto." })]
       : [el("h3", { textContent: "Metti dentro" }),
          el("ul", {}, ...Object.entries(c.entra).map(([n, q]) => riga(n, q, c.motivi_entra[n], "+"))),

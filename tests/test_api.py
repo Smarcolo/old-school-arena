@@ -131,3 +131,10 @@ def test_annulla_l_ultima_mossa():
     r = client.post(f"/api/partite/{p['id']}/annulla").json()
     assert r["partita"]["richiesta"] == "mulligan" and r["partita"]["incontro"]["annullabili"] == 0
     assert client.post(f"/api/partite/{p['id']}/annulla").status_code == 400
+
+
+def test_consiglio_sideboard_anche_dopo_una_partita_corta():
+    p = client.post("/api/partite", json={"mazzo": "Millstone Dreams (Mr. Pox)", "mazzo_avversaria": "Rosso (prova)"}).json()
+    comando(p["id"], "concedo")
+    c = client.get(f"/api/partite/{p['id']}/consiglio-sideboard").json()
+    assert "lista del mazzo" in c["base"] and c["entra"] and sum(c["entra"].values()) == sum(c["esce"].values())

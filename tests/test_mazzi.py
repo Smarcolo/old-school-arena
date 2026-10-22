@@ -71,7 +71,7 @@ def test_mazzi_predefiniti():
 
 
 def test_pagina_mazzi():
-    assert "Cerca carte" in client.get("/mazzi.html").text
+    assert "Aggiungi carte" in client.get("/mazzi.html").text
 
 
 def test_avviso_colore_mancante(conn):

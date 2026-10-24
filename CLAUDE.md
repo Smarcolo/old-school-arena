@@ -63,6 +63,12 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   La storia si svuota con la partita successiva e a incontro finito.
 - `app/versione.py` — `VERSIONE` mostrata in alto nel tavolo (`/api/versione`): **aggiornarla a ogni consegna**.
   I file del sito si servono con `Cache-Control: no-cache` (`FileDelSito`) perché Safari non tenga i vecchi.
+- Versione per il browser (iPad senza PC, GitHub Pages): `app/browser.py` registra in `sys.modules` sostituti
+  minimi di fastapi/pydantic/httpx e chiama direttamente le funzioni di main.py (`chiama(metodo, url, corpo)`);
+  `ipad/ponte.js` carica Pyodide nella pagina, intercetta `fetch("/api/...")`, tiene `/dati` in IndexedDB (IDBFS),
+  scarica le carte da Scryfall in JS al primo avvio e sostituisce `urlImmagine` con gli indirizzi Scryfall del
+  database. TCDecks dal browser non si raggiunge (CORS): lì valgono i mazzi salvati. `python -m ipad.costruisci`
+  crea `sito/` (pagine con ponte.js, app.zip, Pyodide 0.25.1 + sqlite3 controllato con sha256).
 - `data/` — database, cache immagini, bulk Scryfall: generati, non versionati (vedi `.gitignore`).
 
 ## Regole del motore

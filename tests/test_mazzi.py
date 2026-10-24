@@ -84,3 +84,15 @@ def test_lista_swedish_in_bozza(conn):
     a = mazzi.analizza(conn, {"Black Lotus": 2, "Darkpact": 1, "Swamp": 57}, {})
     assert any("Black Lotus è ristretta" in p for p in a["problemi"])
     assert any("Darkpact è bandita" in p for p in a["problemi"])
+
+
+def test_trasferimento_mazzi_tra_pc_e_ipad():
+    client.put("/api/mazzi/Da trasferire", json={"testo": "20 Forest\n20 Grizzly Bears\n\nSideboard\n2 Giant Growth"})
+    testo = client.get("/api/trasferimento-mazzi").json()["testo"]
+    client.delete("/api/mazzi/Da trasferire")
+    # incollato in una mail può arrivare con righe in più prima e dopo
+    r = client.post("/api/trasferimento-mazzi", json={"testo": "Ciao\n" + testo + "\n\nInviato da iPad"})
+    assert r.status_code == 200 and "Da trasferire" in r.json()["importati"]
+    assert client.get("/api/mazzi/Da trasferire").json()["sideboard"] == {"Giant Growth": 2}
+    assert client.post("/api/trasferimento-mazzi", json={"testo": "4 Lightning Bolt"}).status_code == 400
+    client.delete("/api/mazzi/Da trasferire")

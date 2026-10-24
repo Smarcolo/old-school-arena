@@ -206,3 +206,28 @@ def salva_se_manca(conn: sqlite3.Connection, nome: str, mazzo: dict[str, int],
                    sideboard: dict[str, int] | None = None) -> None:
     if leggi(conn, nome) is None:
         salva(conn, nome, mazzo, sideboard or {})
+
+
+INTESTAZIONE_TRASFERIMENTO = "OLD-SCHOOL-ARENA-MAZZI"
+
+
+def esporta_tutti(conn: sqlite3.Connection) -> str:
+    """Tutti i mazzi in un testo da copiare (PC → iPad e viceversa): intestazione e JSON compatto."""
+    righe = conn.execute("SELECT nome, mazzo, sideboard, origine, info FROM mazzi ORDER BY origine, nome").fetchall()
+    dati = [{"nome": r["nome"], "mazzo": json.loads(r["mazzo"]), "sideboard": json.loads(r["sideboard"]),
+             "origine": r["origine"], "info": json.loads(r["info"])} for r in righe]
+    return INTESTAZIONE_TRASFERIMENTO + "\n" + json.dumps(dati, ensure_ascii=False, separators=(",", ":"))
+
+
+def importa_tutti(conn: sqlite3.Connection, testo: str) -> list[str]:
+    """Salva i mazzi di un testo fatto da `esporta_tutti` (quelli con lo stesso nome si sovrascrivono)."""
+    inizio = testo.find("[")
+    if INTESTAZIONE_TRASFERIMENTO not in testo or inizio < 0:
+        raise ValueError("non è un testo copiato con «Copia tutti i mazzi»")
+    try:
+        dati = json.loads(testo[inizio:testo.rfind("]") + 1])
+    except json.JSONDecodeError:
+        raise ValueError("il testo è incompleto o rovinato: copialo di nuovo tutto")
+    for m in dati:
+        salva(conn, m["nome"], m["mazzo"], m.get("sideboard", {}), m.get("origine", ""), m.get("info"))
+    return [m["nome"] for m in dati]

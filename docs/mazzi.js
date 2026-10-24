@@ -253,6 +253,29 @@ function caricaModello(m) {
   mostraAnalisi(m);
 }
 
+$("copia-mazzi").onclick = async () => {
+  const { testo } = await api("/api/trasferimento-mazzi");
+  $("trasferimento").value = testo;
+  try {
+    await navigator.clipboard.writeText(testo);
+    avvisa("Mazzi copiati: incollali in una mail o un messaggio per l'altro dispositivo.");
+  } catch {
+    $("trasferimento").select();
+    avvisa("Il testo è selezionato nel riquadro: tienilo premuto (o Ctrl+C) e scegli «Copia».");
+  }
+};
+
+$("importa-mazzi").onclick = async () => {
+  try {
+    const r = await api("/api/trasferimento-mazzi", { method: "POST", body: JSON.stringify({ testo: $("trasferimento").value }) });
+    avvisa(`Importati ${r.importati.length} mazzi.`);
+    $("trasferimento").value = "";
+    caricaElenco();
+  } catch (e) {
+    avvisa("Errore: " + e.message);
+  }
+};
+
 $("url-tc").addEventListener("keydown", async (e) => {
   if (e.key !== "Enter" || !$("url-tc").value.trim()) return;
   try {

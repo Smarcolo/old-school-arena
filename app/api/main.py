@@ -448,6 +448,19 @@ def analizza_mazzo(corpo: TestoMazzo) -> dict:
     return {**mazzi.analizza(conn_carte, mazzo, sideboard), "righe_non_capite": errori}
 
 
+@app.get("/api/trasferimento-mazzi")
+def esporta_mazzi() -> dict:
+    return {"testo": mazzi.esporta_tutti(conn_carte)}
+
+
+@app.post("/api/trasferimento-mazzi")
+def importa_mazzi(corpo: TestoMazzo) -> dict:
+    try:
+        return {"importati": mazzi.importa_tutti(conn_carte, corpo.testo)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
 @app.get("/api/mazzi/{nome:path}")
 def leggi_mazzo(nome: str) -> dict:
     salvato = mazzi.leggi(conn_carte, nome)

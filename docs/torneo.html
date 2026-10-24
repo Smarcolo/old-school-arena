@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Torneo · Old School Arena</title>
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+<header>
+  <h1>Top 8</h1>
+  <span id="info"></span>
+  <a class="link" href="index.html">← Torna al tavolo</a>
+</header>
+<main class="torneo">
+  <section class="pannello" id="nuovo-torneo">
+    <h2>Nuova top 8</h2>
+    <label>Torneo su TCDecks: nome (vuoto = il più recente) oppure l'indirizzo della pagina del torneo
+      <input id="nome-torneo" value="Plague 5" autocomplete="off" placeholder="es. Plague 5 o https://www.tcdecks.net/deck.php?id=...">
+    </label>
+    <label>Il tuo mazzo <select id="mio-mazzo"></select></label>
+    <label>Prendi il posto di <select id="posto"></select></label>
+    <button id="crea" type="button">Carica la top 8</button>
+    <p class="dettaglio">Gli altri 7 mazzi sono quelli veri del torneo. I loro incontri si giocano da soli; i tuoi li giochi tu, al meglio di tre.</p>
+  </section>
+  <section class="pannello" id="tabellone" hidden></section>
+</main>
+<p id="messaggio" role="status"></p>
+<script src="comune.js"></script>
+<script src="ponte.js"></script>
+<script src="torneo.js"></script>
+</body>
+</html>

@@ -24,12 +24,12 @@ const scriviAttesa = (testo) => { document.getElementById("attesa-testo")?.repla
 if (document.body) mostraAttesa(); else document.addEventListener("DOMContentLoaded", mostraAttesa);
 
 // --- Avviso mentre l'avversaria pensa --------------------------------------------------------------------
-const pensiero = document.createElement("div");
-pensiero.id = "pensiero-ponte";
-pensiero.textContent = "L'avversaria sta pensando…";
+const avvisoPensiero = document.createElement("div");
+avvisoPensiero.id = "pensiero-ponte";
+avvisoPensiero.textContent = "L'avversaria sta pensando…";
 function mostraPensiero(si) {
-  if (si && !pensiero.isConnected) document.body.appendChild(pensiero);
-  else if (!si) pensiero.remove();
+  if (si && !avvisoPensiero.isConnected) document.body.appendChild(avvisoPensiero);
+  else if (!si) avvisoPensiero.remove();
 }
 
 // --- Salvataggio dei dati nel browser -----------------------------------------------------------------

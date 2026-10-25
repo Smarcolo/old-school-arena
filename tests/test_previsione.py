@@ -55,9 +55,12 @@ def test_le_copie_non_toccano_la_partita_vera(con_previsione):
 
 def test_valuta():
     p = partita_in_combattimento()
-    assert previsione.valuta(p, "AI") == pytest.approx(0, abs=0.05)
+    pari = previsione.valuta(p, "AI")
     p.giocatore("B").vita = 5
-    assert previsione.valuta(p, "AI") > 0.3
+    assert previsione.valuta(p, "AI") > pari + 0.3
+    p.giocatore("B").vita = 20
+    p.giocatore("AI").vita = 3
+    assert previsione.valuta(p, "AI") < pari - 0.3
     p.vincitore = "AI"
     assert previsione.valuta(p, "AI") == 1.0
 

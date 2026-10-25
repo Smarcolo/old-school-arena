@@ -63,7 +63,19 @@ def _di_se_stessa(nome_nel_testo: str, carta: Carta) -> bool:
     return nome_nel_testo.lower() in (carta.nome.lower(), "this creature", "cardname", "~", "it")
 
 
+_GIA_ANALIZZATE: dict[tuple, list[AbilitaAttivata]] = {}
+
+
 def analizza_abilita(carta: Carta) -> list[AbilitaAttivata]:
+    """Le abilità attivate lette dal testo. Il risultato dipende solo da nome, testo e tipo: si ricorda (l'AI le
+    chiede migliaia di volte nelle sue previsioni). Da non modificare."""
+    chiave = (carta.nome, carta.testo, carta.tipo)
+    if chiave not in _GIA_ANALIZZATE:
+        _GIA_ANALIZZATE[chiave] = _analizza_abilita(carta)
+    return _GIA_ANALIZZATE[chiave]
+
+
+def _analizza_abilita(carta: Carta) -> list[AbilitaAttivata]:
     trovate = []
     if carta.nome == "Chaos Orb":  # il lancio fisico non si può fare: si sceglie il permanente colpito
         riga = next((r.strip() for r in carta.testo.splitlines() if r.strip().startswith("{1}, {T}:")), "")

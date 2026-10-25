@@ -49,8 +49,21 @@ def riga_di_mana(riga: str) -> bool:
     return bool((m and _cosa_produce(m["cosa"])) or _DANNO_TAPPATA.match(riga))
 
 
+_GIA_LETTE: dict[tuple, tuple | None] = {}
+
+
 def mana_prodotto(carta: Carta) -> FonteMana | None:
-    """La fonte di mana della carta (la prima abilità di mana riconosciuta), o None."""
+    """La fonte di mana della carta (la prima abilità di mana riconosciuta), o None. La lettura del testo
+    dipende solo da nome, testo e tipo: si ricorda."""
+    chiave = (carta.nome, carta.testo, carta.tipo)
+    if chiave not in _GIA_LETTE:
+        fonte = _mana_prodotto(carta)
+        _GIA_LETTE[chiave] = fonte and (fonte.colori, fonte.quantita, fonte.sacrifica, fonte.danno)
+    letta = _GIA_LETTE[chiave]
+    return FonteMana(carta, *letta) if letta else None
+
+
+def _mana_prodotto(carta: Carta) -> FonteMana | None:
     danno = 0
     for riga in carta.testo.splitlines():
         if (d := _DANNO_TAPPATA.match(riga.strip())) and d["nome"] in (carta.nome, "it"):
@@ -78,7 +91,8 @@ def riga_da_terre_avversarie(riga: str) -> bool:
 
 def da_terre_avversarie(carta: Carta) -> bool:
     """Fellwar Stone: il colore dipende dalle terre dell'avversario (vedi fonte_in_partita)."""
-    return any(riga_da_terre_avversarie(r) for r in carta.testo.splitlines())
+    return "an opponent controls could produce" in carta.testo and any(
+        riga_da_terre_avversarie(r) for r in carta.testo.splitlines())
 
 
 def fonte_in_partita(carta: Carta, terre_avversarie: list[Carta]) -> FonteMana | None:

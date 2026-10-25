@@ -324,3 +324,7 @@ main.editor, main.torneo { display: grid; align-items: start; gap: 1rem; padding
 }
 
 .versione { font-size: .7rem; opacity: .55; white-space: nowrap; }
+
+#pensiero, #pensiero-ponte { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 9998;
+  background: #1d1a16; color: #f2e8d5; font: 15px Georgia, serif; padding: 8px 16px; border-radius: 20px;
+  opacity: .92; box-shadow: 0 2px 8px rgba(0, 0, 0, .4); }

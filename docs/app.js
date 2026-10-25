@@ -11,8 +11,13 @@ const el = (tag, props = {}, ...figli) => {
   return e;
 };
 
+// Se la risposta tarda (l'avversaria sta ragionando) compare un avviso. Nella versione per iPad lo mostra ponte.js.
+const pensiero = el("div", { id: "pensiero", textContent: "L'avversaria sta pensando…" });
 async function api(percorso, opzioni = {}) {
-  const r = await fetch(percorso, { headers: { "Content-Type": "application/json" }, ...opzioni });
+  const timer = !window.PONTE && opzioni.method && setTimeout(() => document.body.append(pensiero), 300);
+  let r;
+  try { r = await fetch(percorso, { headers: { "Content-Type": "application/json" }, ...opzioni }); }
+  finally { clearTimeout(timer); pensiero.remove(); }
   const testo = await r.text();
   let dati = null;
   try { dati = testo ? JSON.parse(testo) : null; } catch { /* risposta non JSON, es. errore 500 in testo */ }

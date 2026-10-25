@@ -415,6 +415,102 @@ def _blocchi_con_previsione(partita: Partita, nome: str, blocchi: list[tuple[Car
     return [(partita.trova_in_campo(b)[1], partita.trova_in_campo(a)[1]) for b, a in scelta]
 
 
+REGOLE = ("regole",)
+PASSA = ("passa",)
+MAX_GIOCATE = 7
+
+
+def _momento_importante(partita: Partita, nome: str) -> bool:
+    """Quando vale la pena pensare: sua fase principale a pila vuota, risposta a una magia avversaria,
+    fase finale dell'avversario, attaccanti avversari appena dichiarati (prima dei blocchi), dopo i blocchi."""
+    attivo = partita.giocatore_attivo.nome
+    comb = partita.combattimento
+    return ((attivo == nome and partita.fase in FASI_PRINCIPALI and not partita.pila)
+            or (partita.pila and partita.pila[-1].controllore != nome)
+            or (attivo != nome and partita.fase == Fase.FINALE and not partita.pila)
+            or bool(comb and attivo != nome and comb.attaccanti_dichiarati and not comb.bloccanti_dichiarati
+                    and comb.attaccanti and not partita.pila)
+            or bool(comb and comb.bloccanti_dichiarati and not comb.danni_inflitti and not partita.pila))
+
+
+def _bersagli_candidati(partita: Partita, nome: str, carta: Carta, tipo: str) -> list[str]:
+    from app.engine.carte_implementate import valore_carta
+    from app.engine.effetti import bersaglio_legale
+    avversario = partita.avversario_di(nome)
+    rif = [f"pila:{o.id}" for o in reversed(partita.pila) if o.controllore != nome]
+    rif += [f"carta:{c.id}" for c in sorted(avversario[Zona.CAMPO], key=valore_carta, reverse=True)]
+    rif.append(f"giocatore:{avversario.nome}")
+    if tipo == "giocatore":  # pescate (Ancestral, Braingeyser): su di sé
+        rif.append(f"giocatore:{nome}")
+    if carta.nome == "Giant Growth":
+        rif = [f"carta:{c.id}" for c in partita.giocatore(nome)[Zona.CAMPO] if c.is_creatura]
+    return [r for r in rif if bersaglio_legale(partita, tipo, r, carta)][:3]
+
+
+def giocate_possibili(partita: Partita, nome: str) -> list[tuple]:
+    """Le giocate da confrontare: le regole, passare, ogni magia lanciabile adesso (con il bersaglio della sua
+    politica e i bersagli più interessanti) e le abilità attivabili dei suoi permanenti."""
+    from app.engine.effetti import EFFETTI
+    giocate = [REGOLE, PASSA]
+    for carta in partita.giocatore(nome)[Zona.MANO]:
+        if carta.is_terra or puo_lanciare(partita, nome, carta) is not None:
+            continue
+        comb = partita.combattimento
+        if carta.nome == "Giant Growth" and not (partita.pila or (comb and comb.bloccanti_dichiarati)):
+            continue  # il pompaggio serve in combattimento o in risposta
+        possibili = []
+        if (politica := politiche.POLITICHE.get(carta.nome)) and (scelta := politica(partita, nome, carta)):
+            possibili.append((list(scelta[0]), scelta[1]))
+        effetto = EFFETTI.get(carta.nome)
+        if carta.is_aura:
+            if bersaglio := bersaglio_aura(partita, nome, carta):
+                possibili.append(([f"carta:{bersaglio.id}"], 0))
+        elif effetto and effetto.bersaglio:
+            for rif in _bersagli_candidati(partita, nome, carta, effetto.bersaglio):
+                possibili.append(([rif], max(politiche._x_massimo(partita, nome, carta, [rif]), 0)))
+        else:
+            possibili.append(([], max(politiche._x_massimo(partita, nome, carta, []), 0)))
+        for bersagli, x in possibili:
+            if "X" in carta.costo and x < 1:
+                continue
+            if puo_lanciare(partita, nome, carta, bersagli, x) is None:
+                giocata = ("lancia", carta.id, tuple(bersagli), x)
+                if giocata not in giocate:
+                    giocate.append(giocata)
+    for fonte in partita.giocatore(nome)[Zona.CAMPO]:  # abilità (non di mana, non di rigenerazione)
+        for ab in analizza_abilita(fonte):
+            if ab.tipo in ("rigenera", "mana") or puo_attivare(partita, nome, fonte, ab) is not None:
+                continue
+            for rif in (_bersagli_candidati(partita, nome, fonte, ab.bersaglio) if ab.bersaglio else [None]):
+                bersagli = (rif,) if rif else ()
+                if puo_attivare(partita, nome, fonte, ab, list(bersagli)) is None:
+                    giocate.append(("attiva", fonte.id, ab.indice, bersagli))
+    return giocate[:MAX_GIOCATE]
+
+
+def _esegui(partita: Partita, nome: str, giocata: tuple) -> None:
+    if giocata == REGOLE:
+        agisci(partita, nome)
+    elif giocata == PASSA:
+        azioni.passa_priorita(partita, nome)
+    elif giocata[0] == "attiva":
+        _, id_carta, indice, bersagli = giocata
+        fonte = partita.trova_in_campo(id_carta)[1]
+        ab = next(a for a in analizza_abilita(fonte) if a.indice == indice)
+        azioni.attiva(partita, nome, fonte, ab, list(bersagli))
+    else:
+        _, id_carta, bersagli, x = giocata
+        carta = next(c for c in partita.giocatore(nome)[Zona.MANO] if c.id == id_carta)
+        azioni.lancia(partita, nome, carta, list(bersagli), x)
+
+
+def _giocata_con_previsione(partita: Partita, nome: str) -> tuple:
+    giocate = giocate_possibili(partita, nome)
+    if len(giocate) <= 2:  # niente da lanciare: decidono le regole
+        return REGOLE
+    return previsione.migliore(partita, nome, giocate, lambda copia, g: _esegui(copia, nome, g))
+
+
 def _abilita_pronte(partita: Partita, nome: str, tipo: str) -> list[tuple[Carta, object]]:
     return [(c, ab) for c in partita.giocatore(nome)[Zona.CAMPO] for ab in analizza_abilita(c)
             if ab.tipo == tipo and puo_attivare(partita, nome, c, ab) is None]
@@ -463,6 +559,12 @@ def agisci(partita: Partita, nome: str) -> None:
         # la terra prima di tutto: più mana per le magie del turno
         if terra := next((c for c in mano if puo_giocare_terra(partita, nome, c) is None), None):
             azioni.gioca_terra(partita, nome, terra)
+            return
+
+    if previsione.attiva() and _momento_importante(partita, nome):
+        giocata = _giocata_con_previsione(partita, nome)
+        if giocata != REGOLE:
+            _esegui(partita, nome, giocata)
             return
 
     if scelta := politiche.scegli_magia(partita, nome):

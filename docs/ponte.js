@@ -4,6 +4,7 @@
 "use strict";
 
 const PYODIDE = "pyodide/";
+window.PONTE = true;  // app.js: l'avviso «sta pensando» lo mostra il ponte
 let py = null;
 let indirizzi = {};  // nome carta in minuscolo -> immagine Scryfall (cornice 1993), dal database delle carte
 const fetchVero = window.fetch.bind(window);
@@ -21,6 +22,15 @@ document.head.appendChild(stileAttesa);
 const mostraAttesa = () => document.body && !attesa.isConnected && document.body.appendChild(attesa);
 const scriviAttesa = (testo) => { document.getElementById("attesa-testo")?.replaceChildren(testo); };
 if (document.body) mostraAttesa(); else document.addEventListener("DOMContentLoaded", mostraAttesa);
+
+// --- Avviso mentre l'avversaria pensa --------------------------------------------------------------------
+const pensiero = document.createElement("div");
+pensiero.id = "pensiero-ponte";
+pensiero.textContent = "L'avversaria sta pensando…";
+function mostraPensiero(si) {
+  if (si && !pensiero.isConnected) document.body.appendChild(pensiero);
+  else if (!si) pensiero.remove();
+}
 
 // --- Salvataggio dei dati nel browser -----------------------------------------------------------------
 let coda = Promise.resolve();
@@ -100,7 +110,11 @@ window.fetch = async function (risorsa, opzioni = {}) {
     try { risposta = { stato: 200, dati: { importate: await importaCarte() } }; }
     catch (e) { risposta = { stato: 502, dati: { detail: `Scryfall non raggiungibile: ${e.message}` } }; }
   } else {
-    risposta = JSON.parse(py.globals.get("browser").chiama(metodo, percorso, opzioni.body ?? null));
+    // Python blocca la pagina finché lavora: prima si mostra l'avviso e si lascia al browser il tempo di disegnarlo
+    const pensa = metodo !== "GET" && percorso.startsWith("/api/partite");
+    if (pensa) { mostraPensiero(true); await new Promise((ok) => requestAnimationFrame(() => setTimeout(ok, 0))); }
+    try { risposta = JSON.parse(py.globals.get("browser").chiama(metodo, percorso, opzioni.body ?? null)); }
+    finally { if (pensa) mostraPensiero(false); }
   }
   if (metodo !== "GET") salvaDati();
   return new Response(JSON.stringify(risposta.dati), { status: risposta.stato, headers: { "Content-Type": "application/json" } });

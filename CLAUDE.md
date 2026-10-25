@@ -103,11 +103,17 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   negli scambi alla pari, con tutto se è letale, ma tiene a casa i bloccanti se il contrattacco sarebbe letale
   (`_danni_del_contrattacco`); Bolt in faccia solo a fine partita (avversario ≤ 10) o con la mano piena; anima
   Mishra's Factory per attaccare/bloccare; Moat e The Abyss solo se convengono.
-- Previsione (`ai/previsione.py`): per attaccanti e bloccanti l'AI confronta le alternative (le sue regole, tutti,
-  nessuno, solo i sicuri; nei blocchi anche sacrificio, scambio, blocco doppio) giocando 6 copie della partita
-  2 turni avanti con le regole normali, con le carte nascoste rimescolate (non bara), max 1,5 s. Spenta nei tornei
-  simulati (`simulazione.gioca_da_sola`) e nei test (conftest; `test_previsione.py` la accende). Misurata con
-  1000 partite a mazzi e posti scambiati contro la versione precedente: vince il 62% (solo regole: 55%).
+- Previsione (`ai/previsione.py`): nei momenti importanti l'AI confronta le alternative giocandole su copie della
+  partita (pickle) 2 turni avanti con le regole normali per entrambi, carte nascoste rimescolate (non bara), max 1 s:
+  attaccanti (regole, tutti, nessuno, solo i sicuri), bloccanti (anche sacrificio, scambio, blocco doppio) e
+  giocate (`avversaria.giocate_possibili`: regole, passa, ogni magia lanciabile con i bersagli migliori, abilità)
+  in fase principale, in risposta, prima/dopo i blocchi e a fine turno avversario (`_momento_importante`).
+  Un'alternativa batte le regole solo con `MARGINE` (altrimenti il caso sceglie giocate cattive). `valuta`: vita
+  propria concava (conta di più quando è poca), quella avversaria lineare, creature, permanenti, mano, terre.
+  Spenta nei tornei simulati (`simulazione.gioca_da_sola`) e nei test (conftest; `test_previsione.py` la accende).
+  `analizza_abilita` e `mana_prodotto` ricordano la lettura del testo (chiave nome, testo, tipo) per la velocità.
+  Misure (banco con mazzi e posti scambiati): v2026.10.25-1 batte l'originale 62%; v2026.10.25-2 batte la -1 58%
+  e l'originale 59% (le percentuali non si sommano: contro avversari diversi il vantaggio cambia).
 - L'AI decide le magie in `ai/politiche.py` (POLITICHE per nome carta, anche Dark Ritual solo se sblocca una carta, Balance se
   conviene, Earthquake/Hurricane, Unsummon/Boomerang sugli attaccanti) e le abilità di utilità in `scegli_abilita`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
 - Bersagli: stringhe `"giocatore:<nome>"` o `"carta:<id>"`, risolte con `Partita.risolvi_bersaglio`. Se alla

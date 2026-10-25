@@ -98,11 +98,18 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   inizia di nuovo chi aveva iniziato). Nei test, dopo `modifica_vita` chiamare `azioni_di_stato`.
 - Carte che lasciano il campo: `Carta.lascia_il_campo()` azzera tutto. Tipo corrente (Factory animata = artefatto):
   usare `tipo_attuale`, non `tipo`, per i controlli in campo.
-- AI (`ai/avversaria.py`): gioca subito Mox/Sol Ring/Lotus; con Counterspell/Mana Drain in mano tiene {U}{U}
-  (`lascia_contromagia`); attacca con tutto se è letale; Bolt in faccia quando basta; anima Mishra's Factory per
-  attaccare/bloccare; Moat e The Abyss solo se convengono. Contro la versione precedente vince il 73% (100 partite
-  con mazzi da torneo scambiati). Per confronti simili: due moduli avversaria su due giocatori, vedi simulazione.py.
-- L'AI decide le magie in `ai/politiche.py` (POLITICHE per nome carta) e le abilità di utilità in `scegli_abilita`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
+- AI (`ai/avversaria.py`): nella sua fase principale gioca prima la terra; gioca subito Mox/Sol Ring/Lotus; con
+  Counterspell/Mana Drain in mano tiene {U}{U} (`lascia_contromagia`, non se dovrebbe scartare); attacca anche
+  negli scambi alla pari, con tutto se è letale, ma tiene a casa i bloccanti se il contrattacco sarebbe letale
+  (`_danni_del_contrattacco`); Bolt in faccia solo a fine partita (avversario ≤ 10) o con la mano piena; anima
+  Mishra's Factory per attaccare/bloccare; Moat e The Abyss solo se convengono.
+- Previsione (`ai/previsione.py`): per attaccanti e bloccanti l'AI confronta le alternative (le sue regole, tutti,
+  nessuno, solo i sicuri; nei blocchi anche sacrificio, scambio, blocco doppio) giocando 6 copie della partita
+  2 turni avanti con le regole normali, con le carte nascoste rimescolate (non bara), max 1,5 s. Spenta nei tornei
+  simulati (`simulazione.gioca_da_sola`) e nei test (conftest; `test_previsione.py` la accende). Misurata con
+  1000 partite a mazzi e posti scambiati contro la versione precedente: vince il 62% (solo regole: 55%).
+- L'AI decide le magie in `ai/politiche.py` (POLITICHE per nome carta, anche Dark Ritual solo se sblocca una carta, Balance se
+  conviene, Earthquake/Hurricane, Unsummon/Boomerang sugli attaccanti) e le abilità di utilità in `scegli_abilita`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
 - Bersagli: stringhe `"giocatore:<nome>"` o `"carta:<id>"`, risolte con `Partita.risolvi_bersaglio`. Se alla
   risoluzione il bersaglio non è più valido la magia non ha effetto. Dopo ogni risoluzione girano `azioni_di_stato`
   (creature con danni letali al cimitero). A fine turno danni e bonus "fino alla fine del turno" si azzerano.

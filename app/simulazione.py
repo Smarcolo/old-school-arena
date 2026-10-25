@@ -1,5 +1,5 @@
 """Partite e incontri giocati interamente dall'avversaria AI su entrambi i lati (per i tornei simulati)."""
-from app.ai import avversaria
+from app.ai import avversaria, previsione
 from app.ai.sideboard import scegli_cambi
 from app.engine import mulligan
 from app.engine.eventi import Evento
@@ -12,6 +12,11 @@ MAX_PASSI = 30000
 def gioca_da_sola(partita: Partita, max_passi: int = MAX_PASSI) -> str:
     """Fa giocare la partita all'AI per entrambi i giocatori fino alla fine. Se non finisce entro max_passi
     (stallo), vince chi ha più punti vita (a parità, chi ha più carte nel grimorio)."""
+    with previsione.spenta():
+        return _gioca_da_sola(partita, max_passi)
+
+
+def _gioca_da_sola(partita: Partita, max_passi: int) -> str:
     for _ in range(max_passi):
         if partita.vincitore:
             return partita.vincitore

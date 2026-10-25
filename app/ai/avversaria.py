@@ -11,7 +11,7 @@ Priorità delle scelte:
 6. Nella fase finale dell'avversario: abilità di danno a {T} rimaste stappate sull'avversario.
 7. Altrimenti passa.
 """
-from app.ai import politiche
+from app.ai import politiche, previsione
 from app.engine import azioni, combattimento, mana
 from app.engine.abilita import analizza_abilita
 from app.engine.inneschi import analizza_inneschi
@@ -123,7 +123,9 @@ def bersaglio_bolt(partita: Partita, nome: str, bolt: Carta | None = None) -> st
         return f"giocatore:{avversario.nome}"
     if migliore := _creatura_uccidibile(partita, nome, DANNI_BOLT, bolt):
         return f"carta:{migliore.id}"
-    if not partita.pila and partita.giocatore_attivo.nome == nome and partita.fase in FASI_PRINCIPALI:
+    if (not partita.pila and partita.giocatore_attivo.nome == nome and partita.fase in FASI_PRINCIPALI
+            and (avversario.vita <= 10 or len(partita.giocatore(nome)[Zona.MANO]) >= 6)):
+        # in faccia solo verso la fine (o con la mano piena): prima conviene tenerlo per le creature
         return f"giocatore:{avversario.nome}"
     return None
 
@@ -141,6 +143,8 @@ def lascia_contromagia(partita: Partita, nome: str, carta: Carta) -> bool:
     """Con una contromagia in mano (e l'avversario con carte in mano) non spende il mana che serve a lanciarla."""
     g = partita.giocatore(nome)
     if not any(c.nome in CONTROMAGIE for c in g[Zona.MANO]) or len(partita.avversario_di(nome)[Zona.MANO]) < 2:
+        return True
+    if len(g[Zona.MANO]) > 7:  # altrimenti a fine turno scarterebbe: meglio giocare le carte
         return True
     from app.engine.validazione import fonti_di_mana
     costo = mana.con_x(mana.analizza_costo(carta.costo), 0)
@@ -253,25 +257,58 @@ def _muore_a_fine_turno(c: Carta) -> bool:
     return any(i.momento == "finale" and i.effetto == "sacrifica" for i in analizza_inneschi(c))
 
 
+def _turni_per_uccidere(vita: int, forza: int) -> float:
+    return vita / forza if forza > 0 else float("inf")
+
+
+def _danni_del_contrattacco(partita: Partita, nome: str, a_casa: list[Carta]) -> int:
+    """Danni che l'avversario farebbe attaccando con tutto al prossimo turno, se lei blocca con le creature
+    rimaste a casa (ognuna ferma l'attaccante più forte che può bloccare)."""
+    avversario = partita.avversario_di(nome)
+    attaccanti = sorted((c for c in avversario[Zona.CAMPO] if c.is_creatura and not c.ha("defender")
+                         and "Wall" not in c.tipo_attuale), key=lambda c: -c.forza_attuale)
+    liberi = list(a_casa)
+    passano = 0
+    for a in attaccanti:
+        b = next((b for b in liberi if not a.ha("flying") or b.ha("flying") or b.ha("reach")), None)
+        if b is None:
+            passano += a.forza_attuale
+        else:
+            liberi.remove(b)
+    return passano
+
+
 def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
-    """Attacca con ogni creatura che nessun bloccante possibile ucciderebbe senza morire a sua volta.
-    Chi verrà sacrificato a fine turno (es. Ball Lightning) attacca sempre."""
-    avversario = partita.avversario_di(nome).nome
-    difensori = combattimento.possibili_bloccanti(partita, avversario)
-    scelti = []
-    for a in combattimento.possibili_attaccanti(partita, nome):
-        possibili = [b for b in difensori if combattimento.puo_bloccare_contro(partita, avversario, b, a) is None]
-        cattivo_scambio = any(b.forza_attuale >= a.costituzione_attuale - a.danni and not a.protetta_da(b)
-                              and (a.forza_attuale < b.costituzione_attuale - b.danni or b.protetta_da(a))
-                              for b in possibili)
-        if not cattivo_scambio or _muore_a_fine_turno(a):
-            scelti.append(a)
+    """Attacca con ogni creatura che nessun bloccante possibile ucciderebbe senza morire a sua volta; se sta
+    vincendo la corsa (uccide prima di essere uccisa) attacca anche quando il blocco peggiore è uno scambio alla pari.
+    Tiene a casa i bloccanti che servono se il contrattacco avversario sarebbe letale.
+    Chi verrà sacrificato a fine turno (es. Ball Lightning) attacca sempre; tutti attaccano se il danno è letale."""
+    g = partita.giocatore(nome)
+    avversario = partita.avversario_di(nome)
+    difensori = combattimento.possibili_bloccanti(partita, avversario.nome)
     tutti = combattimento.possibili_attaccanti(partita, nome)
-    if len(scelti) < len(tutti):
-        # attacco con tutto se, anche bloccando i più forti, i danni che passano bastano
-        forze = sorted((a.forza_attuale for a in tutti), reverse=True)
-        if sum(forze[len(difensori):]) >= partita.avversario_di(nome).vita:
-            return tutti
+    # attacco con tutto se, anche bloccando i più forti, i danni che passano bastano
+    forze = sorted((a.forza_attuale for a in tutti), reverse=True)
+    if sum(forze[len(difensori):]) >= avversario.vita:
+        return tutti
+    mia_forza = sum(c.forza_attuale for c in g[Zona.CAMPO] if c.is_creatura)
+    sua_forza = sum(c.forza_attuale for c in avversario[Zona.CAMPO] if c.is_creatura)
+    in_vantaggio = _turni_per_uccidere(avversario.vita, mia_forza) <= _turni_per_uccidere(g.vita, sua_forza)
+    scelti = []
+    for a in tutti:
+        possibili = [b for b in difensori if combattimento.puo_bloccare_contro(partita, avversario.nome, b, a) is None]
+        uccidono = [b for b in possibili if b.forza_attuale >= a.costituzione_attuale - a.danni and not a.protetta_da(b)]
+        cattivo_scambio = any(a.forza_attuale < b.costituzione_attuale - b.danni or b.protetta_da(a) for b in uccidono)
+        if _muore_a_fine_turno(a) or not cattivo_scambio:
+            scelti.append(a)
+    # chi ha cautela non si tappa: resta un bloccante anche se attacca
+    a_casa = lambda: [c for c in g[Zona.CAMPO] if c.is_creatura and not c.tappata
+                      and (c not in scelti or c.ha("vigilance"))]
+    while scelti and _danni_del_contrattacco(partita, nome, a_casa()) >= g.vita:
+        candidati = [c for c in scelti if not _muore_a_fine_turno(c) and not c.ha("vigilance")]
+        if not candidati:
+            break
+        scelti.remove(max(candidati, key=lambda c: (c.costituzione_attuale, c.forza_attuale)))
     return scelti
 
 
@@ -322,6 +359,62 @@ def scegli_bloccanti(partita: Partita, nome: str) -> list[tuple[Carta, Carta]]:
     return blocchi
 
 
+def _per_id(partita: Partita, ids) -> list[Carta]:
+    return [t[1] for i in ids if (t := partita.trova_in_campo(i))]
+
+
+def _attacco_con_previsione(partita: Partita, nome: str, scelti: list[Carta]) -> list[Carta]:
+    """Confronta l'attacco delle regole con: tutti all'attacco, nessuno, solo chi nessuno può uccidere bloccando."""
+    tutti = combattimento.possibili_attaccanti(partita, nome)
+    avversario = partita.avversario_di(nome).nome
+    difensori = combattimento.possibili_bloccanti(partita, avversario)
+    sicuri = [a for a in tutti if not any(
+        combattimento.puo_bloccare_contro(partita, avversario, b, a) is None
+        and b.forza_attuale >= a.costituzione_attuale - a.danni and not a.protetta_da(b) for b in difensori)]
+    opzioni = []
+    for gruppo in (scelti, tutti, [], sicuri):
+        ids = tuple(sorted(c.id for c in gruppo))
+        if ids not in opzioni:
+            opzioni.append(ids)
+
+    def applica(copia: Partita, ids) -> None:
+        attaccanti = _per_id(copia, ids)
+        combattimento.dichiara_attaccanti(copia, nome, attaccanti, scegli_bande(attaccanti))
+    return _per_id(partita, previsione.migliore(partita, nome, opzioni, applica))
+
+
+def _blocchi_con_previsione(partita: Partita, nome: str, blocchi: list[tuple[Carta, Carta]]) -> list[tuple[Carta, Carta]]:
+    """Confronta i blocchi delle regole con: nessun blocco, i blocchi più un blocco «di sacrificio» sull'attaccante
+    libero più forte, uno scambio (bloccante che lo uccide anche morendo) e un blocco doppio che lo uccide."""
+    opzioni = [tuple((b.id, a.id) for b, a in blocchi), ()]
+    usati = {b.id for b, _ in blocchi}
+    bloccati = {a.id for _, a in blocchi}
+    liberi = sorted((a for a in combattimento.attaccanti_in_campo(partita) if a.id not in bloccati),
+                    key=lambda a: -a.forza_attuale)
+    disponibili = [b for b in combattimento.possibili_bloccanti(partita, nome) if b.id not in usati]
+    for a in liberi[:1]:
+        legali = [b for b in disponibili if combattimento.puo_bloccare_contro(partita, nome, b, a) is None]
+        if legali:
+            piccola = min(legali, key=lambda b: (b.forza_attuale, b.costituzione_attuale))
+            opzioni.append(opzioni[0] + ((piccola.id, a.id),))
+            vita_a = a.costituzione_attuale - a.danni
+            uccidono = [b for b in legali if b.forza_attuale >= vita_a and not a.protetta_da(b)]
+            if uccidono:
+                scambio = min(uccidono, key=lambda b: (b.forza_attuale + b.costituzione_attuale))
+                opzioni.append(opzioni[0] + ((scambio.id, a.id),))
+            else:
+                coppia = sorted((b for b in legali if not a.protetta_da(b)), key=lambda b: -b.forza_attuale)[:2]
+                if len(coppia) == 2 and sum(b.forza_attuale for b in coppia) >= vita_a:
+                    opzioni.append(opzioni[0] + tuple((b.id, a.id) for b in coppia))
+    opzioni = list(dict.fromkeys(opzioni))
+
+    def applica(copia: Partita, coppie) -> None:
+        combattimento.dichiara_bloccanti(copia, nome, [(copia.trova_in_campo(b)[1], copia.trova_in_campo(a)[1])
+                                                       for b, a in coppie])
+    scelta = previsione.migliore(partita, nome, opzioni, applica)
+    return [(partita.trova_in_campo(b)[1], partita.trova_in_campo(a)[1]) for b, a in scelta]
+
+
 def _abilita_pronte(partita: Partita, nome: str, tipo: str) -> list[tuple[Carta, object]]:
     return [(c, ab) for c in partita.giocatore(nome)[Zona.CAMPO] for ab in analizza_abilita(c)
             if ab.tipo == tipo and puo_attivare(partita, nome, c, ab) is None]
@@ -340,10 +433,15 @@ def agisci(partita: Partita, nome: str) -> None:
     avversario = partita.avversario_di(nome).nome
 
     if combattimento.deve_dichiarare_bloccanti(partita, nome):
-        combattimento.dichiara_bloccanti(partita, nome, scegli_bloccanti(partita, nome))
+        blocchi = scegli_bloccanti(partita, nome)
+        if previsione.attiva():
+            blocchi = _blocchi_con_previsione(partita, nome, blocchi)
+        combattimento.dichiara_bloccanti(partita, nome, blocchi)
         return
     if combattimento.deve_dichiarare_attaccanti(partita, nome):
         attaccanti = scegli_attaccanti(partita, nome)
+        if previsione.attiva():
+            attaccanti = _attacco_con_previsione(partita, nome, attaccanti)
         combattimento.dichiara_attaccanti(partita, nome, attaccanti, scegli_bande(attaccanti))
         return
 
@@ -359,6 +457,12 @@ def agisci(partita: Partita, nome: str) -> None:
     for fonte, ab in _abilita_pronte(partita, nome, "danno"):
         if ab.bersaglio in ("qualsiasi", "creatura") and (vittima := _creatura_uccidibile(partita, nome, ab.danni, fonte)):
             azioni.attiva(partita, nome, fonte, ab, [f"carta:{vittima.id}"])
+            return
+
+    if partita.giocatore_attivo.nome == nome and not partita.pila and partita.fase in FASI_PRINCIPALI:
+        # la terra prima di tutto: più mana per le magie del turno
+        if terra := next((c for c in mano if puo_giocare_terra(partita, nome, c) is None), None):
+            azioni.gioca_terra(partita, nome, terra)
             return
 
     if scelta := politiche.scegli_magia(partita, nome):

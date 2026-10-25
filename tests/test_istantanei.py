@@ -107,6 +107,7 @@ def test_comando_con_bersaglio(p):
 
 
 def test_ai_bolta_la_creatura(p):
+    p.giocatore("A").terre_giocate_nel_turno = 1  # altrimenti prima gioca una terra
     agisci(p, "A")
     assert p.pila[-1].carta.nome == "Lightning Bolt" and p.pila[-1].bersagli == [rif(p, "grizzly bears", "B")]
     agisci(p, "A")  # non spreca il secondo Bolt sullo stesso orso: passa

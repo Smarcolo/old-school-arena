@@ -179,7 +179,89 @@ def spazza(p: Partita, nome: str, carta: Carta):
     return None
 
 
+def dark_ritual(p: Partita, nome: str, carta: Carta):
+    """Solo se con {B}{B}{B} in più diventa lanciabile una carta della mano che adesso non lo è."""
+    if not _mia_principale(p, nome):
+        return None
+    from app.engine.validazione import fonti_di_mana
+    g = p.giocatore(nome)
+    fonti = fonti_di_mana(p, nome)
+    piano = mana.piano_pagamento(g.riserva, fonti, mana.analizza_costo(carta.costo))
+    if piano is None:
+        return None
+    usate = [f for f, _ in piano]
+    restanti = [f for f in fonti if not any(f is u for u in usate)]
+    riserva = dict(g.riserva)
+    riserva["B"] = riserva.get("B", 0) + 3
+    for altra in g[Zona.MANO]:
+        if altra is carta or altra.is_terra or puo_lanciare(p, nome, altra) is None:
+            continue
+        if altra.is_permanente or altra.nome in POLITICHE:
+            costo = mana.con_x(mana.analizza_costo(altra.costo), 0)
+            if mana.piano_pagamento(riserva, restanti, costo) is not None:
+                return [], 0
+    return None
+
+
+def _quanti(p: Partita, chi: str, condizione) -> int:
+    return sum(1 for c in p.giocatore(chi)[Zona.CAMPO] if condizione(c))
+
+
+def balance(p: Partita, nome: str, carta: Carta):
+    """Quando fa perdere all'avversario più di quanto fa perdere a lei (creature contano doppio)."""
+    if not _mia_principale(p, nome):
+        return None
+    avv = p.avversario_di(nome).nome
+    def perdite(mie: int, sue: int) -> tuple[int, int]:
+        minimo = min(mie, sue)
+        return mie - minimo, sue - minimo
+    terre = perdite(_quanti(p, nome, lambda c: c.is_terra), _quanti(p, avv, lambda c: c.is_terra))
+    mano = perdite(len(p.giocatore(nome)[Zona.MANO]) - 1, len(p.giocatore(avv)[Zona.MANO]))
+    creature = perdite(_quanti(p, nome, lambda c: c.is_creatura), _quanti(p, avv, lambda c: c.is_creatura))
+    vantaggio = (terre[1] - terre[0]) + (mano[1] - mano[0]) + 2 * (creature[1] - creature[0])
+    return ([], 0) if vantaggio >= 3 else None
+
+
+def terremoto(p: Partita, nome: str, carta: Carta):
+    """Earthquake (creature senza volare) / Hurricane (con volare): X letale per l'avversario e non per lei,
+    oppure la X che uccide più creature avversarie che sue."""
+    if not _mia_principale(p, nome):
+        return None
+    g, avv = p.giocatore(nome), p.avversario_di(nome)
+    vola = carta.nome == "Hurricane"
+    x_max = _x_massimo(p, nome, carta, [])
+    if x_max >= avv.vita and g.vita > avv.vita:
+        return [], avv.vita
+    def valore_colpite(chi, x):
+        return sum((c.forza_attuale or 0) + 1 for c in p.giocatore(chi)[Zona.CAMPO]
+                   if c.is_creatura and c.ha("flying") == vola and not c.protetta_da(carta)
+                   and c.costituzione_attuale - c.danni <= x)
+    migliore = None
+    for x in range(1, x_max + 1):
+        if g.vita - x < 6:
+            break
+        guadagno = valore_colpite(avv.nome, x) - valore_colpite(nome, x)
+        if guadagno >= 5 and (migliore is None or guadagno > migliore[0]):
+            migliore = (guadagno, x)
+    return ([], migliore[1]) if migliore else None
+
+
+def rimbalzo(p: Partita, nome: str, carta: Carta):
+    """Unsummon / Boomerang: sull'attaccante avversario più grosso, prima dei blocchi."""
+    comb = p.combattimento
+    if not (comb and comb.attaccanti_dichiarati and not comb.bloccanti_dichiarati and not p.pila
+            and p.giocatore_attivo.nome != nome):
+        return None
+    tipo = "creatura" if carta.nome == "Unsummon" else "permanente"
+    attaccanti = [t[1] for i in comb.attaccanti if (t := p.trova_in_campo(i))
+                  and bersaglio_legale(p, tipo, f"carta:{t[1].id}", carta)]
+    grosso = max(attaccanti, key=lambda c: c.forza_attuale, default=None)
+    return ([f"carta:{grosso.id}"], 0) if grosso and grosso.forza_attuale >= 3 else None
+
+
 POLITICHE = {
+    "Dark Ritual": dark_ritual, "Balance": balance, "Earthquake": terremoto, "Hurricane": terremoto,
+    "Unsummon": rimbalzo, "Boomerang": rimbalzo,
     "Counterspell": contromagia, "Mana Drain": contromagia, "Red Elemental Blast": contromagia,
     "Blue Elemental Blast": contromagia,
     "Swords to Plowshares": rimozione, "Terror": rimozione,

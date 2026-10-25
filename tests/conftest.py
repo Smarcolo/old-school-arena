@@ -25,3 +25,10 @@ def mazzo(n_terre=20, n_orsi=20):
 @pytest.fixture
 def partita():
     return nuova_partita({"A": mazzo(), "B": mazzo()}, seed=1)
+
+
+@pytest.fixture(autouse=True)
+def _senza_previsione(monkeypatch):
+    """L'AI nei test usa le sue regole veloci; la previsione ha i suoi test (test_previsione.py)."""
+    from app.ai import previsione
+    monkeypatch.setattr(previsione, "ABILITATA", False)

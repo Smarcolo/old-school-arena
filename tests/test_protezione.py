@@ -111,6 +111,7 @@ def test_ai_non_bolta_una_creatura_protetta(p):
     for c in list(p.giocatore("A")[Zona.MANO]):
         if c.is_terra:
             p.giocatore("A")[Zona.MANO].remove(c)
+    p.giocatore("B").vita = 10  # in faccia solo verso la fine della partita
     agisci(p, "A")
     assert p.pila and p.pila[-1].bersagli == ["giocatore:B"]  # niente creature legali: va in faccia
 

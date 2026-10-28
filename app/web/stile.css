@@ -351,3 +351,4 @@ main.editor, main.torneo { display: grid; align-items: start; gap: 1rem; padding
 @keyframes titolo-entra { from { transform: scale(.4); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .coriandoli { display: none; } .trofeo, .titolo-campione { animation: none; } }
 #altro-torneo[hidden] { display: none; }
+#sezione-ipad[hidden], #chiave-ipad[hidden] { display: none; }

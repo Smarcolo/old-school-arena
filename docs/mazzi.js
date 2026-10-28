@@ -253,6 +253,26 @@ function caricaModello(m) {
   mostraAnalisi(m);
 }
 
+// Mazzi del PC pubblicati per l'iPad (app/cards/condivisione.py). Nella versione per iPad la sezione non serve.
+function mostraCondivisione(c) {
+  $("chiave-ipad").hidden = c.chiave && !c.errore;
+  $("stato-ipad").textContent = !c.chiave
+    ? "Per vedere questi mazzi anche sull'iPad incolla una volta la chiave di GitHub (vedi le istruzioni ricevute)."
+    : c.errore ? `Non riesco a mandarli: ${c.errore}.`
+    : c.ultimo ? `Collegato: ogni mazzo che salvi arriva anche sull'iPad (ultimo invio ${c.ultimo}; sull'iPad ricarica la pagina dopo un paio di minuti).`
+    : "Collegato: ogni mazzo che salvi arriva anche sull'iPad.";
+}
+if (window.PONTE) $("sezione-ipad").hidden = true;
+else api("/api/condivisione").then(mostraCondivisione).catch(() => { $("sezione-ipad").hidden = true; });
+$("salva-chiave").onclick = async () => {
+  try {
+    mostraCondivisione(await api("/api/condivisione", { method: "POST", body: JSON.stringify({ testo: $("chiave-github").value }) }));
+    $("chiave-github").value = "";
+  } catch (e) {
+    avvisa("Errore: " + e.message);
+  }
+};
+
 $("copia-mazzi").onclick = async () => {
   const { testo } = await api("/api/trasferimento-mazzi");
   $("trasferimento").value = testo;

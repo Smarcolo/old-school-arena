@@ -92,7 +92,7 @@ def _pagine(destinazione: Path) -> None:
 
 
 # Scritti nella cartella pubblicata da altri (il lavoro automatico su GitHub): si tengono tra una costruzione e l'altra
-DA_TENERE = ["tornei_tcdecks.json"]
+DA_TENERE = ["tornei_tcdecks.json", "mazzi_pc.json"]
 
 
 def costruisci(destinazione: Path) -> None:

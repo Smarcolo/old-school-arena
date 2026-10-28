@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.cards import database, immagini, mazzi, scryfall, tcdecks
+from app.cards import condivisione, database, immagini, mazzi, scryfall, tcdecks
 from app.cards.regole_swedish import carica_regole
 from app.engine import combattimento, mana
 from app.engine.eventi import Evento
@@ -101,6 +101,7 @@ MILLSTONE_DREAMS = {
     "Mishra's Factory": 3, "Tropical Island": 2, "Library of Alexandria": 1, "Strip Mine": 1}
 mazzi.salva_se_manca(conn_carte, "Millstone Dreams (Mr. Pox)", MILLSTONE_DREAMS,
                      {"Serra Angel": 4, "Juzám Djinn": 4, "Erhnam Djinn": 4, "Blue Elemental Blast": 3})
+condivisione.pubblica(conn_carte)  # i mazzi del PC anche sull'iPad (solo se c'è la chiave di GitHub)
 giudice = Giudice()
 
 
@@ -456,9 +457,29 @@ def esporta_mazzi() -> dict:
 @app.post("/api/trasferimento-mazzi")
 def importa_mazzi(corpo: TestoMazzo) -> dict:
     try:
-        return {"importati": mazzi.importa_tutti(conn_carte, corpo.testo)}
+        importati = mazzi.importa_tutti(conn_carte, corpo.testo)
+        condivisione.pubblica(conn_carte)
+        return {"importati": importati}
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+
+@app.get("/api/condivisione")
+def stato_condivisione() -> dict:
+    """Mazzi del PC sull'iPad: c'è la chiave di GitHub? quando è andato l'ultimo invio?"""
+    return {"chiave": bool(condivisione.chiave()), **condivisione.stato}
+
+
+@app.post("/api/condivisione")
+def salva_chiave(corpo: TestoMazzo) -> dict:
+    """La chiave di GitHub incollata nella pagina Mazzi: si salva in data/github_token.txt e si prova subito."""
+    chiave = corpo.testo.strip()
+    if not chiave.startswith(("github_pat_", "ghp_")):
+        raise HTTPException(400, "non sembra una chiave di GitHub: deve iniziare con github_pat_")
+    condivisione.FILE_CHIAVE.parent.mkdir(parents=True, exist_ok=True)
+    condivisione.FILE_CHIAVE.write_text(chiave, encoding="utf-8")
+    condivisione.pubblica(conn_carte, attendi=True)
+    return {"chiave": True, **condivisione.stato}
 
 
 @app.get("/api/mazzi/{nome:path}")
@@ -478,6 +499,7 @@ def salva_mazzo(nome: str, corpo: TestoMazzo) -> dict:
         raise HTTPException(400, "righe non capite: " + "; ".join(errori))
     analisi = mazzi.analizza(conn_carte, mazzo, sideboard)
     mazzi.salva(conn_carte, nome.strip(), analisi["mazzo"], analisi["sideboard"])
+    condivisione.pubblica(conn_carte)
     return {"nome": nome.strip(), "testo": mazzi.formatta_testo(analisi["mazzo"], analisi["sideboard"]), **analisi}
 
 
@@ -485,6 +507,7 @@ def salva_mazzo(nome: str, corpo: TestoMazzo) -> dict:
 def elimina_mazzo(nome: str) -> dict:
     if not mazzi.elimina(conn_carte, nome):
         raise HTTPException(404, "mazzo non trovato")
+    condivisione.pubblica(conn_carte)
     return {"ok": True}
 
 

@@ -81,6 +81,10 @@ async function avvia() {
     const r = await fetchVero("tornei_tcdecks.json", { cache: "no-cache" });
     if (r.ok) py.FS.writeFile("/dati/tornei_tcdecks.json", await r.text());
   } catch (e) { console.warn("elenco tornei non disponibile", e); }
+  try {  // mazzi salvati sul PC (app/cards/condivisione.py): li importa browser.avvia
+    const r = await fetchVero("mazzi_pc.json", { cache: "no-cache" });
+    if (r.ok) py.FS.writeFile("/dati/mazzi_pc.json", await r.text());
+  } catch (e) { console.warn("mazzi del PC non disponibili", e); }
   scriviAttesa("Preparo il tavolo… (3/3)");
   await py.runPythonAsync(`
 import os, sys

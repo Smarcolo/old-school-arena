@@ -78,6 +78,11 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   scarica le carte da Scryfall in JS al primo avvio e sostituisce `urlImmagine` con gli indirizzi Scryfall del
   database. TCDecks dal browser non si raggiunge (CORS): lì valgono i mazzi salvati. `python -m ipad.costruisci`
   crea `sito/` (o la cartella indicata: `docs/` è quella pubblicata su GitHub Pages, da ricostruire a ogni consegna) (pagine con ponte.js, app.zip, Pyodide 0.25.1 + sqlite3 controllato con sha256).
+- Mazzi del PC sull'iPad (`app/cards/condivisione.py`): sul PC a ogni salvataggio/eliminazione/import e all'avvio
+  `pubblica` manda i mazzi dell'utente (non quelli TCDecks) in `docs/mazzi_pc.json` con l'API GitHub (thread; chiave
+  in `data/github_token.txt`, incollata da Marco nella pagina Mazzi, `/api/condivisione`). Sull'iPad ponte.js copia
+  `mazzi_pc.json` in /dati e `browser.avvia` chiama `importa_dal_pc` (una volta per file). Le eliminazioni sul PC
+  non tolgono i mazzi dall'iPad. `ipad.costruisci` non cancella `docs/mazzi_pc.json`.
 - `data/` — database, cache immagini, bulk Scryfall: generati, non versionati (vedi `.gitignore`).
 
 ## Regole del motore

@@ -108,7 +108,9 @@ def avvia():
     global _main
     installa_sostituti()
     from app.api import main
+    from app.cards import condivisione
     _main = main
+    condivisione.importa_dal_pc(main.conn_carte)  # mazzi del PC arrivati dal sito (ponte.js li mette in /dati)
     return main.VERSIONE
 
 

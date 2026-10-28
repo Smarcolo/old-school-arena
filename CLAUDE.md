@@ -11,8 +11,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/engine/` — stato della partita (`stato.py`), zone, azioni, validazione, event log. Nessuna dipendenza da API, AI o web.
 - `app/cards/` — `carte_base.json` (dati di prova scritti a mano, sovrascritti dall'import Scryfall), database SQLite delle carte, import Scryfall, regole di costruzione mazzo Swedish (`regole_swedish.json`).
 - `app/cards/tcdecks.py` — top 8 degli ultimi tornei Old School da TCDecks (format.php → deck.php?id → deck.php?id&iddeck).
-  Parser volutamente generico (link e righe «4 Nome»), verificato solo su pagine di prova: la struttura reale di
-  TCDecks non era raggiungibile dalla sessione in cui è stato scritto. Mazzi salvati con origine "tcdecks" e info
+  Parser verificato sulle pagine vere (2026-10-28, 229 mazzi): elenco in righe con «N Players» e data; liste nella
+  `table_deck` (`_lista_da_tabella`: colonne a sezioni «Creatures [17]» = mazzo, colonna senza sezioni = sideboard). Mazzi salvati con origine "tcdecks" e info
   (torneo, posizione, giocatore, url). `mazzi.scegli_mazzo_avversaria` sceglie a caso tra i giocabili con supporto
   del motore ≥ 80%. Riserva: import di un singolo mazzo dall'indirizzo.
   TCDecks risponde ai programmi con una verifica anti-bot («Verificación en curso»): HEADERS manda il cookie

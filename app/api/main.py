@@ -193,7 +193,7 @@ def vista(p: Partita) -> dict:
                  "costituzione": c.costituzione_attuale if c.is_creatura else None,
                  "danni": c.danni, "bersaglio": tipo_bersaglio(c),
                  "incanta": _nome_incantata(p, c), "abilita": _abilita(c), "scudi": c.scudi_rigenerazione,
-                 "attivabili": [{"testo": a.testo, "bersaglio": a.bersaglio,
+                 "attivabili": [{"testo": a.testo, "bersaglio": a.bersaglio, "tipo": a.tipo,
                                  "ora": not (motivo := puo_attivare(p, UMANO, c, a)) if g.nome == UMANO and z == Zona.CAMPO else False,
                                  "motivo": motivo if g.nome == UMANO and z == Zona.CAMPO else None}
                                 for a in analizza_abilita(c)],

@@ -187,3 +187,33 @@ def test_mishra_factory_non_si_paga_da_sola_per_animarsi():
     assert puo_attivare(p, "Tu", fac, anima) is None
     azioni.attiva(p, "Tu", fac, anima)
     assert not fac.tappata
+
+
+MIRROR = ("{T}, Sacrifice Mirror Universe: Exchange life totals with target opponent. "
+          "Activate only during your upkeep.")
+MILLSTONE = "{2}, {T}: Target player mills two cards."
+
+
+def test_ti_fermi_nel_mantenimento_per_mirror_universe():
+    p = partita_con_ai()
+    tu, ai = p.giocatore("Tu"), p.giocatore("AI")
+    specchio = Carta("Mirror Universe", "Artifact", "{6}", None, None, MIRROR)
+    specchio.entrata_nel_turno = 0
+    tu[Zona.CAMPO].append(specchio)
+    ai[Zona.MANO].clear()
+    tu.vita = 5
+    esegui_comando(p, "Tu", "AI", "fine turno")
+    assert p.giocatore_attivo.nome == "Tu" and p.fase == Fase.MANTENIMENTO  # fermo qui, non salta alla principale
+    esegui_comando(p, "Tu", "AI", f"attiva {specchio.id} 1 su avversaria")
+    assert tu.vita == 20 and ai.vita == 5
+
+
+def test_millstone_anche_sul_proprio_grimorio():
+    p = partita_con_ai()
+    tu = p.giocatore("Tu")
+    macina = Carta("Millstone", "Artifact", "{2}", None, None, MILLSTONE)
+    macina.entrata_nel_turno = 0
+    tu[Zona.CAMPO].extend([macina, Carta("Forest", "Basic Land — Forest"), Carta("Forest", "Basic Land — Forest")])
+    prima = len(tu[Zona.GRIMORIO])
+    esegui_comando(p, "Tu", "AI", f"attiva {macina.id} 1 su me")
+    assert len(tu[Zona.GRIMORIO]) == prima - 2 and len(tu[Zona.CIMITERO]) == 2

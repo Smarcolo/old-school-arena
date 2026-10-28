@@ -126,7 +126,10 @@ function suCampo(c, mio) {
   const opzioni = [];
   if (c.puo_attaccare) opzioni.push([attaccantiScelti.has(c.id) ? "Non attaccare" : "⚔ Attacca", () => scegliAttaccante(c)]);
   (c.attivabili || []).forEach((a, i) => {
-    if (a.ora) opzioni.push([`Attiva ${descriviAbilita(a.testo)}`, () => attivaAbilita(c, a, i)]);
+    if (a.ora && a.tipo === "macina") {  // Millstone: anche sul proprio grimorio (es. per riempire il cimitero)
+      opzioni.push([`Macina l'avversaria`, () => invia(`attiva ${c.id} ${i + 1} su avversaria`)],
+        [`Macina il tuo grimorio`, () => invia(`attiva ${c.id} ${i + 1} su me`)]);
+    } else if (a.ora) opzioni.push([`Attiva ${descriviAbilita(a.testo)}`, () => attivaAbilita(c, a, i)]);
     // abilità che ora non si può usare per mancanza di mana: si vede lo stesso, con il motivo
     else if (a.motivo && a.motivo.includes("mana")) opzioni.push([`✕ ${descriviAbilita(a.testo)}`, () => avvisa(a.motivo)]);
   });
@@ -330,7 +333,7 @@ function pallino(colore) {
 const NOMI_MANA = { W: "bianco", U: "blu", B: "nero", R: "rosso", G: "verde", C: "incolore" };
 
 // Bersagli ovvi: non serve cliccarli (Mind Twist si gioca sempre sull'avversaria).
-const BERSAGLIO_OVVIO = { "Mind Twist": "avversaria", "Millstone": "avversaria", "Mirror Universe": "avversaria" };
+const BERSAGLIO_OVVIO = { "Mind Twist": "avversaria", "Mirror Universe": "avversaria" };
 
 function chiediX(c) {
   if (!c.x) return "";
@@ -404,12 +407,20 @@ function cosaFare() {
   const carte = [...new Set(giocabiliInMano())];
   const puoi = carte.length ? ` Ora puoi usare: ${carte.join(", ")} (illuminate in verde).` : "";
   if (p.pila.length) return `In pila c'è ${p.pila[p.pila.length - 1].nome}.` + puoi + " Altrimenti «Lascia risolvere».";
+  if (p.attivo === "Tu" && p.fase === "mantenimento")
+    return "Mantenimento: è l'unico momento per usare Mirror Universe (scambia i punti vita). Oppure «Avanti».";
   if (p.attivo === "Tu" && p.fase === "principale 1")
     return ("Clicca una carta della mano per giocarla; clicca una tua creatura per attaccare o usare un'abilità." + puoi).trim();
   return (puoi || "Non hai carte da giocare in questo momento.").trim();
 }
 
 // I pulsanti dicono cosa succede davvero passando la priorità in quel momento.
+// Pulsanti nel riquadro del turno per le abilità del momento (animare Mishra's Factory, Mirror Universe...)
+function bottoniAbilita(adatta, etichetta) {
+  return partita.giocatori[0].campo.flatMap((c) => (c.attivabili || []).map((a, i) => [c, a, i]))
+    .filter(([, a]) => a.ora && adatta(a)).map(([c, a, i]) => bottone(etichetta(c), () => attivaAbilita(c, a, i)));
+}
+
 function azioniTurno() {
   const p = partita, comb = p.combattimento, mio = p.attivo === "Tu";
   if (magiaInAttesa) return [bottone("Annulla", annullaBersaglio)];
@@ -421,9 +432,13 @@ function azioniTurno() {
   if (mio && p.fase === "principale 2") return [bottone("Fine turno", () => invia("fine turno"))];
   if (mio && p.fase === "combattimento" && comb && comb.bloccanti_dichiarati && !comb.danni_inflitti && comb.attaccanti.length)
     return [bottone("Vai ai danni", () => invia("passa"))];
+  if (mio && p.fase === "mantenimento")
+    return [...bottoniAbilita((a) => a.tipo === "scambia_vita", (c) => `Usa ${c.nome}`), bottone("Avanti", () => invia("passa"))];
   if (mio) return [bottone("Avanti", () => invia("passa")), bottone("Fine turno", () => invia("fine turno"))];
   if (comb && comb.bloccanti_dichiarati && !comb.danni_inflitti && comb.attaccanti.length) return [bottone("Vai ai danni", () => invia("passa"))];
-  if (comb && comb.attaccanti_dichiarati && !comb.bloccanti_dichiarati && comb.attaccanti.length) return [bottone("Vai ai blocchi", () => invia("passa"))];
+  if (comb && comb.attaccanti_dichiarati && !comb.bloccanti_dichiarati && comb.attaccanti.length)
+    return [...bottoniAbilita((a) => a.tipo === "anima", (c) => `🛡 Anima ${c.nome} per bloccare`),
+      bottone("Vai ai blocchi", () => invia("passa"))];
   if (p.fase === "finale") return [bottone("Passa al mio turno", () => invia("passa"))];
   return [bottone("Continua", () => invia("passa"))];
 }

@@ -184,7 +184,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   La regia non ferma l'umano per un innesco in pila se non può rispondere.
 - Regia: l'umano si ferma anche per dichiarare attaccanti/bloccanti e, dopo i blocchi, se ha un istantaneo lanciabile;
   nel turno avversario anche dopo la dichiarazione degli attaccanti (prima dei blocchi) e nella fase finale, se ha
-  qualcosa da usare (`ha_istantanei`). Quello che mette in pila l'umano si risolve da solo.
+  qualcosa da usare (`ha_istantanei`), e nel proprio mantenimento se ha Mirror Universe pronto
+  (`ha_abilita_del_mantenimento`). Quello che mette in pila l'umano si risolve da solo. Nel tavolo
+  (`bottoniAbilita`): «Anima Mishra's Factory per bloccare» quando ti attaccano, «Usa Mirror Universe» nel
+  mantenimento; Millstone dal menu della carta su avversaria o su di sé.
 - Scarto a fine turno (`azioni._scarta_fino_a_sette`): l'AI scarta da sola, l'umano con Scelta "scegli" e seguito
   "fine_turno" che fa ripartire `passa_fase`. La vista dà per le carte dell'umano in campo `mana`/`mana_ora`:
   il tavolo fa tappare scegliendo il colore («tappa <id> per <colore>»), `lancia` usa prima la riserva.

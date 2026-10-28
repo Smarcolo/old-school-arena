@@ -19,6 +19,12 @@ def ha_istantanei(partita: Partita, umano: str) -> bool:
             or any(puo_attivare(partita, umano, c, ab) is None for c in g[Zona.CAMPO] for ab in analizza_abilita(c)))
 
 
+def ha_abilita_del_mantenimento(partita: Partita, umano: str) -> bool:
+    """Un'abilità che si può usare solo nel proprio mantenimento (Mirror Universe) ed è attivabile adesso."""
+    return any(ab.solo_nel_mantenimento and puo_attivare(partita, umano, c, ab) is None
+               for c in partita.giocatore(umano)[Zona.CAMPO] for ab in analizza_abilita(c))
+
+
 def deve_fermarsi(partita: Partita, umano: str) -> bool:
     """Vedi sotto; in più: le scelte in sospeso dell'umano lo fermano sempre; quello che l'umano ha messo in pila
     si risolve senza chiedergli niente (se l'avversaria risponde, l'umano si ferma sulla sua risposta); un innesco
@@ -49,6 +55,8 @@ def _deve_fermarsi(partita: Partita, umano: str) -> bool:
         return ha_istantanei(partita, umano)  # ti attaccano: prima dei blocchi (es. animare Mishra's Factory)
     if turno_avversario and partita.fase == Fase.FINALE:
         return ha_istantanei(partita, umano)  # fine del turno avversario: Ancestral Recall, Library of Alexandria...
+    if not turno_avversario and partita.fase == Fase.MANTENIMENTO:
+        return ha_abilita_del_mantenimento(partita, umano)  # Mirror Universe si usa solo qui
     return partita.giocatore_attivo.nome == umano and partita.fase in FASI_PRINCIPALI
 
 

@@ -15,7 +15,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   TCDecks non era raggiungibile dalla sessione in cui è stato scritto. Mazzi salvati con origine "tcdecks" e info
   (torneo, posizione, giocatore, url). `mazzi.scegli_mazzo_avversaria` sceglie a caso tra i giocabili con supporto
   del motore ≥ 80%. Riserva: import di un singolo mazzo dall'indirizzo.
-  Ultimi 5 tornei già pronti: `.github/workflows/tornei.yml` (GitHub Actions, ogni lunedì o a mano) lancia
+  TCDecks risponde ai programmi con una verifica anti-bot («Verificación en curso»): HEADERS manda il cookie
+  `verificado=1` che la pagina imposterebbe nel browser (deciso da Marco il 2026-10-28; `_verifica_anti_bot` la
+  riconosce se cambia). Ultimi 5 tornei già pronti: `.github/workflows/tornei.yml` (il primo del mese o a mano) lancia
   `python -m app.cards.tcdecks --json docs/tornei_tcdecks.json` (`raccogli_tornei`: nome completo dal titolo della
   pagina, data, giocatori, top 8 con le liste; pagine scaricate come artifact «tcdecks-diagnosi»). Il gioco lo legge con
   `elenco_tornei` (da raw.githubusercontent, copia in `data/tornei_tcdecks.json`; sull'iPad la scrive ponte.js),

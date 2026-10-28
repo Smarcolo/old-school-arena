@@ -204,3 +204,18 @@ def test_top_otto_dall_elenco_e_copia_locale(conn, tmp_path, monkeypatch):
     assert top.torneo == "Monthly #62" and len(top.mazzi) == 8
     assert len(mazzi.elenco(conn, tcdecks.ORIGINE)) == 8  # salvati: l'avversaria li può usare
     assert tcdecks.top_otto_dall_elenco(conn, "1", get=senza_rete).errori
+
+
+def test_dettagli_nel_formato_vero_di_tcdecks():
+    riga = ('<tr><td title="Paper"></td><td data-label="Tournament Name"><a href="deck.php?id=44640">The Plague 5 (Swe)</a></td>'
+            '<td data-label="Players"><a href="deck.php?id=44640"> 65 Players </a></td>'
+            '<td data-label="Date"><a href="deck.php?id=44640">03/10/2026</a></td></tr>')
+    assert tcdecks.tornei_recenti(riga)[0].nome == "The Plague 5 (Swe)"
+    assert tcdecks._dettagli_tornei(riga) == {"44640": {"data": "03/10/2026", "giocatori": 65}}
+
+
+def test_verifica_anti_bot_riconosciuta(conn, tmp_path, monkeypatch):
+    monkeypatch.setattr(tcdecks, "DIAGNOSI", tmp_path / "diagnosi")
+    verifica = "<title>Verificación en curso...</title><p>Verificando que no eres un bot...</p>"
+    top = tcdecks.carica_torneo(conn, "", get=finto_get({"format=Old+School": FORMATO, "deck.php?id=43448": verifica}), pausa=0)
+    assert any("anti-bot" in e for e in top.errori)

@@ -24,8 +24,15 @@ FORMATO = BASE + "format.php?format=Old+School"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                          "Chrome/124.0 Safari/537.36",
            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-           "Accept-Language": "it-IT,it;q=0.9,en;q=0.8"}
+           "Accept-Language": "it-IT,it;q=0.9,en;q=0.8",
+           # TCDecks risponde prima con «Verificando que no eres un bot...», una pagina che nel browser imposta questo
+           # cookie e si ricarica. Mandarlo subito l'ha deciso Marco (2026-10-28): poche pagine, una volta al mese
+           "Cookie": "verificado=1"}
 DIAGNOSI = DATI / "tcdecks_diagnosi"  # le pagine dell'ultimo tentativo, per capire cosa non va
+
+
+def _verifica_anti_bot(testo: str) -> bool:
+    return "no eres un bot" in testo or "Verificación en curso" in testo
 
 
 def _ricorda_pagina(nome: str, url: str, stato: int, testo: str) -> None:
@@ -186,6 +193,8 @@ def carica_torneo(conn, nome: str = "", get=httpx.get, pausa: float = 1.0) -> To
         _ricorda_pagina(f"{pagine:02d}-{nome_file}", url, risposta.status_code, risposta.text)
         if risposta.status_code != 200:
             raise ValueError(f"TCDecks ha risposto con il codice {risposta.status_code} a {url}")
+        if _verifica_anti_bot(risposta.text):
+            raise ValueError("TCDecks ha risposto con la sua verifica anti-bot invece della pagina")
         time.sleep(pausa)
         return risposta.text
 
@@ -291,12 +300,12 @@ def _dettagli_tornei(pagina: str) -> dict[str, dict]:
     """Per ogni torneo della pagina del formato le altre celle della sua riga: data e numero di giocatori."""
     dettagli = {}
     for riga in re.findall(r"<tr[^>]*>(.*?)</tr>", pagina, re.S | re.I):
-        if not (m := re.search(r"deck\.php\?id=(\d+)(?![\d&])", riga)):
+        if not (link := re.search(r"deck\.php\?id=(\d+)(?![\d&])", riga)):
             continue
         celle = [_testo(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", riga, re.S | re.I)]
         data = next((c for c in celle if re.search(r"\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}-\d{2}-\d{2}", c)), "")
-        giocatori = next((int(c) for c in celle if re.fullmatch(r"\d{1,4}", c)), None)
-        dettagli.setdefault(m.group(1), {"data": data, "giocatori": giocatori})
+        giocatori = next((int(n.group(1)) for c in celle if (n := re.fullmatch(r"(\d{1,4})(?: players?)?", c, re.I))), None)
+        dettagli.setdefault(link.group(1), {"data": data, "giocatori": giocatori})
     return dettagli
 
 
@@ -364,6 +373,8 @@ def raccogli_tornei(quanti: int = 5, get=httpx.get, pausa: float = 1.0) -> dict:
         _ricorda_pagina(f"{pagine:02d}-{nome_file}", url, risposta.status_code, risposta.text)
         if risposta.status_code != 200:
             raise ValueError(f"TCDecks ha risposto con il codice {risposta.status_code} a {url}")
+        if _verifica_anti_bot(risposta.text):
+            raise ValueError("TCDecks ha risposto con la sua verifica anti-bot invece della pagina")
         time.sleep(pausa)
         return risposta.text
 

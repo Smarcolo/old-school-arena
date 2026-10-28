@@ -1,10 +1,9 @@
 # Le top 8 degli ultimi 5 tornei Old School da TCDecks, salvate in docs/tornei_tcdecks.json: il gioco (PC e iPad)
-# le legge da lì, perché dal browser TCDecks non si raggiunge. Ogni lunedì, oppure a mano da «Actions».
+# le legge da lì, perché dal browser TCDecks non si raggiunge. Solo a mano da «Actions»: per ora TCDecks risponde ai
+# programmi con una verifica anti-bot («Verificando que no eres un bot») e le pagine dei tornei non arrivano.
 name: Tornei TCDecks
 
 on:
-  schedule:
-    - cron: "17 5 * * 1"
   workflow_dispatch:
 
 permissions:

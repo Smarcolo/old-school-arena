@@ -107,8 +107,41 @@ def mazzi_del_torneo(pagina: str, id_torneo: str, quanti: int = 8) -> list[VoceM
     return voci[:quanti]
 
 
+def _righe_carte(frammento: str) -> list[str]:
+    testo = re.sub(r"<(?:br|/h\d)[^>]*>", "\n", frammento, flags=re.I)
+    return [" ".join(r.split()) for r in html_lib.unescape(re.sub(r"<[^>]+>", " ", testo)).splitlines() if r.strip()]
+
+
+def _lista_da_tabella(pagina: str) -> tuple[dict[str, int], dict[str, int]] | None:
+    """Pagina vera di TCDecks (table_deck): il mazzo è in colonne divise per tipo («Creatures [17]», «Land [24]»),
+    la sideboard è la colonna senza sezioni. L'intestazione «Sideboard» sta sopra tutte le colonne."""
+    inizio = pagina.find('class="table_deck"')
+    if inizio < 0:
+        return None
+    tabella = pagina[inizio:pagina.find("</table>", inizio)]
+    mazzo: dict[str, int] = {}
+    sideboard: dict[str, int] = {}
+    side_letta = False
+    for cella in re.findall(r"<td[^>]*>(.*?)</td>", tabella, re.S | re.I):
+        righe = _righe_carte(cella)
+        carte = [m for r in righe if (m := re.match(r"^(\d{1,2})\s+(.+)$", r)) and not re.search(r"\bcards?$", r, re.I)]
+        if not carte:
+            continue
+        con_sezioni = any(re.match(r"^[A-Za-z ]+\[\d+\]$", r) for r in righe)
+        if not con_sezioni and side_letta:  # la colonna della sideboard compare due volte (celle annidate)
+            continue
+        destinazione = mazzo if con_sezioni else sideboard
+        side_letta |= not con_sezioni
+        for m in carte:
+            destinazione[m.group(2)] = destinazione.get(m.group(2), 0) + int(m.group(1))
+    return (mazzo, sideboard) if mazzo else None
+
+
 def lista_dal_mazzo(pagina: str) -> tuple[dict[str, int], dict[str, int]]:
-    """Righe «4 Nome carta» del testo della pagina; dopo «Sideboard» vanno in sideboard."""
+    """Righe «4 Nome carta» del testo della pagina; dopo «Sideboard» vanno in sideboard. Per la tabella delle pagine
+    vere di TCDecks vedi _lista_da_tabella."""
+    if tabella := _lista_da_tabella(pagina):
+        return tabella
     testo = re.sub(r"<(?:br|/tr|/td|/th|/div|/li|/p|/h\d)[^>]*>", "\n", pagina, flags=re.I)
     testo = html_lib.unescape(re.sub(r"<[^>]+>", " ", testo))
     mazzo: dict[str, int] = {}

@@ -219,3 +219,17 @@ def test_verifica_anti_bot_riconosciuta(conn, tmp_path, monkeypatch):
     verifica = "<title>Verificación en curso...</title><p>Verificando que no eres un bot...</p>"
     top = tcdecks.carica_torneo(conn, "", get=finto_get({"format=Old+School": FORMATO, "deck.php?id=43448": verifica}), pausa=0)
     assert any("anti-bot" in e for e in top.errori)
+
+
+def test_lista_nella_tabella_vera_di_tcdecks():
+    """Intestazione «Sideboard» sopra le colonne; mazzo diviso in sezioni, sideboard senza (e ripetuta, annidata)."""
+    carta = lambda n, nome: f'{n} <a class="screenshot" href="x" name="{nome}">{nome}</a><br />'
+    pagina = ('<table class="table_deck"><tr><th colspan="2"> Mario playing Mardu </th><th>Position: 1 </th></tr>'
+              '<tr><th colspan="2"> Deck Name: Kiwisdu </th><th scope="hide"> Sideboard </th></tr><tr align="left">'
+              f'<td><h6>Creatures [4]</h6>{carta(4, "Hypnotic Specter")}<h6>Instants [4]</h6>{carta(4, "Lightning Bolt")}</td>'
+              f'<td><h6>Land [52]</h6>{carta(52, "Swamp")}</td>'
+              f'<td><table><tr><td>{carta(3, "Disenchant")}{carta(2, "Terror")}</td></tr><tr><td>5 Cards</td></tr></table></td>'
+              '</tr></table>')
+    mazzo, side = tcdecks.lista_dal_mazzo(pagina)
+    assert mazzo == {"Hypnotic Specter": 4, "Lightning Bolt": 4, "Swamp": 52}
+    assert side == {"Disenchant": 3, "Terror": 2}

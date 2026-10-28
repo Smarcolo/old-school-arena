@@ -95,7 +95,7 @@ browser.avvia()`);
   await salvaDati();
   const browser = py.globals.get("browser");
   indirizzi = JSON.parse(browser.indirizzi_immagini());
-  if (browser.carte_importate() < 500) {
+  if (browser.serve_import()) {
     try { await importaCarte(); } catch (e) { console.warn("import Scryfall non riuscito", e); }
   }
   attesa.remove();

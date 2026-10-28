@@ -32,3 +32,12 @@ def test_converti_scryfall_filtra_set():
     ]
     righe = converti(dati, {"lea", "3ed"})
     assert len(righe) == 1 and righe[0]["set_codici"] == "3ed,lea"
+
+
+def test_le_carte_di_prova_non_cancellano_quelle_di_scryfall(conn):
+    from app.cards import database
+    database.salva(conn, [{"nome": "Counterspell", "tipo": "Instant", "costo": "{U}{U}", "testo": "Counter target spell.",
+                           "set_codici": "lea,leb", "immagine_url": "https://cards.scryfall.io/leb/counterspell.jpg"}])
+    database.carica_carte_base(conn)  # come a ogni avvio
+    riga = conn.execute("SELECT set_codici, immagine_url FROM carte WHERE nome = 'Counterspell'").fetchone()
+    assert riga["immagine_url"] == "https://cards.scryfall.io/leb/counterspell.jpg" and riga["set_codici"] == "lea,leb"

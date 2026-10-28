@@ -162,13 +162,22 @@ def importa_carte_da_json(testo: str) -> int:
     """Le carte scaricate da Scryfall dalla pagina (ponte.js): stessa conversione dell'import del server."""
     from app.cards import database, scryfall
     from app.cards.regole_swedish import carica_regole
+    from app.config import DATI
     righe = scryfall.converti(json.loads(testo), set(carica_regole().set_ammessi))
-    return database.salva(_main.conn_carte, righe)
+    n = database.salva(_main.conn_carte, righe)
+    (DATI / "import_scryfall_v2").write_text("fatto", encoding="utf-8")
+    return n
 
 
-def carte_importate() -> int:
-    """Quante carte vengono dall'import Scryfall (quelle di prova scritte a mano non hanno l'immagine)."""
-    return _main.conn_carte.execute("SELECT COUNT(*) FROM carte WHERE immagine_url != ''").fetchone()[0]
+def serve_import() -> bool:
+    """Le carte vanno (ri)scaricate da Scryfall se sono poche o se molte carte non hanno l'immagine del 1993
+    (succedeva fino alla versione 2026.10.28-3: le carte di prova cancellavano l'indirizzo a ogni avvio)."""
+    conn = _main.conn_carte
+    con_immagine = conn.execute("SELECT COUNT(*) FROM carte WHERE immagine_url != ''").fetchone()[0]
+    senza = conn.execute("SELECT COUNT(*) FROM carte WHERE immagine_url = ''").fetchone()[0]
+    from app.config import DATI
+    gia_rifatto = (DATI / "import_scryfall_v2").exists()
+    return con_immagine < 500 or (senza > 20 and not gia_rifatto)
 
 
 def set_ammessi() -> str:

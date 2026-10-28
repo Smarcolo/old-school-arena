@@ -40,13 +40,18 @@ def connetti(percorso: Path | str = DB_CARTE) -> sqlite3.Connection:
     return conn
 
 
-def salva(conn: sqlite3.Connection, righe: list[dict]) -> int:
+def salva(conn: sqlite3.Connection, righe: list[dict], solo_se_di_prova: bool = False) -> int:
+    """Inserisce o aggiorna le carte. Un indirizzo d'immagine vuoto non cancella quello che c'è. Con
+    solo_se_di_prova aggiorna solo le carte scritte a mano (senza set): quelle importate da Scryfall restano."""
+    condizione = " WHERE carte.set_codici = ''" if solo_se_di_prova else ""
     conn.executemany(
         """INSERT INTO carte (nome, tipo, costo, forza, costituzione, testo, set_codici, immagine_url)
            VALUES (:nome, :tipo, :costo, :forza, :costituzione, :testo, :set_codici, :immagine_url)
            ON CONFLICT(nome) DO UPDATE SET tipo=excluded.tipo, costo=excluded.costo,
              forza=excluded.forza, costituzione=excluded.costituzione, testo=excluded.testo,
-             set_codici=excluded.set_codici, immagine_url=excluded.immagine_url""",
+             set_codici=excluded.set_codici,
+             immagine_url=CASE WHEN excluded.immagine_url != '' THEN excluded.immagine_url ELSE carte.immagine_url END"""
+        + condizione,
         [
             {"costo": "", "forza": None, "costituzione": None, "testo": "", "set_codici": "", "immagine_url": "", **r}
             for r in righe
@@ -57,7 +62,8 @@ def salva(conn: sqlite3.Connection, righe: list[dict]) -> int:
 
 
 def carica_carte_base(conn: sqlite3.Connection) -> int:
-    return salva(conn, json.loads(CARTE_BASE.read_text(encoding="utf-8")))
+    """Le carte di prova: aggiungono quelle mancanti e aggiornano solo quelle non ancora importate da Scryfall."""
+    return salva(conn, json.loads(CARTE_BASE.read_text(encoding="utf-8")), solo_se_di_prova=True)
 
 
 def cerca(conn: sqlite3.Connection, nome: str) -> Carta | None:

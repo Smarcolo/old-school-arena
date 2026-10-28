@@ -33,7 +33,24 @@ function disegna() {
   if (torneo.da_giocare) azioni.push(el("button", { type: "button", textContent: "Gioca il tuo incontro", onclick: gioca }));
   if (torneo.campione) azioni.push(el("p", { className: "campione", textContent: `Vince il torneo: ${torneo.campione}` }));
   t.replaceChildren(el("h2", { textContent: torneo.nome }), el("div", { className: "turni" }, ...turni), ...azioni);
+  const tu = (torneo.partecipanti || []).find((p) => p.umano);
+  if (tu && torneo.campione === tu.nome) festa(tu.nome);
 }
+
+// --- Vittoria del torneo: trofeo, coriandoli e scritta da campione (una volta per torneo) --------------------
+function festa(mazzo) {
+  const chiave = `festa-${torneo.id}`;
+  try { if (localStorage.getItem(chiave)) return; localStorage.setItem(chiave, "1"); } catch { /* senza memoria: si rivede */ }
+  const colori = ["#e8c25a", "#f2e8d5", "#c0392b", "#2e86c1", "#27ae60", "#8e44ad"];
+  $("festa").querySelector(".coriandoli").replaceChildren(...Array.from({ length: 90 }, () => el("i", { style:
+    `left:${Math.random() * 100}%;background:${colori[Math.floor(Math.random() * colori.length)]};` +
+    `animation-delay:${(Math.random() * 2.5).toFixed(2)}s;animation-duration:${(2.8 + Math.random() * 2.5).toFixed(2)}s;` +
+    `transform:rotate(${Math.floor(Math.random() * 360)}deg)` })));
+  $("festa-torneo").textContent = `Hai vinto ${torneo.nome}`;
+  $("festa-mazzo").textContent = `con ${mazzo}`;
+  $("festa").hidden = false;
+}
+$("chiudi-festa").onclick = () => { $("festa").hidden = true; };
 
 async function gioca() {
   try {
@@ -48,8 +65,10 @@ $("crea").onclick = async () => {
   $("crea").disabled = true;
   avvisa("Carico la top 8 da TCDecks e simulo i quarti che non giochi tu…");
   try {
+    const scelto = $("scegli-torneo").value;
     torneo = await api("/api/tornei", { method: "POST", body: JSON.stringify({
-      torneo: $("nome-torneo").value.trim(), mazzo: $("mio-mazzo").value, posto: parseInt($("posto").value, 10) }) });
+      torneo: scelto === "altro" || !scelto ? $("nome-torneo").value.trim() : scelto,
+      mazzo: $("mio-mazzo").value, posto: parseInt($("posto").value, 10) }) });
     history.replaceState(null, "", `torneo.html?id=${torneo.id}`);
     avvisa(torneo.avvisi && torneo.avvisi.length ? "Attenzione: " + torneo.avvisi.join("; ") : "Top 8 pronta.");
     disegna();
@@ -62,7 +81,21 @@ $("crea").onclick = async () => {
   }
 };
 
+$("scegli-torneo").onchange = () => { $("altro-torneo").hidden = $("scegli-torneo").value !== "altro"; };
+
+async function caricaTornei() {
+  let elenco = { tornei: [] };
+  try { elenco = await api("/api/tornei-tcdecks"); } catch { /* resta solo «altro» */ }
+  const voce = (t) => el("option", { value: `tc:${t.id}`, textContent: [t.nome, t.data, t.giocatori && `${t.giocatori} giocatori`]
+    .filter(Boolean).join(" · ") });
+  $("scegli-torneo").replaceChildren(...elenco.tornei.map(voce),
+    el("option", { value: "altro", textContent: "Altro torneo (scrivi il nome o l'indirizzo)…" }));
+  $("altro-torneo").hidden = elenco.tornei.length > 0;
+  if (!elenco.tornei.length) $("scegli-torneo").value = "altro";
+}
+
 (async () => {
+  caricaTornei();
   const mazzi = await api("/api/mazzi");
   $("mio-mazzo").replaceChildren(...mazzi.filter((m) => m.origine !== "tcdecks")
     .map((m) => el("option", { value: m.nome, textContent: `${m.nome} (${m.totale})` })));

@@ -77,6 +77,10 @@ async function avvia() {
   py.FS.mkdirTree("/dati");
   py.FS.mount(py.FS.filesystems.IDBFS, {}, "/dati");
   await new Promise((ok) => py.FS.syncfs(true, (err) => { if (err) console.warn("lettura dati", err); ok(); }));
+  try {  // ultimi tornei TCDecks preparati su GitHub (dal browser TCDecks non si raggiunge): li legge app/cards/tcdecks.py
+    const r = await fetchVero("tornei_tcdecks.json", { cache: "no-cache" });
+    if (r.ok) py.FS.writeFile("/dati/tornei_tcdecks.json", await r.text());
+  } catch (e) { console.warn("elenco tornei non disponibile", e); }
   scriviAttesa("Preparo il tavolo… (3/3)");
   await py.runPythonAsync(`
 import os, sys

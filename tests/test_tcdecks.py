@@ -165,3 +165,42 @@ def test_carica_torneo_spiega_cosa_non_va(conn, tmp_path, monkeypatch):
         status_code, text = 403, "Just a moment..."
     top = tcdecks.carica_torneo(conn, "", get=lambda url, **kw: Bloccato(), pausa=0)
     assert any("codice 403" in e for e in top.errori)
+
+
+TORNEO_OTTO = "<title>X-point Old School Online Monthly #62 - TCDecks</title><table>" + "".join(
+    f'<tr><td>{i}</td><td><a href="deck.php?id=43448&amp;iddeck=9000{i}">Mazzo {i}</a></td><td>Giocatore {i}</td></tr>'
+    for i in range(1, 9)) + "</table>"
+
+
+def test_raccogli_tornei_per_il_file_su_github(tmp_path, monkeypatch):
+    monkeypatch.setattr(tcdecks, "DIAGNOSI", tmp_path / "diagnosi")
+    lista = MAZZO_BR.replace("20 Plateau", "48 Plateau")
+    pagine = {"format=Old+School": FORMATO, "deck.php?id=43448": TORNEO_OTTO, "deck.php?id=43400": "<p>vuoto</p>"}
+    pagine |= {f"iddeck=9000{i}": lista for i in range(1, 9)}
+    dati = tcdecks.raccogli_tornei(5, get=finto_get(pagine), pausa=0)
+    (torneo,) = dati["tornei"]
+    assert torneo["nome"] == "X-point Old School Online Monthly #62"
+    assert torneo["data"] == "10/10/2026" and torneo["giocatori"] == 24
+    assert [m["posizione"] for m in torneo["mazzi"]] == list(range(1, 9))
+    assert torneo["mazzi"][0]["sideboard"] == {"Disenchant": 3}
+    assert any("Hurloon Battle" in e for e in dati["errori"])  # senza mazzi: saltato e spiegato
+
+
+def test_top_otto_dall_elenco_e_copia_locale(conn, tmp_path, monkeypatch):
+    import json
+    monkeypatch.setattr(tcdecks, "FILE_TORNEI", tmp_path / "tornei.json")
+    lista = {"Plateau": 48, "Savannah Lions": 12}
+    dati = {"tornei": [{"id": "43448", "nome": "Monthly #62", "url": "u", "mazzi": [
+        {"posizione": i, "nome": f"Mazzo {i}", "giocatore": "G", "mazzo": lista, "sideboard": {}} for i in range(1, 9)]}]}
+
+    class Risposta:
+        status_code = 200
+        def json(self):
+            return dati
+    assert tcdecks.elenco_tornei(get=lambda url, **kw: Risposta())["tornei"][0]["nome"] == "Monthly #62"
+    senza_rete = finto_get({})
+    assert json.loads((tmp_path / "tornei.json").read_text())["tornei"]  # copia locale per quando manca la rete
+    top = tcdecks.top_otto_dall_elenco(conn, "43448", get=senza_rete)
+    assert top.torneo == "Monthly #62" and len(top.mazzi) == 8
+    assert len(mazzi.elenco(conn, tcdecks.ORIGINE)) == 8  # salvati: l'avversaria li può usare
+    assert tcdecks.top_otto_dall_elenco(conn, "1", get=senza_rete).errori

@@ -109,3 +109,19 @@ def test_comando_tappa_per_colore(p):
     from app.commands.parser import analizza
     p.giocatore("A")[Zona.CAMPO].append(TUNDRA())
     assert "{U}" in esegui(p, "A", analizza("tappa tundra per blu"))
+
+
+def test_dice_quale_colore_manca():
+    from app.engine.stato import Carta, Fase, nuova_partita
+    from app.engine.validazione import puo_lanciare
+    from app.engine.zone import Zona
+    isola = lambda: Carta("Island", "Basic Land — Island", "", None, None, "({T}: Add {U}.)")
+    p = nuova_partita({"A": [isola() for _ in range(20)], "B": [isola() for _ in range(20)]}, seed=1)
+    p.mulligan = None
+    a = p.giocatore("A")
+    p.attivo = p.priorita = p.giocatori.index(a)
+    p.fase = Fase.PRINCIPALE_1
+    a[Zona.CAMPO][:] = [isola(), isola()]
+    campo = Carta("Field of Dreams", "World Enchantment", "{W}{U}", None, None, "")
+    a[Zona.MANO][:] = [campo]
+    assert puo_lanciare(p, "A", campo).endswith("ti manca il bianco")

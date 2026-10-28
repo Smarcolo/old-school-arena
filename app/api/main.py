@@ -544,6 +544,15 @@ def _lista_giocabile(mazzo: dict[str, int], sideboard: dict[str, int]) -> tuple[
     return Lista(noti, side), sostituite
 
 
+@app.get("/api/tornei-tcdecks")
+def tornei_tcdecks() -> dict:
+    """Gli ultimi tornei Old School di TCDecks con la top 8 già pronta, da scegliere nella pagina Torneo."""
+    dati = tcdecks.elenco_tornei()
+    return {"aggiornato": dati.get("aggiornato", ""), "errori": dati.get("errori", []),
+            "tornei": [{"id": t["id"], "nome": t["nome"], "data": t.get("data", ""), "giocatori": t.get("giocatori"),
+                        "mazzi": len(t["mazzi"])} for t in dati["tornei"]]}
+
+
 @app.post("/api/tornei")
 def crea_torneo(richiesta: RichiestaTorneo) -> dict:
     """Top 8 di un torneo vero da TCDecks con il tuo mazzo al posto di uno dei piazzati (serve internet la
@@ -551,7 +560,10 @@ def crea_torneo(richiesta: RichiestaTorneo) -> dict:
     if not 1 <= richiesta.posto <= 8:
         raise HTTPException(400, "il posto va da 1 a 8")
     tuo = _carica_lista(richiesta.mazzo)
-    top = tcdecks.carica_torneo(conn_carte, richiesta.torneo)
+    if richiesta.torneo.startswith("tc:"):  # uno degli ultimi tornei già pronti (/api/tornei-tcdecks)
+        top = tcdecks.top_otto_dall_elenco(conn_carte, richiesta.torneo[3:])
+    else:
+        top = tcdecks.carica_torneo(conn_carte, richiesta.torneo)
     per_posto = {voce.posizione: (voce, mazzo, side) for voce, mazzo, side in top.mazzi}
     mancanti = [p for p in range(1, 9) if p != richiesta.posto and p not in per_posto]
     if mancanti:

@@ -327,6 +327,9 @@ def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
         modifica_vita(partita, chi, sua - mia, f"({fonte.nome}: scambio dei punti vita)")
         modifica_vita(partita, altro.nome, mia - sua, f"({fonte.nome}: scambio dei punti vita)")
     elif ab.tipo == "chaos_orb":
+        if not partita.trova_in_campo(fonte.id):  # «If Chaos Orb is on the battlefield»: distrutta in risposta
+            _log(partita, chi, "neutralizzata", f"{fonte.nome} non è più in campo: non cade su niente")
+            return
         colpito = partita.risolvi_bersaglio(oggetto.bersagli[0])
         _log(partita, chi, "chaos_orb", f"{fonte.nome} cade su {colpito.nome}")
         distruggi(partita, colpito, f"(colpita da {fonte.nome})")

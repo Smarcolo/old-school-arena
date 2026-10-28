@@ -23,7 +23,7 @@ TESTI = {
     "Sylvan Library": ("Enchantment", "{1}{G}", "At the beginning of your draw step, you may draw two additional cards. If "
                        "you do, choose two cards in your hand drawn this turn. For each of those cards, pay 4 life or put "
                        "the card on top of your library."),
-    "Field of Dreams": ("World Enchantment", "{W}", "Players play with the top card of their libraries revealed."),
+    "Field of Dreams": ("World Enchantment", "{W}{U}", "Players play with the top card of their libraries revealed."),
 }
 
 
@@ -166,3 +166,30 @@ def test_field_of_dreams_mostra_la_cima_di_entrambi_i_grimori(p):
     in_campo(p, "Tu", carta("Field of Dreams"))
     v = vista(p)
     assert [g["cima"] for g in v["giocatori"]] == [p.giocatori[0][Zona.GRIMORIO][-1].nome, p.giocatori[1][Zona.GRIMORIO][-1].nome]
+
+
+def test_ai_risponde_all_orb_con_il_suo_orb(p):
+    """Un giocatore esperto distrugge l'Orb avversario in risposta: così quello non cade su niente."""
+    from app.ai import avversaria
+    orb_a = in_campo(p, "A", carta("Chaos Orb"))
+    orb_b = in_campo(p, "B", carta("Chaos Orb"))
+    spettro = in_campo(p, "B", Carta("Hypnotic Specter", "Creature — Specter", "{1}{B}{B}", 2, 2,
+                                    "Flying\nWhenever Hypnotic Specter deals damage to an opponent, that player discards a card at random."))
+    p.attivo = p.priorita = p.giocatori.index(p.giocatore("A"))
+    azioni.attiva(p, "A", orb_a, analizza_abilita(orb_a)[0], [f"carta:{spettro.id}"])
+    azioni.passa_priorita(p, "A")
+    avversaria.agisci(p, "B")
+    assert p.pila[-1].carta is orb_b and p.pila[-1].bersagli == [f"carta:{orb_a.id}"]
+    risolvi(p)
+    assert spettro in p.giocatore("B")[Zona.CAMPO]  # l'Orb di A è stato distrutto prima: non è caduto
+    assert orb_a in p.giocatore("A")[Zona.CIMITERO] and orb_b in p.giocatore("B")[Zona.CIMITERO]
+
+
+def test_ai_lancia_l_orb_sulla_sylvan_library(p):
+    from app.ai import avversaria
+    orb = in_campo(p, "B", carta("Chaos Orb"))
+    libreria = in_campo(p, "A", carta("Sylvan Library"))
+    p.attivo = p.priorita = p.giocatori.index(p.giocatore("B"))
+    p.giocatore("B").terre_giocate_nel_turno = 1
+    avversaria.agisci(p, "B")
+    assert p.pila and p.pila[-1].carta is orb and p.pila[-1].bersagli == [f"carta:{libreria.id}"]

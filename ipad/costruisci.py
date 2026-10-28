@@ -91,12 +91,19 @@ def _pagine(destinazione: Path) -> None:
     (destinazione / ".nojekyll").write_text("")  # GitHub Pages: servire i file così come sono
 
 
+# Scritti nella cartella pubblicata da altri (il lavoro automatico su GitHub): si tengono tra una costruzione e l'altra
+DA_TENERE = ["tornei_tcdecks.json"]
+
+
 def costruisci(destinazione: Path) -> None:
+    tenuti = {n: (destinazione / n).read_bytes() for n in DA_TENERE if (destinazione / n).exists()}
     if destinazione.exists():
         shutil.rmtree(destinazione)
     _pyodide(destinazione / "pyodide")
     _pagine(destinazione)
     _codice(destinazione / "app.zip")
+    for nome, dati in tenuti.items():
+        (destinazione / nome).write_bytes(dati)
     versione = re.search(r'VERSIONE = "([^"]+)"', (RADICE / "app" / "versione.py").read_text()).group(1)
     print(f"versione {versione} pronta in {destinazione}")
 

@@ -286,6 +286,44 @@ def scegli_magia(p: Partita, nome: str):
     return None
 
 
+# Permanenti non creatura che un giocatore esperto toglie di mezzo appena può (vantaggio carte o blocco del gioco)
+PERMANENTI_PERICOLOSI = {"Sylvan Library": 9, "Moat": 9, "The Abyss": 9, "Mirror Universe": 8, "Millstone": 8,
+                         "Black Vise": 7, "Jayemdae Tome": 7, "Library of Alexandria": 8, "Icy Manipulator": 7,
+                         "Disrupting Scepter": 7, "Howling Mine": 5, "Bad Moon": 6, "Crusade": 6, "Sol Ring": 6,
+                         "Chaos Orb": 6, "Ivory Tower": 5}
+
+
+def pericolo(t: Carta) -> int:
+    """Quanto è importante distruggere un permanente avversario (0 = non vale la pena)."""
+    if t.is_terra:
+        return 0
+    if t.nome in PERMANENTI_PERICOLOSI:
+        return PERMANENTI_PERICOLOSI[t.nome]
+    if t.is_creatura:
+        punti = 2 * (t.forza_attuale or 0) + (2 if t.ha("flying") else 0)
+        if "discards" in t.testo or "draw" in t.testo.lower():  # Hypnotic Specter e simili: rubano carte
+            punti += 3
+        return punti
+    return 4 if t.nome in CARTE_MIGLIORI or t.nome.startswith("Mox") else 0
+
+
+def _bersaglio_chaos_orb(p: Partita, nome: str, orb: Carta) -> Carta | None:
+    """Chaos Orb: in risposta all'Orb avversario lo distrugge (così il suo non cade su niente); altrimenti, nella sua
+    fase principale o alla fine del turno avversario, sul permanente avversario più pericoloso."""
+    avv = p.avversario_di(nome)
+    legale = lambda t: bersaglio_legale(p, "permanente", f"carta:{t.id}", orb)
+    if p.pila:
+        cima = p.pila[-1]
+        if (cima.controllore != nome and cima.abilita and cima.abilita.tipo == "chaos_orb"
+                and (t := p.trova_in_campo(cima.carta.id)) and legale(t[1])):
+            return t[1]
+        return None
+    if not (_mia_principale(p, nome) or _fine_turno_avversario(p, nome)):
+        return None
+    candidati = [t for t in avv[Zona.CAMPO] if legale(t) and pericolo(t) >= 6]
+    return max(candidati, key=lambda t: (pericolo(t), valore_carta(t))) if candidati else None
+
+
 def scegli_abilita(p: Partita, nome: str):
     """Abilità di utilità: Strip Mine su una terra non base, Library of Alexandria e Jayemdae Tome a fine turno
     avversario, Icy Manipulator sulla creatura migliore avversaria nel suo mantenimento."""
@@ -304,11 +342,8 @@ def scegli_abilita(p: Partita, nome: str):
                 return c, ab, [f"giocatore:{avv.nome}"]
             if ab.tipo == "scambia_vita" and avv.vita - p.giocatore(nome).vita >= 8:  # Mirror Universe
                 return c, ab, [f"giocatore:{avv.nome}"]
-            if ab.tipo == "chaos_orb" and _mia_principale(p, nome):
-                minacce = [t for t in avv[Zona.CAMPO] if not t.is_terra and bersaglio_legale(p, "permanente", f"carta:{t.id}", c)
-                           and ((t.forza_attuale or 0) >= 3 or t.nome in ("Moat", "The Abyss", "Black Vise", "Mirror Universe"))]
-                if minacce:
-                    return c, ab, [f"carta:{max(minacce, key=lambda t: (t.forza_attuale or 0, valore_carta(t))).id}"]
+            if ab.tipo == "chaos_orb" and (scelta := _bersaglio_chaos_orb(p, nome, c)):
+                return c, ab, [f"carta:{scelta.id}"]
             if (ab.tipo == "tappa" and p.giocatore_attivo.nome == avv.nome and p.fase == Fase.MANTENIMENTO
                     and not p.pila):
                 creature = [t for t in avv[Zona.CAMPO] if t.is_creatura and not t.tappata

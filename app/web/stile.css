@@ -328,3 +328,26 @@ main.editor, main.torneo { display: grid; align-items: start; gap: 1rem; padding
 #pensiero, #pensiero-ponte { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 9998;
   background: #1d1a16; color: #f2e8d5; font: 15px Georgia, serif; padding: 8px 16px; border-radius: 20px;
   opacity: .92; box-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
+
+/* Vittoria del torneo */
+#festa { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, #3a2a0acc, #000e 70%); animation: festa-entra .5s ease-out; }
+#festa[hidden] { display: none; }
+.coriandoli { position: absolute; inset: 0; pointer-events: none; }
+.coriandoli i { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; opacity: .9;
+  animation-name: coriandolo; animation-timing-function: linear; animation-iteration-count: infinite; }
+.trofeo-box { position: relative; text-align: center; color: #f2e8d5; font-family: Georgia, serif; padding: 2rem; }
+.trofeo { font-size: clamp(90px, 22vw, 180px); line-height: 1; filter: drop-shadow(0 0 30px #e8c25a);
+  animation: trofeo-sale 1s cubic-bezier(.2, 1.6, .4, 1) both, trofeo-brilla 2s ease-in-out 1s infinite; }
+.titolo-campione { font-size: clamp(42px, 9vw, 84px); font-weight: bold; letter-spacing: .12em; color: #e8c25a;
+  text-shadow: 0 0 18px #e8c25a99, 0 4px 0 #6b4a0a; animation: titolo-entra .8s .4s cubic-bezier(.2, 1.4, .4, 1) both; }
+.festa-torneo { font-size: clamp(18px, 3vw, 26px); margin-top: .6rem; animation: titolo-entra .6s .9s both; }
+.festa-mazzo { font-size: clamp(15px, 2.4vw, 20px); opacity: .85; font-style: italic; animation: titolo-entra .6s 1.1s both; }
+#chiudi-festa { margin-top: 1.4rem; font-size: 1.1rem; padding: .6rem 1.6rem; animation: titolo-entra .6s 1.5s both; }
+@keyframes festa-entra { from { opacity: 0; } }
+@keyframes coriandolo { to { transform: translateY(110vh) rotate(720deg); } }
+@keyframes trofeo-sale { from { transform: translateY(60vh) scale(.3); opacity: 0; } }
+@keyframes trofeo-brilla { 50% { transform: scale(1.06) rotate(-3deg); filter: drop-shadow(0 0 50px #ffd96a); } }
+@keyframes titolo-entra { from { transform: scale(.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .coriandoli { display: none; } .trofeo, .titolo-campione { animation: none; } }
+#altro-torneo[hidden] { display: none; }

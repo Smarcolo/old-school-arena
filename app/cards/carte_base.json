@@ -112,7 +112,7 @@
   {"nome": "Juggernaut", "tipo": "Artifact Creature — Juggernaut", "costo": "{4}", "testo": "Juggernaut attacks each combat if able.\nJuggernaut can't be blocked by Walls.", "forza": 5, "costituzione": 3},
   {"nome": "Ali from Cairo", "tipo": "Creature — Human", "costo": "{2}{R}{R}", "testo": "Damage that would reduce your life total to less than 1 reduces it to 1 instead.", "forza": 0, "costituzione": 1},
   {"nome": "Recall", "tipo": "Sorcery", "costo": "{X}{X}{U}", "testo": "Discard X cards, then return a card from your graveyard to your hand for each card discarded this way. Exile Recall."},
-  {"nome": "Field of Dreams", "tipo": "World Enchantment", "costo": "{W}", "testo": "Players play with the top card of their libraries revealed."},
+  {"nome": "Field of Dreams", "tipo": "World Enchantment", "costo": "{W}{U}", "testo": "Players play with the top card of their libraries revealed."},
   {"nome": "Sylvan Library", "tipo": "Enchantment", "costo": "{1}{G}", "testo": "At the beginning of your draw step, you may draw two additional cards. If you do, choose two cards in your hand drawn this turn. For each of those cards, pay 4 life or put the card on top of your library."},
   {"nome": "Millstone", "tipo": "Artifact", "costo": "{2}", "testo": "{2}, {T}: Target player mills two cards."},
   {"nome": "Fellwar Stone", "tipo": "Artifact", "costo": "{2}", "testo": "{T}: Add one mana of any color that a land an opponent controls could produce."},

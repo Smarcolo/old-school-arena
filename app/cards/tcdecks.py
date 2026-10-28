@@ -287,7 +287,138 @@ def importa_url(conn, url: str, get=httpx.get) -> Resoconto:
     return res
 
 
+def _dettagli_tornei(pagina: str) -> dict[str, dict]:
+    """Per ogni torneo della pagina del formato le altre celle della sua riga: data e numero di giocatori."""
+    dettagli = {}
+    for riga in re.findall(r"<tr[^>]*>(.*?)</tr>", pagina, re.S | re.I):
+        if not (m := re.search(r"deck\.php\?id=(\d+)(?![\d&])", riga)):
+            continue
+        celle = [_testo(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", riga, re.S | re.I)]
+        data = next((c for c in celle if re.search(r"\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}-\d{2}-\d{2}", c)), "")
+        giocatori = next((int(c) for c in celle if re.fullmatch(r"\d{1,4}", c)), None)
+        dettagli.setdefault(m.group(1), {"data": data, "giocatori": giocatori})
+    return dettagli
+
+
+# Il file preparato ogni settimana su GitHub (vedi raccogli_tornei); copia locale per quando manca la rete
+URL_TORNEI = ("https://raw.githubusercontent.com/Smarcolo/old-school-arena/claude/old-school-arena-setup-o0x9qi/"
+              "docs/tornei_tcdecks.json")
+FILE_TORNEI = DATI / "tornei_tcdecks.json"
+
+
+def elenco_tornei(get=httpx.get) -> dict:
+    """Le ultime top 8 già pronte: dal file su GitHub (salvato anche in locale), altrimenti dalla copia locale.
+    Nella versione per iPad la copia locale la scrive la pagina (ponte.js) prima di avviare il programma."""
+    import json
+    try:
+        risposta = get(URL_TORNEI, timeout=10, follow_redirects=True)
+        if risposta.status_code == 200:
+            dati = risposta.json()
+            try:
+                FILE_TORNEI.parent.mkdir(parents=True, exist_ok=True)
+                FILE_TORNEI.write_text(json.dumps(dati, ensure_ascii=False), encoding="utf-8")
+            except OSError:
+                pass
+            return dati
+    except Exception:
+        pass
+    try:
+        return json.loads(FILE_TORNEI.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"tornei": [], "errori": ["elenco dei tornei non disponibile (serve internet la prima volta)"]}
+
+
+def top_otto_dall_elenco(conn, id_torneo: str, get=httpx.get) -> TopOtto:
+    """La top 8 di un torneo dell'elenco già pronto; i mazzi si salvano anche (origine "tcdecks") così
+    l'avversaria li può usare nelle partite normali."""
+    torneo = next((t for t in elenco_tornei(get)["tornei"] if t["id"] == id_torneo), None)
+    if torneo is None:
+        return TopOtto(id_torneo, errori=["torneo non più nell'elenco: ricarica la pagina"])
+    risultato = TopOtto(torneo["nome"])
+    for m in torneo["mazzi"]:
+        voce = VoceMazzo("", m["nome"], m["posizione"], m.get("giocatore", ""))
+        analisi = mazzi.analizza(conn, m["mazzo"], m.get("sideboard", {}))
+        risultato.carte_sconosciute |= {p.removeprefix("carta sconosciuta: ") for p in analisi["problemi"]
+                                        if p.startswith("carta sconosciuta")}
+        mazzi.salva(conn, f"TC {voce.posizione}° {voce.nome} · {torneo['nome']}"[:120], m["mazzo"],
+                    m.get("sideboard", {}), origine=ORIGINE,
+                    info={"torneo": torneo["nome"], "posizione": voce.posizione, "giocatore": voce.giocatore,
+                          "url": torneo.get("url", "")})
+        risultato.mazzi.append((voce, m["mazzo"], m.get("sideboard", {})))
+    return risultato
+
+
+def raccogli_tornei(quanti: int = 5, get=httpx.get, pausa: float = 1.0) -> dict:
+    """Le top 8 degli ultimi `quanti` tornei Old School, pronte per il gioco: {"aggiornato", "tornei": [{"id",
+    "nome" (completo, dal titolo della pagina), "data", "giocatori", "url", "mazzi": [{"posizione", "nome",
+    "giocatore", "mazzo", "sideboard"}]}], "errori"}. La usa il lavoro automatico su GitHub (vedi
+    .github/workflows/tornei.yml), che scrive docs/tornei_tcdecks.json: il gioco la legge da lì."""
+    from datetime import datetime, timezone
+    risultato = {"aggiornato": datetime.now(timezone.utc).isoformat(timespec="minutes"), "tornei": [], "errori": []}
+    pagine = 0
+
+    def scarica(url: str, nome_file: str) -> str:
+        nonlocal pagine
+        risposta = get(url, headers=HEADERS, timeout=30, follow_redirects=True)
+        pagine += 1
+        _ricorda_pagina(f"{pagine:02d}-{nome_file}", url, risposta.status_code, risposta.text)
+        if risposta.status_code != 200:
+            raise ValueError(f"TCDecks ha risposto con il codice {risposta.status_code} a {url}")
+        time.sleep(pausa)
+        return risposta.text
+
+    try:
+        pagina = scarica(FORMATO, "elenco-tornei")
+    except Exception as e:
+        risultato["errori"].append(f"elenco dei tornei non raggiungibile: {e}")
+        return risultato
+    dettagli = _dettagli_tornei(pagina)
+    for torneo in tornei_recenti(pagina):
+        if len(risultato["tornei"]) >= quanti:
+            break
+        url = f"{BASE}deck.php?id={torneo.id}"
+        voce = {"id": torneo.id, "nome": torneo.nome, "url": url, "mazzi": [], **dettagli.get(torneo.id, {})}
+        try:
+            pagina_torneo = scarica(url, f"torneo-{torneo.id}")
+            if m := re.search(r"<title>(.*?)</title>", pagina_torneo, re.S | re.I):
+                titolo = _testo(m.group(1)).split(" - ")[0].strip()
+                if len(titolo) > len(voce["nome"]) and "tcdecks" not in titolo.lower():
+                    voce["nome"] = titolo
+            voci = mazzi_del_torneo(pagina_torneo, torneo.id, 8)
+        except Exception as e:
+            risultato["errori"].append(f"{torneo.nome}: {e}")
+            continue
+        for v in voci:
+            try:
+                mazzo, side = lista_dal_mazzo(scarica(f"{url}&iddeck={v.iddeck}", f"mazzo-{torneo.id}-{v.posizione}"))
+            except Exception as e:
+                risultato["errori"].append(f"{torneo.nome}, {v.nome}: {e}")
+                continue
+            if not 40 <= sum(mazzo.values()) <= 100:
+                risultato["errori"].append(f"{torneo.nome}, {v.nome}: lista non letta ({sum(mazzo.values())} carte)")
+                continue
+            voce["mazzi"].append({"posizione": v.posizione, "nome": v.nome, "giocatore": v.giocatore,
+                                  "mazzo": mazzo, "sideboard": side})
+        if len(voce["mazzi"]) >= 7:  # con 7 su 8 si gioca lo stesso: l'umano prende il posto mancante
+            risultato["tornei"].append(voce)
+        else:
+            risultato["errori"].append(f"{voce['nome']}: letti solo {len(voce['mazzi'])} mazzi su 8, torneo saltato")
+    return risultato
+
+
 def main() -> None:
+    if len(sys.argv) > 2 and sys.argv[1] == "--json":  # python -m app.cards.tcdecks --json docs/tornei_tcdecks.json
+        import json
+        from pathlib import Path
+        dati = raccogli_tornei()
+        for e in dati["errori"]:
+            print("Errore:", e, file=sys.stderr)
+        print(f"{len(dati['tornei'])} tornei: " + "; ".join(t["nome"] for t in dati["tornei"]), file=sys.stderr)
+        if dati["tornei"]:  # se TCDecks non risponde si tiene il file di prima
+            Path(sys.argv[2]).write_text(json.dumps(dati, ensure_ascii=False, indent=1), encoding="utf-8")
+        else:
+            sys.exit(1)
+        return
     from app.cards import database
     with database.connetti() as conn:
         res = importa(conn)

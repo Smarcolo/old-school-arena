@@ -147,11 +147,22 @@ def puo_lanciare(partita: Partita, nome_giocatore: str, carta: Carta, bersagli: 
     if x < 0:
         return "X non può essere negativo"
     costo = costo_di_lancio(carta, x, len(bersagli or []))
-    if mana.piano_pagamento(g.riserva, fonti_di_mana(partita, nome_giocatore), costo) is None:
+    fonti = fonti_di_mana(partita, nome_giocatore)
+    if mana.piano_pagamento(g.riserva, fonti, costo) is None:
         con = f" con X={x}" if "X" in carta.costo else ""
         extra = f" per {len(bersagli)} bersagli" if bersagli and len(bersagli) > 1 else ""
-        return f"non hai abbastanza mana per {carta.nome} ({carta.costo}{con}{extra})"
+        return f"non hai abbastanza mana per {carta.nome} ({carta.costo}{con}{extra}){_colori_mancanti(g.riserva, fonti, costo)}"
     return None
+
+
+NOMI_COLORI = {"W": "bianco", "U": "blu", "B": "nero", "R": "rosso", "G": "verde"}
+
+
+def _colori_mancanti(riserva: dict[str, int], fonti: list, costo: dict[str, int]) -> str:
+    """«: ti manca il bianco» quando un colore del costo non si può proprio produrre (es. solo mana blu per {W}{U})."""
+    mancanti = [NOMI_COLORI[c] for c in NOMI_COLORI if costo.get(c, 0)
+                and riserva.get(c, 0) + sum(f.quantita for f in fonti if c in f.colori) < costo[c]]
+    return f": ti manca il {' e il '.join(mancanti)}" if mancanti else ""
 
 
 def max_bersagli(carta: Carta) -> int:

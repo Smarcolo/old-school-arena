@@ -15,6 +15,12 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   TCDecks non era raggiungibile dalla sessione in cui è stato scritto. Mazzi salvati con origine "tcdecks" e info
   (torneo, posizione, giocatore, url). `mazzi.scegli_mazzo_avversaria` sceglie a caso tra i giocabili con supporto
   del motore ≥ 80%. Riserva: import di un singolo mazzo dall'indirizzo.
+  Ultimi 5 tornei già pronti: `.github/workflows/tornei.yml` (GitHub Actions, ogni lunedì o a mano) lancia
+  `python -m app.cards.tcdecks --json docs/tornei_tcdecks.json` (`raccogli_tornei`: nome completo dal titolo della
+  pagina, data, giocatori, top 8 con le liste; pagine scaricate come artifact «tcdecks-diagnosi»). Il gioco lo legge con
+  `elenco_tornei` (da raw.githubusercontent, copia in `data/tornei_tcdecks.json`; sull'iPad la scrive ponte.js),
+  `/api/tornei-tcdecks`, e `/api/tornei` con `torneo: "tc:<id>"` usa `top_otto_dall_elenco`. `ipad.costruisci`
+  non cancella `docs/tornei_tcdecks.json`.
 - `app/cards/scryfall.py` — import dalla ricerca Scryfall (solo set ammessi, tutte le stampe, a pagine).
 - `app/cards/mazzi.py` — mazzi salvati (tabella `mazzi`), formato testo «4 Nome carta» con riga «Sideboard»,
   analisi: regole Swedish, carte sconosciute, cosa il motore non sa ancora giocare, colori senza fonti, curva.
@@ -50,7 +56,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - `app/torneo.py` — top 8 simulata: 7 mazzi veri di un torneo (tcdecks.carica_torneo, per nome; senza rete i mazzi
   salvati) + il mazzo dell'umano al posto scelto; tabellone 1-8, 4-5, 2-7, 3-6; incontri AI contro AI giocati da
   `app/simulazione.py` (gioca_da_sola / gioca_incontro_da_solo); l'incontro dell'umano è un Incontro normale.
-  Pagina `/torneo.html`; il tavolo riapre un incontro con `index.html?incontro=<id>`.
+  Pagina `/torneo.html` (menu dei tornei pronti + «Altro torneo»; se vince l'umano animazione «CAMPIONE!», `festa()`,
+  una volta per torneo); il tavolo riapre un incontro con `index.html?incontro=<id>`.
 - `app/api/main.py` — FastAPI; serve anche il frontend statico in `app/web/`. Le richieste `/api/` si servono una
   alla volta (dipendenza globale `_serializza` con un lock): stato e connessione SQLite sono condivisi.
   Le liste dell'`Incontro` sono copie: la sideboard non cambia il mazzo del partecipante nei turni successivi.
@@ -114,6 +121,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   `analizza_abilita` e `mana_prodotto` ricordano la lettura del testo (chiave nome, testo, tipo) per la velocità.
   Misure (banco con mazzi e posti scambiati): v2026.10.25-1 batte l'originale 62%; v2026.10.25-2 batte la -1 58%
   e l'originale 59% (le percentuali non si sommano: contro avversari diversi il vantaggio cambia).
+- Chaos Orb: si risolve solo se l'Orb è ancora in campo. L'AI (`politiche._bersaglio_chaos_orb`) risponde all'Orb
+  avversario distruggendolo col suo; altrimenti lo lancia sul permanente con `pericolo()` ≥ 6 (Sylvan Library, Moat,
+  creature grosse o che rubano carte...). Mana insufficiente: il messaggio dice il colore che manca.
 - L'AI decide le magie in `ai/politiche.py` (POLITICHE per nome carta, anche Dark Ritual solo se sblocca una carta, Balance se
   conviene, Earthquake/Hurricane, Unsummon/Boomerang sugli attaccanti) e le abilità di utilità in `scegli_abilita`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
 - Bersagli: stringhe `"giocatore:<nome>"` o `"carta:<id>"`, risolte con `Partita.risolvi_bersaglio`. Se alla

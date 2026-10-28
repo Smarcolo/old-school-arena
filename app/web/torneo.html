@@ -15,8 +15,11 @@
 <main class="torneo">
   <section class="pannello" id="nuovo-torneo">
     <h2>Nuova top 8</h2>
-    <label>Torneo su TCDecks: nome (vuoto = il più recente) oppure l'indirizzo della pagina del torneo
-      <input id="nome-torneo" value="Plague 5" autocomplete="off" placeholder="es. Plague 5 o https://www.tcdecks.net/deck.php?id=...">
+    <label>Torneo (ultimi tornei Old School su TCDecks)
+      <select id="scegli-torneo"><option value="">Carico l'elenco…</option></select>
+    </label>
+    <label id="altro-torneo" hidden>Nome del torneo (vuoto = il più recente) oppure l'indirizzo della sua pagina su TCDecks
+      <input id="nome-torneo" autocomplete="off" placeholder="es. Plague 5 o https://www.tcdecks.net/deck.php?id=...">
     </label>
     <label>Il tuo mazzo <select id="mio-mazzo"></select></label>
     <label>Prendi il posto di <select id="posto"></select></label>
@@ -26,6 +29,16 @@
   <section class="pannello" id="tabellone" hidden></section>
 </main>
 <p id="messaggio" role="status"></p>
+<div id="festa" hidden>
+  <div class="coriandoli" aria-hidden="true"></div>
+  <div class="trofeo-box">
+    <div class="trofeo" aria-hidden="true">🏆</div>
+    <div class="titolo-campione">CAMPIONE!</div>
+    <div id="festa-torneo" class="festa-torneo"></div>
+    <div id="festa-mazzo" class="festa-mazzo"></div>
+    <button id="chiudi-festa" type="button">Grazie!</button>
+  </div>
+</div>
 <script src="comune.js"></script>
 <script src="torneo.js"></script>
 </body>

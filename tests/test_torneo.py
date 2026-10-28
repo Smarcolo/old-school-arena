@@ -120,3 +120,21 @@ def test_la_sideboard_non_passa_al_turno_dopo():
     inc.registra_esito()
     inc.cambia_sideboard("Tu", {"War Mammoth": 2}, {"Grizzly Bears": 2})
     assert lista.mazzo == {"Forest": 20, "Grizzly Bears": 20} and lista.sideboard == {"War Mammoth": 2}
+
+
+def test_api_torneo_dagli_ultimi_tornei_tcdecks(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app.api.main import app
+    from app.cards import tcdecks
+    lista = {"Forest": 20, "Grizzly Bears": 20}
+    dati = {"aggiornato": "2026-10-27T05:17", "tornei": [{"id": "77", "nome": "Old School Online Monthly #63", "data": "26/10/2026",
+            "giocatori": 31, "url": "u", "mazzi": [{"posizione": i, "nome": f"Orsi {i}", "giocatore": "G", "mazzo": lista,
+                                                     "sideboard": {}} for i in range(1, 9)]}]}
+    monkeypatch.setattr(tcdecks, "elenco_tornei", lambda get=None: dati)
+    client = TestClient(app)
+    elenco = client.get("/api/tornei-tcdecks").json()
+    assert elenco["tornei"] == [{"id": "77", "nome": "Old School Online Monthly #63", "data": "26/10/2026",
+                                 "giocatori": 31, "mazzi": 8}]
+    r = client.post("/api/tornei", json={"torneo": "tc:77", "mazzo": "Verde (prova)", "posto": 8})
+    assert r.status_code == 200, r.text
+    assert r.json()["nome"] == "Old School Online Monthly #63"

@@ -143,3 +143,14 @@ def test_non_attacca_contro_una_factory_pronta_a_bloccare():
     ai[Zona.CAMPO].append(carta("Plains"))
     ai[Zona.MANO][:] = [carta("Swords to Plowshares")]
     assert orso in scegli_attaccanti(p, "AI")  # se blocca, la Factory finisce rimossa dal gioco
+
+
+def test_rompe_la_library_se_hai_la_mano_piena():
+    from app.ai.politiche import terra_da_distruggere
+    p = p_base()
+    b = p.giocatore("B")
+    libreria = carta("Library of Alexandria")
+    b[Zona.CAMPO][:] = [_terra("Island", "Basic Land — Island"), libreria]
+    b[Zona.CIMITERO][:] = [carta("Counterspell")]
+    b[Zona.MANO][:] = [carta("Island") for _ in range(6)]
+    assert terra_da_distruggere(p, "AI", carta("Strip Mine"), minimo=6) is libreria  # più dell'ultima isola

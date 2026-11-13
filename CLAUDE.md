@@ -133,7 +133,7 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   avversario distruggendolo col suo; altrimenti lo lancia sul permanente con `pericolo()` ≥ 6 (Sylvan Library, Moat,
   creature grosse o che rubano carte...). Mana insufficiente: il messaggio dice il colore che manca.
 - Spaccaterre (Stone Rain, Sinkhole, Ice Storm, Strip Mine): `politiche.punteggio_terra` / `terra_da_distruggere`:
-  Maze of Ith prima di tutto se l'AI ha creature; poi le ultime fonti dei colori che l'avversario usa (simboli delle
+  Maze of Ith prima di tutto se l'AI ha creature, Library of Alexandria se l'avversario ha 6-7 carte in mano; poi le ultime fonti dei colori che l'avversario usa (simboli delle
   sue carte in campo e cimitero), bianco e blu pesano di più se l'AI ha creature (Swords, Wrath, Counterspell);
   poi terre utili (Library, Factory, Strip Mine) e doppie. Strip Mine solo con punteggio ≥ 6. Maze of Ith come
   carta non ha ancora la sua abilità nel motore.

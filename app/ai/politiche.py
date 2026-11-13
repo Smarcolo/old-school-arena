@@ -93,7 +93,8 @@ def _fonti_per_colore(p: Partita, chi: str) -> dict[str, list[Carta]]:
 
 def punteggio_terra(p: Partita, nome: str, terra: Carta) -> float:
     """Quanto conviene distruggere questa terra avversaria. Come un giocatore esperto:
-    - Maze of Ith prima di tutto, se ho creature con cui attaccare;
+    - Maze of Ith prima di tutto, se ho creature con cui attaccare; Library of Alexandria se l'avversario ha 6-7
+      carte in mano (con 7 pesca gratis);
     - le fonti di un colore che l'avversario usa ed è rimasto con poche fonti: togliere l'ultima isola o l'ultima
       pianura vuol dire niente Counterspell o Swords to Plowshares sulla mia creatura (contro bianco e blu,
       con creature in campo, quei due colori pesano di più);
@@ -102,6 +103,8 @@ def punteggio_terra(p: Partita, nome: str, terra: Carta) -> float:
     mie_creature = any(c.is_creatura for c in p.giocatore(nome)[Zona.CAMPO])
     if terra.nome == "Maze of Ith":
         return 40.0 if mie_creature else 4.0
+    if terra.nome == "Library of Alexandria" and len(p.giocatore(avv)[Zona.MANO]) >= 6:
+        return 35.0  # con 6-7 carte in mano sta per pescare gratis a ogni turno: va tolta subito
     punti = float(TERRE_DI_VALORE.get(terra.nome, 0))
     fonte = mana.mana_prodotto(terra)
     if not fonte or fonte.colori == "C":

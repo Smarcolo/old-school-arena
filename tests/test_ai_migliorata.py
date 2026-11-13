@@ -120,3 +120,26 @@ def test_strip_mine_solo_su_un_bersaglio_che_vale():
     assert terra_da_distruggere(p, "AI", mina, minimo=6) is None  # una foresta tra quattro non vale la Strip Mine
     b[Zona.CAMPO][:] = [_terra("Forest", "Basic Land — Forest"), carta("Library of Alexandria")]
     assert terra_da_distruggere(p, "AI", mina, minimo=6).nome == "Library of Alexandria"
+
+
+FACTORY_VERA = ("{T}: Add {C}.\n{1}: Mishra's Factory becomes a 2/2 Assembly-Worker artifact creature until end of turn. "
+                "It's still a land.\n{T}: Target Assembly-Worker creature gets +1/+1 until end of turn.")
+
+
+def test_non_attacca_contro_una_factory_pronta_a_bloccare():
+    """Un 2/2 contro una Factory stappata (2/2 che si pompa a 3/3): un giocatore esperto non attacca,
+    a meno di avere Swords o Disenchant per toglierla di mezzo."""
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    orso = cr("Orso", 2, 2)
+    orso.entrata_nel_turno = 1
+    ai[Zona.CAMPO].append(orso)
+    fabbrica = Carta("Mishra's Factory", "Land", "", None, None, FACTORY_VERA)
+    b[Zona.CAMPO][:] = [fabbrica, carta("Forest")]
+    assert orso not in scegli_attaccanti(p, "AI")
+    fabbrica.tappata = True  # tappata: non può animarsi
+    assert orso in scegli_attaccanti(p, "AI")
+    fabbrica.tappata = False
+    ai[Zona.CAMPO].append(carta("Plains"))
+    ai[Zona.MANO][:] = [carta("Swords to Plowshares")]
+    assert orso in scegli_attaccanti(p, "AI")  # se blocca, la Factory finisce rimossa dal gioco

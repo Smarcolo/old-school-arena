@@ -116,7 +116,8 @@ def test_mishra_factory_anima_blocca_e_si_pompa():
     fac = Carta("Mishra's Factory", "Land", "", None, None, FACTORY)
     fac.entrata_nel_turno = 0
     tu[Zona.CAMPO].extend([fac, Carta("Forest", "Basic Land — Forest")])
-    orco = Carta("Hill Giant", "Creature — Giant", "{3}{R}", 3, 3)
+    # 3/4: la Factory pompata (3/4) non lo uccide, quindi l'AI attacca (contro un 3/3 non attaccherebbe)
+    orco = Carta("Muro che cammina", "Creature — Giant", "{3}{R}", 3, 4)
     orco.entrata_nel_turno = 0
     ai[Zona.CAMPO].append(orco)
     ai[Zona.MANO].clear()
@@ -128,8 +129,8 @@ def test_mishra_factory_anima_blocca_e_si_pompa():
     esegui_comando(p, "Tu", "AI", "passa")  # ai blocchi
     esegui_comando(p, "Tu", "AI", f"blocca {orco.id} con {fac.id}")
     esegui_comando(p, "Tu", "AI", f"attiva {fac.id} 2 su {fac.id}")  # si tappa e si dà +1/+2: blocca lo stesso
-    # l'abilità si risolve da sola e si va ai danni: 3/4 contro 3/3
-    assert orco in ai[Zona.CIMITERO] and fac in tu[Zona.CAMPO]
+    # l'abilità si risolve da sola e si va ai danni: 3/4 contro 3/4, sopravvivono entrambi
+    assert orco in ai[Zona.CAMPO] and fac in tu[Zona.CAMPO] and tu.vita == 20
     assert any("Mishra's Factory prende +1/+2" in e.descrizione for e in p.registro.eventi)
 
 

@@ -115,7 +115,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - AI (`ai/avversaria.py`): nella sua fase principale gioca prima la terra; gioca subito Mox/Sol Ring/Lotus; con
   Counterspell/Mana Drain in mano tiene {U}{U} (`lascia_contromagia`, non se dovrebbe scartare); attacca anche
   negli scambi alla pari, con tutto se è letale, ma tiene a casa i bloccanti se il contrattacco sarebbe letale
-  (`_danni_del_contrattacco`); Bolt in faccia solo a fine partita (avversario ≤ 10) o con la mano piena; anima
+  (`_danni_del_contrattacco`); conta come bloccanti anche le Mishra's Factory avversarie pronte ad animarsi e
+  pomparsi (`bloccanti_nascosti`), salvo avere Swords/Disenchant/Shatter/Bolt lanciabili; Bolt in faccia solo a fine partita (avversario ≤ 10) o con la mano piena; anima
   Mishra's Factory per attaccare/bloccare; Moat e The Abyss solo se convengono.
 - Previsione (`ai/previsione.py`): nei momenti importanti l'AI confronta le alternative giocandole su copie della
   partita (pickle) 2 turni avanti con le regole normali per entrambi, carte nascoste rimescolate (non bara), max 1 s:

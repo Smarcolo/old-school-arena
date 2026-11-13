@@ -278,8 +278,44 @@ def _danni_del_contrattacco(partita: Partita, nome: str, a_casa: list[Carta]) ->
     return passano
 
 
+RISPOSTE_ALLA_FACTORY = {"Swords to Plowshares", "Disenchant", "Shatter", "Lightning Bolt"}
+
+
+def bloccanti_nascosti(partita: Partita, chi: str) -> list[Carta]:
+    """Le terre di `chi` che possono diventare bloccanti (Mishra's Factory): stappate, non animate, con un altro
+    mana per pagare l'animazione. Rese come creature finte già pompate dalla loro abilità sugli Assembly-Worker
+    (la Factory blocca e poi si tappa per darsi +1/+1): un giocatore esperto ne tiene conto prima di attaccare."""
+    g = partita.giocatore(chi)
+    terre_altrui = partita.avversario_di(chi)[Zona.CAMPO]
+    finte = []
+    for c in g[Zona.CAMPO]:
+        if c.tappata or c.is_creatura:
+            continue
+        abilita = analizza_abilita(c)
+        anima = next((ab for ab in abilita if ab.tipo == "anima"), None)
+        if anima is None:
+            continue
+        costo = mana.analizza_costo(anima.costo_mana)
+        # le sue fonti stappate (non serve che abbia la priorità adesso: conta cosa potrà fare quando attacco)
+        fonti = [f for x in g[Zona.CAMPO] if x is not c and not x.tappata and not partita.ha_debolezza_da_evocazione(x)
+                 and (f := mana.fonte_in_partita(x, terre_altrui))]
+        if mana.piano_pagamento(g.riserva, fonti, costo) is None:
+            continue
+        pompa = next((ab for ab in abilita if ab.tipo == "pompa_bersaglio"), None)
+        f, cos = anima.forza + (pompa.forza if pompa else 0), anima.costituzione + (pompa.costituzione if pompa else 0)
+        finte.append(Carta(c.nome, anima.tipo_animato or "Artifact Creature", "", f, cos))
+    return finte
+
+
+def _ha_risposta_alla_factory(partita: Partita, nome: str) -> bool:
+    """Swords, Disenchant, Shatter o Bolt lanciabili: se la Factory blocca, la si toglie di mezzo."""
+    return any(c.nome in RISPOSTE_ALLA_FACTORY and puo_lanciare(partita, nome, c) is None
+               for c in partita.giocatore(nome)[Zona.MANO])
+
+
 def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
-    """Attacca con ogni creatura che nessun bloccante possibile ucciderebbe senza morire a sua volta; se sta
+    """Attacca con ogni creatura che nessun bloccante possibile (anche una Mishra's Factory avversaria pronta ad
+    animarsi, vedi bloccanti_nascosti) ucciderebbe senza morire a sua volta; se sta
     vincendo la corsa (uccide prima di essere uccisa) attacca anche quando il blocco peggiore è uno scambio alla pari.
     Tiene a casa i bloccanti che servono se il contrattacco avversario sarebbe letale.
     Chi verrà sacrificato a fine turno (es. Ball Lightning) attacca sempre; tutti attaccano se il danno è letale."""
@@ -287,9 +323,11 @@ def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
     avversario = partita.avversario_di(nome)
     difensori = combattimento.possibili_bloccanti(partita, avversario.nome)
     tutti = combattimento.possibili_attaccanti(partita, nome)
+    # Mishra's Factory avversaria: può animarsi, bloccare e pomparsi, a meno di avere la risposta in mano
+    nascosti = [] if _ha_risposta_alla_factory(partita, nome) else bloccanti_nascosti(partita, avversario.nome)
     # attacco con tutto se, anche bloccando i più forti, i danni che passano bastano
     forze = sorted((a.forza_attuale for a in tutti), reverse=True)
-    if sum(forze[len(difensori):]) >= avversario.vita:
+    if sum(forze[len(difensori) + len(nascosti):]) >= avversario.vita:
         return tutti
     mia_forza = sum(c.forza_attuale for c in g[Zona.CAMPO] if c.is_creatura)
     sua_forza = sum(c.forza_attuale for c in avversario[Zona.CAMPO] if c.is_creatura)
@@ -297,6 +335,7 @@ def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
     scelti = []
     for a in tutti:
         possibili = [b for b in difensori if combattimento.puo_bloccare_contro(partita, avversario.nome, b, a) is None]
+        possibili += [b for b in nascosti if not a.ha("flying") and not a.protetta_da(b)]
         uccidono = [b for b in possibili if b.forza_attuale >= a.costituzione_attuale - a.danni and not a.protetta_da(b)]
         cattivo_scambio = any(a.forza_attuale < b.costituzione_attuale - b.danni or b.protetta_da(a) for b in uccidono)
         if _muore_a_fine_turno(a) or not cattivo_scambio:

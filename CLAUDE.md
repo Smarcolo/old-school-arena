@@ -117,7 +117,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   negli scambi alla pari, con tutto se è letale, ma tiene a casa i bloccanti se il contrattacco sarebbe letale
   (`_danni_del_contrattacco`); conta come bloccanti anche le Mishra's Factory avversarie pronte ad animarsi e
   pomparsi (`bloccanti_nascosti`), salvo avere Swords/Disenchant/Shatter/Bolt lanciabili; Bolt in faccia solo a fine partita (avversario ≤ 10) o con la mano piena; anima
-  Mishra's Factory per attaccare/bloccare; Moat e The Abyss solo se convengono.
+  Mishra's Factory per attaccare/bloccare; Moat e The Abyss solo se convengono. Malizie dagli articoli Old School:
+  con già 2+ creature e 5+ di forza tiene le altre in mano contro un mazzo bianco o che ha mostrato spazzate
+  (`teme_spazzata`); con {U}{U} avversari stappati e contromagie viste lancia prima la carta meno cara, l'esca
+  (`teme_contromagia`). Misurate: neutre contro sé stessa (50% su 300 partite), tenute perché contano contro un umano.
 - Previsione (`ai/previsione.py`): nei momenti importanti l'AI confronta le alternative giocandole su copie della
   partita (pickle) 2 turni avanti con le regole normali per entrambi, carte nascoste rimescolate (non bara), max 1 s:
   attaccanti (regole, tutti, nessuno, solo i sicuri), bloccanti (anche sacrificio, scambio, blocco doppio) e

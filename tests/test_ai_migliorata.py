@@ -154,3 +154,20 @@ def test_rompe_la_library_se_hai_la_mano_piena():
     b[Zona.CIMITERO][:] = [carta("Counterspell")]
     b[Zona.MANO][:] = [carta("Island") for _ in range(6)]
     assert terra_da_distruggere(p, "AI", carta("Strip Mine"), minimo=6) is libreria  # più dell'ultima isola
+
+
+def test_non_si_scopre_contro_wrath_e_lancia_prima_l_esca():
+    from app.ai.avversaria import teme_contromagia, teme_spazzata
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO].extend([cr("Leone", 3, 1), cr("Cavaliere", 2, 2)])
+    b[Zona.CAMPO][:] = [carta("Plains"), carta("Island"), carta("Island")]
+    b[Zona.MANO][:] = [carta("Island"), carta("Island"), carta("Island")]
+    assert teme_spazzata(p, "AI")  # 2 creature e 5 di forza contro un mazzo bianco con la mano piena
+    b.vita = 5
+    assert not teme_spazzata(p, "AI")  # sta per vincere: niente prudenza
+    b[Zona.CIMITERO].append(carta("Counterspell"))
+    assert teme_contromagia(p, "AI")  # {U}{U} stappati e Counterspell già visto
+    for t in b[Zona.CAMPO]:
+        t.tappata = True
+    assert not teme_contromagia(p, "AI")

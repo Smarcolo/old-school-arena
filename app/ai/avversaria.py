@@ -278,6 +278,43 @@ def _danni_del_contrattacco(partita: Partita, nome: str, a_casa: list[Carta]) ->
     return passano
 
 
+SPAZZATE = {"Wrath of God", "Balance", "Earthquake", "Pestilence", "Nevinyrral's Disk"}
+CONTROMAGIE_VISTE = {"Counterspell", "Mana Drain", "Power Sink", "Spell Blast", "Force Spike"}
+
+
+def _viste(partita: Partita, chi: str) -> set[str]:
+    """Le carte di `chi` che si conoscono: in campo e nel cimitero."""
+    g = partita.giocatore(chi)
+    return {c.nome for c in [*g[Zona.CAMPO], *g[Zona.CIMITERO]]}
+
+
+def _fonti_stappate(partita: Partita, chi: str, colore: str) -> int:
+    altrui = partita.avversario_di(chi)[Zona.CAMPO]
+    return sum(1 for c in partita.giocatore(chi)[Zona.CAMPO]
+               if not c.tappata and (f := mana.fonte_in_partita(c, altrui)) and colore in f.colori)
+
+
+def teme_spazzata(partita: Partita, nome: str) -> bool:
+    """Non mettere in campo tutto contro chi può spazzare il campo (Wrath of God, Balance): un giocatore esperto,
+    con già abbastanza pressione (2+ creature e 5+ di forza), tiene le altre in mano per ricostruire dopo."""
+    avv = partita.avversario_di(nome).nome
+    mie = [c for c in partita.giocatore(nome)[Zona.CAMPO] if c.is_creatura]
+    if len(mie) < 2 or sum(c.forza_attuale for c in mie) < 5:
+        return False
+    if partita.avversario_di(nome).vita <= sum(c.forza_attuale for c in mie):
+        return False  # sta per vincere: niente prudenza
+    bianco = any((f := mana.mana_prodotto(c)) and "W" in f.colori for c in partita.giocatore(avv)[Zona.CAMPO])
+    return (bool(_viste(partita, avv) & SPAZZATE) or bianco) and len(partita.giocatore(avv)[Zona.MANO]) >= 2
+
+
+def teme_contromagia(partita: Partita, nome: str) -> bool:
+    """L'avversario ha {U}{U} stappati e gioca contromagie (viste, o almeno è blu): prima si lancia l'esca."""
+    avv = partita.avversario_di(nome).nome
+    if _fonti_stappate(partita, avv, "U") < 2 or not partita.giocatore(avv)[Zona.MANO]:
+        return False
+    return bool(_viste(partita, avv) & CONTROMAGIE_VISTE) or _fonti_stappate(partita, avv, "U") >= 3
+
+
 RISPOSTE_ALLA_FACTORY = {"Swords to Plowshares", "Disenchant", "Shatter", "Lightning Bolt"}
 
 
@@ -636,6 +673,8 @@ def agisci(partita: Partita, nome: str) -> None:
             return
         lanciabili = [c for c in mano if c.is_creatura and puo_lanciare(partita, nome, c) is None
                       and lascia_contromagia(partita, nome, c)]
+        if lanciabili and teme_spazzata(partita, nome):
+            lanciabili = []  # ha già abbastanza pressione in campo: le altre creature restano in mano
         if not lanciabili:  # poi le aure, sulla sua creatura migliore
             for aura in (c for c in mano if c.is_aura and puo_lanciare(partita, nome, c) is None):
                 if bersaglio := bersaglio_aura(partita, nome, aura):
@@ -646,8 +685,10 @@ def agisci(partita: Partita, nome: str) -> None:
                           and puo_lanciare(partita, nome, c) is None and permanente_utile(partita, nome, c)
                           and lascia_contromagia(partita, nome, c)]
         if lanciabili:
-            piu_cara = max(lanciabili, key=lambda c: sum(mana.analizza_costo(c.costo).values()))
-            azioni.lancia(partita, nome, piu_cara)
+            costo = lambda c: sum(mana.analizza_costo(c.costo).values())
+            # contro contromagie pronte prima l'esca (la carta meno importante), altrimenti la minaccia migliore
+            scelta = min(lanciabili, key=costo) if teme_contromagia(partita, nome) else max(lanciabili, key=costo)
+            azioni.lancia(partita, nome, scelta)
             return
         if bolt and (rif := bersaglio_bolt(partita, nome, bolt)):
             azioni.lancia(partita, nome, bolt, [rif])

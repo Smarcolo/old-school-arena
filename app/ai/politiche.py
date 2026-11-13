@@ -8,8 +8,6 @@ from app.engine.stato import Carta, Fase, Partita
 from app.engine.validazione import FASI_PRINCIPALI, puo_attivare, puo_lanciare
 from app.engine.zone import Zona
 
-TERRE_BASE = {"Plains", "Island", "Swamp", "Mountain", "Forest"}
-
 
 def _mia_principale(p: Partita, nome: str) -> bool:
     return p.giocatore_attivo.nome == nome and p.fase in FASI_PRINCIPALI and not p.pila
@@ -68,14 +66,76 @@ def rimozione(p: Partita, nome: str, carta: Carta):
     return None
 
 
+# Terre che un giocatore esperto toglie per prime, a parte i colori (vedi terra_da_distruggere)
+TERRE_DI_VALORE = {"Library of Alexandria": 8, "Mishra's Factory": 7, "Strip Mine": 5, "City of Brass": 3}
+
+
+def _colori_che_usa(p: Partita, chi: str) -> dict[str, int]:
+    """Quanto l'avversario usa ogni colore: simboli colorati delle sue carte viste (campo e cimitero)."""
+    peso: dict[str, int] = {}
+    g = p.giocatore(chi)
+    for c in [*g[Zona.CAMPO], *g[Zona.CIMITERO]]:
+        if not c.is_terra:
+            for colore, n in mana.analizza_costo(c.costo).items():
+                if colore in "WUBRG":
+                    peso[colore] = peso.get(colore, 0) + n
+    return peso
+
+
+def _fonti_per_colore(p: Partita, chi: str) -> dict[str, list[Carta]]:
+    fonti: dict[str, list[Carta]] = {}
+    for c in p.giocatore(chi)[Zona.CAMPO]:
+        if (f := mana.mana_prodotto(c)) and f.colori != "C":
+            for colore in f.colori:
+                fonti.setdefault(colore, []).append(c)
+    return fonti
+
+
+def punteggio_terra(p: Partita, nome: str, terra: Carta) -> float:
+    """Quanto conviene distruggere questa terra avversaria. Come un giocatore esperto:
+    - Maze of Ith prima di tutto, se ho creature con cui attaccare;
+    - le fonti di un colore che l'avversario usa ed è rimasto con poche fonti: togliere l'ultima isola o l'ultima
+      pianura vuol dire niente Counterspell o Swords to Plowshares sulla mia creatura (contro bianco e blu,
+      con creature in campo, quei due colori pesano di più);
+    - poi le terre utili (Library of Alexandria, Mishra's Factory, Strip Mine) e le doppie."""
+    avv = p.avversario_di(nome).nome
+    mie_creature = any(c.is_creatura for c in p.giocatore(nome)[Zona.CAMPO])
+    if terra.nome == "Maze of Ith":
+        return 40.0 if mie_creature else 4.0
+    punti = float(TERRE_DI_VALORE.get(terra.nome, 0))
+    fonte = mana.mana_prodotto(terra)
+    if not fonte or fonte.colori == "C":
+        return punti
+    usati = _colori_che_usa(p, avv)
+    fonti = _fonti_per_colore(p, avv)
+    for colore in fonte.colori:
+        importanza = 1 + usati.get(colore, 0)
+        if mie_creature and colore in "WU":  # Swords, Wrath, Counterspell: le risposte alle mie creature
+            importanza += 3
+        quante = len(fonti.get(colore, []))
+        punti += importanza * (6 if quante == 1 else 3 / quante)  # l'ultima fonte di un colore vale moltissimo
+    return punti + 0.5 * (len(fonte.colori) - 1)
+
+
+def terra_da_distruggere(p: Partita, nome: str, fonte: Carta, minimo: float = 0) -> Carta | None:
+    avv = p.avversario_di(nome)
+    candidate = [t for t in avv[Zona.CAMPO] if t.is_terra and bersaglio_legale(p, "terra", f"carta:{t.id}", fonte)]
+    if not candidate:
+        return None
+    migliore = max(candidate, key=lambda t: (punteggio_terra(p, nome, t), valore_carta(t)))
+    return migliore if punteggio_terra(p, nome, migliore) >= minimo else None
+
+
 def distruggi_permanente(p: Partita, nome: str, carta: Carta):
     if not _mia_principale(p, nome):
         return None
     tipo = {"Disenchant": "artefatto_o_incantesimo", "Shatter": "artefatto", "Stone Rain": "terra",
             "Sinkhole": "terra", "Ice Storm": "terra"}[carta.nome]
+    if tipo == "terra":
+        terra = terra_da_distruggere(p, nome, carta)
+        return ([f"carta:{terra.id}"], 0) if terra else None
     avv = p.avversario_di(nome)
-    candidate = [c for c in avv[Zona.CAMPO] if bersaglio_legale(p, tipo, f"carta:{c.id}", carta)
-                 and not (tipo == "terra" and c.nome in TERRE_BASE)]
+    candidate = [c for c in avv[Zona.CAMPO] if bersaglio_legale(p, tipo, f"carta:{c.id}", carta)]
     if not candidate:
         return None
     return [f"carta:{max(candidate, key=valore_carta).id}"], 0
@@ -325,7 +385,7 @@ def _bersaglio_chaos_orb(p: Partita, nome: str, orb: Carta) -> Carta | None:
 
 
 def scegli_abilita(p: Partita, nome: str):
-    """Abilità di utilità: Strip Mine su una terra non base, Library of Alexandria e Jayemdae Tome a fine turno
+    """Abilità di utilità: Strip Mine sulla terra che conviene togliere (terra_da_distruggere), Library of Alexandria e Jayemdae Tome a fine turno
     avversario, Icy Manipulator sulla creatura migliore avversaria nel suo mantenimento."""
     avv = p.avversario_di(nome)
     for c in list(p.giocatore(nome)[Zona.CAMPO]):
@@ -333,9 +393,9 @@ def scegli_abilita(p: Partita, nome: str):
             if puo_attivare(p, nome, c, ab) is not None:
                 continue
             if ab.tipo == "distruggi" and ab.bersaglio == "terra" and _mia_principale(p, nome):
-                bersagli = [t for t in avv[Zona.CAMPO] if t.is_terra and t.nome not in TERRE_BASE]
-                if bersagli:
-                    return c, ab, [f"carta:{max(bersagli, key=valore_carta).id}"]
+                # Strip Mine costa una terra anche a lei: solo per un bersaglio che vale (Maze, ultima fonte, Library)
+                if terra := terra_da_distruggere(p, nome, c, minimo=6):
+                    return c, ab, [f"carta:{terra.id}"]
             if ab.tipo == "pesca" and _fine_turno_avversario(p, nome):
                 return c, ab, []
             if ab.tipo == "macina" and _fine_turno_avversario(p, nome):  # Millstone

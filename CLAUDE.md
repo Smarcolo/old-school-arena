@@ -131,6 +131,11 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Chaos Orb: si risolve solo se l'Orb è ancora in campo. L'AI (`politiche._bersaglio_chaos_orb`) risponde all'Orb
   avversario distruggendolo col suo; altrimenti lo lancia sul permanente con `pericolo()` ≥ 6 (Sylvan Library, Moat,
   creature grosse o che rubano carte...). Mana insufficiente: il messaggio dice il colore che manca.
+- Spaccaterre (Stone Rain, Sinkhole, Ice Storm, Strip Mine): `politiche.punteggio_terra` / `terra_da_distruggere`:
+  Maze of Ith prima di tutto se l'AI ha creature; poi le ultime fonti dei colori che l'avversario usa (simboli delle
+  sue carte in campo e cimitero), bianco e blu pesano di più se l'AI ha creature (Swords, Wrath, Counterspell);
+  poi terre utili (Library, Factory, Strip Mine) e doppie. Strip Mine solo con punteggio ≥ 6. Maze of Ith come
+  carta non ha ancora la sua abilità nel motore.
 - L'AI decide le magie in `ai/politiche.py` (POLITICHE per nome carta, anche Dark Ritual solo se sblocca una carta, Balance se
   conviene, Earthquake/Hurricane, Unsummon/Boomerang sugli attaccanti) e le abilità di utilità in `scegli_abilita`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
 - Bersagli: stringhe `"giocatore:<nome>"` o `"carta:<id>"`, risolte con `Partita.risolvi_bersaglio`. Se alla

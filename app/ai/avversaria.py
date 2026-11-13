@@ -438,7 +438,9 @@ def _bersagli_candidati(partita: Partita, nome: str, carta: Carta, tipo: str) ->
     from app.engine.effetti import bersaglio_legale
     avversario = partita.avversario_di(nome)
     rif = [f"pila:{o.id}" for o in reversed(partita.pila) if o.controllore != nome]
-    rif += [f"carta:{c.id}" for c in sorted(avversario[Zona.CAMPO], key=valore_carta, reverse=True)]
+    ordine = ((lambda c: politiche.punteggio_terra(partita, nome, c) if c.is_terra else -1) if tipo == "terra"
+              else valore_carta)  # spaccaterre: Maze of Ith, ultime fonti di un colore, terre utili
+    rif += [f"carta:{c.id}" for c in sorted(avversario[Zona.CAMPO], key=ordine, reverse=True)]
     rif.append(f"giocatore:{avversario.nome}")
     if tipo == "giocatore":  # pescate (Ancestral, Braingeyser): su di sé
         rif.append(f"giocatore:{nome}")

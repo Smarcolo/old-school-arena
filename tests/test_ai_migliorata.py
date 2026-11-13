@@ -87,3 +87,36 @@ def test_factory_animata_per_attaccare_e_per_bloccare():
     azioni.passa_priorita(p, "B")
     agisci(p, "AI")
     assert p.pila[-1].descrizione == "abilità di Mishra's Factory"
+
+
+def _terra(nome, tipo):
+    return Carta(nome, tipo, "", None, None, "")
+
+
+def test_spaccaterre_da_esperto():
+    """Con creature in campo contro bianco-blu: via l'ultima isola o l'ultima pianura, e prima di tutto il Maze."""
+    from app.ai.politiche import terra_da_distruggere
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    b[Zona.CAMPO][:] = [_terra("Plains", "Basic Land — Plains"), _terra("Plains", "Basic Land — Plains"),
+                        _terra("Island", "Basic Land — Island"), _terra("Swamp", "Basic Land — Swamp")]
+    b[Zona.CIMITERO][:] = [carta("Counterspell"), carta("Swords to Plowshares")]
+    ai[Zona.CAMPO].append(cr("Orso", 2, 2))
+    roccia = carta("Stone Rain") if "Stone Rain" in BASE else Carta("Stone Rain", "Sorcery", "{2}{R}")
+    assert terra_da_distruggere(p, "AI", roccia).nome == "Island"  # l'unica fonte di blu: niente più Counterspell
+    labirinto = _terra("Maze of Ith", "Land")
+    b[Zona.CAMPO].append(labirinto)
+    assert terra_da_distruggere(p, "AI", roccia) is labirinto  # con creature mie, il Maze prima di tutto
+    ai[Zona.CAMPO].clear()
+    assert terra_da_distruggere(p, "AI", roccia).nome == "Island"  # senza creature il Maze conta poco
+
+
+def test_strip_mine_solo_su_un_bersaglio_che_vale():
+    from app.ai.politiche import terra_da_distruggere
+    p = p_base()
+    b = p.giocatore("B")
+    b[Zona.CAMPO][:] = [_terra("Forest", "Basic Land — Forest") for _ in range(4)]
+    mina = carta("Strip Mine")
+    assert terra_da_distruggere(p, "AI", mina, minimo=6) is None  # una foresta tra quattro non vale la Strip Mine
+    b[Zona.CAMPO][:] = [_terra("Forest", "Basic Land — Forest"), carta("Library of Alexandria")]
+    assert terra_da_distruggere(p, "AI", mina, minimo=6).nome == "Library of Alexandria"

@@ -270,19 +270,72 @@ def _quanti(p: Partita, chi: str, condizione) -> int:
     return sum(1 for c in p.giocatore(chi)[Zona.CAMPO] if condizione(c))
 
 
-def balance(p: Partita, nome: str, carta: Carta):
-    """Quando fa perdere all'avversario più di quanto fa perdere a lei (creature contano doppio)."""
-    if not _mia_principale(p, nome):
-        return None
+def vantaggio_balance(p: Partita, nome: str, mie_terre: int | None = None) -> int:
+    """Quanto Balance fa perdere all'avversario più che a lei (creature contano doppio). mie_terre: quante terre
+    avrebbe lei (per provare la Strip Mine sulla propria terra prima di Balance)."""
     avv = p.avversario_di(nome).nome
     def perdite(mie: int, sue: int) -> tuple[int, int]:
         minimo = min(mie, sue)
         return mie - minimo, sue - minimo
-    terre = perdite(_quanti(p, nome, lambda c: c.is_terra), _quanti(p, avv, lambda c: c.is_terra))
+    if mie_terre is None:
+        mie_terre = _quanti(p, nome, lambda c: c.is_terra)
+    terre = perdite(mie_terre, _quanti(p, avv, lambda c: c.is_terra))
     mano = perdite(len(p.giocatore(nome)[Zona.MANO]) - 1, len(p.giocatore(avv)[Zona.MANO]))
     creature = perdite(_quanti(p, nome, lambda c: c.is_creatura), _quanti(p, avv, lambda c: c.is_creatura))
-    vantaggio = (terre[1] - terre[0]) + (mano[1] - mano[0]) + 2 * (creature[1] - creature[0])
-    return ([], 0) if vantaggio >= 3 else None
+    return (terre[1] - terre[0]) + (mano[1] - mano[0]) + 2 * (creature[1] - creature[0])
+
+
+def _mana_senza_terre(p: Partita, chi: str) -> int:
+    """Mana dai permanenti che non sono terre (Mox, Sol Ring, Mana Vault...), Black Lotus escluso (si consuma)."""
+    totale = 0
+    for c in p.giocatore(chi)[Zona.CAMPO]:
+        if not c.is_terra and (f := mana.mana_prodotto(c)) and not f.sacrifica:
+            totale += f.quantita
+    return totale
+
+
+def strip_per_balance(p: Partita, nome: str):
+    """La giocata di Marco contro The Deck: Strip Mine sulla PROPRIA terra, poi Balance. Restando senza terre
+    (o quasi), Balance costringe l'avversario a scendere allo stesso numero, e intanto gli svuota mano e campo.
+    Solo se Balance si paga ancora senza la Strip Mine e la terra distrutta (Mox, Sol Ring, Lotus...), se
+    l'avversario perde almeno 3 terre e se così Balance rende chiaramente di più.
+    Ritorna (Strip Mine, abilità, [bersaglio]) oppure None."""
+    if not _mia_principale(p, nome):
+        return None
+    from app.engine.validazione import fonti_di_mana
+    g = p.giocatore(nome)
+    bilancia = next((c for c in g[Zona.MANO] if c.nome == "Balance"), None)
+    if bilancia is None:
+        return None
+    costo = mana.analizza_costo(bilancia.costo)
+    sue_terre = _quanti(p, p.avversario_di(nome).nome, lambda c: c.is_terra)
+    mie_terre = _quanti(p, nome, lambda c: c.is_terra)
+    for mina in g[Zona.CAMPO]:
+        for ab in analizza_abilita(mina):
+            if ab.tipo != "distruggi" or ab.bersaglio != "terra" or puo_attivare(p, nome, mina, ab) is not None:
+                continue
+            dopo = mie_terre - 2  # la Strip Mine si sacrifica e porta via una terra sua
+            # dopo, si gioca con il mana degli artefatti: conviene solo se lei ne ha più dell'avversario
+            if (sue_terre - dopo < 3 or vantaggio_balance(p, nome, dopo) < 4
+                    or _mana_senza_terre(p, nome) <= _mana_senza_terre(p, p.avversario_di(nome).nome)):
+                return None
+            # prima le terre che non servono a pagare Balance (non bianche), poi le altre
+            candidate = sorted((t for t in g[Zona.CAMPO] if t.is_terra and t is not mina),
+                               key=lambda t: "W" in ((f := mana.mana_prodotto(t)) and f.colori or ""))
+            for terra in candidate:
+                fonti = [f for f in fonti_di_mana(p, nome) if f.carta is not mina and f.carta is not terra]
+                if (mana.piano_pagamento(g.riserva, fonti, costo) is not None
+                        and bersaglio_legale(p, "terra", f"carta:{terra.id}", mina)):
+                    return mina, ab, [f"carta:{terra.id}"]
+    return None
+
+
+def balance(p: Partita, nome: str, carta: Carta):
+    """Quando fa perdere all'avversario più di quanto fa perdere a lei; ma se conviene prima la Strip Mine
+    sulla propria terra (strip_per_balance), aspetta: Balance arriva subito dopo."""
+    if not _mia_principale(p, nome) or strip_per_balance(p, nome):
+        return None
+    return ([], 0) if vantaggio_balance(p, nome) >= 3 else None
 
 
 def terremoto(p: Partita, nome: str, carta: Carta):
@@ -438,6 +491,8 @@ def scegli_abilita(p: Partita, nome: str):
     """Abilità di utilità: Strip Mine sulla terra che conviene togliere (terra_da_distruggere), Library of Alexandria e Jayemdae Tome a fine turno
     avversario, Icy Manipulator sulla creatura migliore avversaria nel suo mantenimento."""
     avv = p.avversario_di(nome)
+    if combinazione := strip_per_balance(p, nome):
+        return combinazione
     for c in list(p.giocatore(nome)[Zona.CAMPO]):
         for ab in analizza_abilita(c):
             if puo_attivare(p, nome, c, ab) is not None:

@@ -171,3 +171,39 @@ def test_non_si_scopre_contro_wrath_e_lancia_prima_l_esca():
     for t in b[Zona.CAMPO]:
         t.tappata = True
     assert not teme_contromagia(p, "AI")
+
+
+def test_strip_mine_sulla_propria_terra_poi_balance():
+    """La giocata di Marco contro The Deck: Strip Mine sulla propria terra, poi Balance pagato con Mox e Sol Ring.
+    L'avversario scende a zero terre e perde la mano; lei resta con il mana degli artefatti."""
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    mina, pianura = carta("Strip Mine"), carta("Plains")
+    ai[Zona.CAMPO][:] = [mina, pianura, carta("Mox Pearl"), carta("Sol Ring")]
+    ai[Zona.MANO][:] = [carta("Balance"), cr("Orso", 2, 2)]
+    ai.terre_giocate_nel_turno = 1
+    b[Zona.CAMPO][:] = [carta("Plains"), carta("Plains"), carta("Island"), carta("Island"), carta("Island"), carta("Plains")]
+    b[Zona.MANO][:] = [carta("Island") for _ in range(6)]
+    agisci(p, "AI")
+    assert pianura in ai[Zona.CIMITERO] or (p.pila and p.pila[-1].bersagli == [f"carta:{pianura.id}"])
+    for _ in range(40):  # si gioca finché Balance non è risolto
+        if any(c.nome == "Balance" for c in ai[Zona.CIMITERO]):
+            break
+        if p.pila or p.giocatore_con_priorita.nome != "AI":
+            azioni.passa_priorita(p, p.giocatore_con_priorita.nome)
+        else:
+            agisci(p, "AI")
+    assert any(c.nome == "Balance" for c in ai[Zona.CIMITERO])
+    assert not any(c.is_terra for c in b[Zona.CAMPO])  # The Deck senza terre
+    assert len(b[Zona.MANO]) <= 1
+
+
+def test_niente_strip_sulla_propria_terra_senza_artefatti():
+    from app.ai.politiche import strip_per_balance
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Strip Mine"), carta("Plains"), carta("Plains"), carta("Island")]
+    ai[Zona.MANO][:] = [carta("Balance")]
+    b[Zona.CAMPO][:] = [carta("Island") for _ in range(6)]
+    b[Zona.MANO][:] = [carta("Island") for _ in range(6)]
+    assert strip_per_balance(p, "AI") is None  # senza Mox né Sol Ring resterebbe a secco come lui

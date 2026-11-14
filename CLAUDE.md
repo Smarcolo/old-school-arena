@@ -138,7 +138,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Spaccaterre (Stone Rain, Sinkhole, Ice Storm, Strip Mine): `politiche.punteggio_terra` / `terra_da_distruggere`:
   Maze of Ith prima di tutto se l'AI ha creature, Library of Alexandria se l'avversario ha 6-7 carte in mano; poi le ultime fonti dei colori che l'avversario usa (simboli delle
   sue carte in campo e cimitero), bianco e blu pesano di più se l'AI ha creature (Swords, Wrath, Counterspell);
-  poi terre utili (Library, Factory, Strip Mine) e doppie. Strip Mine solo con punteggio ≥ 6. Maze of Ith come
+  poi terre utili (Library, Factory, Strip Mine) e doppie. Strip Mine solo con punteggio ≥ 6. Giocata di Marco contro The Deck (`strip_per_balance`): con Balance in mano, Strip Mine
+  sulla propria terra se dopo Balance si paga ancora (Mox, Sol Ring), l'avversario perde ≥ 3 terre, il vantaggio
+  di Balance è ≥ 4 e lei ha più mana da artefatti (non Lotus) di lui; intanto la politica di Balance aspetta. Maze of Ith come
   carta non ha ancora la sua abilità nel motore.
 - L'AI decide le magie in `ai/politiche.py` (POLITICHE per nome carta, anche Dark Ritual solo se sblocca una carta, Balance se
   conviene, Earthquake/Hurricane, Unsummon/Boomerang sugli attaccanti) e le abilità di utilità in `scegli_abilita`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.

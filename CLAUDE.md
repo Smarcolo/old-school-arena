@@ -179,7 +179,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   «tieni_pagando» 4 vita; scelte «azione:id» in `rispondi_scegli`), Field of Dreams (la vista mostra la cima dei
   grimori, `cima`; l'AI con Field of Dreams in campo usa Millstone come «Conceding Dreams» di Wak Wak:
   `politiche.bersaglio_millstone` macina l'avversario solo se la sua cima gli serve, altrimenti sé stessa se la
-  propria cima è inutile), incantesimi del mondo (ne resta uno, il più recente, in `_un_giro_di_controlli`).
+  propria cima è inutile; prima ancora la «mossa disperata» di Marco, `mossa_disperata`: creatura avversaria
+  pericolosa, nessuna risposta in mano e due carte inutili rimesse in cima con Sylvan (`Carta.nota_in_cima`) →
+  macina sé stessa per pescare una risposta), incantesimi del mondo (ne resta uno, il più recente, in `_un_giro_di_controlli`).
 - Liste incollate da TCDecks: `mazzi.analizza_testo` salta «Tipo [N]», «Deck Name:», «X playing Y Position: N» e
   mette in sideboard le carte oltre il totale delle sezioni.
 - Regole di singole carte (`engine/speciali.py`): Moat, Ali from Cairo, Juggernaut, Kird Ape/Sedge Troll,

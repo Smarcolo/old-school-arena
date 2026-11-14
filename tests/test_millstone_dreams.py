@@ -209,3 +209,19 @@ def test_millstone_con_field_of_dreams_come_conceding_dreams(p):
     assert bersaglio_millstone(p, "B") == "B"  # la lascia lì e si toglie la propria terra inutile
     b[Zona.GRIMORIO].append(Carta("Ancestral Recall", "Instant", "{U}"))
     assert bersaglio_millstone(p, "B") is None  # la propria cima è buona: Millstone resta ferma
+
+
+def test_mossa_disperata_millstone_su_di_se_dopo_sylvan(p):
+    """Creatura avversaria che fa male, niente risposte in mano, due carte inutili rimesse in cima con Sylvan
+    Library: Millstone sul proprio grimorio per pescare una carta nuova (magari Swords to Plowshares)."""
+    from app.ai.politiche import bersaglio_millstone
+    b = p.giocatore("B")
+    in_campo(p, "A", Carta("Juzám Djinn", "Creature — Djinn", "{2}{B}{B}", 5, 5))
+    b[Zona.MANO][:] = [Carta("Island", "Basic Land — Island")]
+    inutili = [Carta("Island", "Basic Land — Island"), Carta("Plains", "Basic Land — Plains")]
+    for c in inutili:
+        b[Zona.MANO].append(c)
+        azioni._applica_scelta(p, "B", "in_cima", c, "Sylvan Library")
+    assert bersaglio_millstone(p, "B") == "B"
+    b[Zona.MANO].append(Carta("Swords to Plowshares", "Instant", "{W}"))
+    assert bersaglio_millstone(p, "B") == "A"  # ha già la risposta in mano: niente mossa disperata

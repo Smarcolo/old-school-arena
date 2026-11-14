@@ -399,15 +399,34 @@ def _carta_utile(p: Partita, chi: str, carta: Carta) -> bool:
     return sum(1 for c in p.giocatore(chi)[Zona.CAMPO] if c.is_terra) < 5
 
 
+RISPOSTE_ALLE_CREATURE = {"Swords to Plowshares", "Terror", "Lightning Bolt", "Fireball", "Disintegrate",
+                          "Psionic Blast", "Wrath of God", "Balance", "Unsummon", "Chaos Orb", "Earthquake"}
+
+
+def mossa_disperata(p: Partita, nome: str) -> bool:
+    """La «mossa disperata» insegnata da Marco: c'è una creatura avversaria pericolosa, in mano non ho niente per
+    toglierla e in cima al grimorio ho rimesso con Sylvan Library carte che non lo fanno: con Millstone macino le
+    mie due carte inutili, così al prossimo turno pesco una carta nuova (magari Swords to Plowshares)."""
+    io, avv = p.giocatore(nome), p.avversario_di(nome)
+    minaccia = any(c.is_creatura and pericolo(c) >= 6 for c in avv[Zona.CAMPO])
+    risposta_in_mano = any(c.nome in RISPOSTE_ALLE_CREATURE for c in io[Zona.MANO])
+    cima = io[Zona.GRIMORIO][-2:]
+    note_inutili = bool(cima) and all(c.nota_in_cima and c.nome not in RISPOSTE_ALLE_CREATURE for c in cima)
+    return minaccia and not risposta_in_mano and note_inutili and len(io[Zona.GRIMORIO]) > 10
+
+
 def bersaglio_millstone(p: Partita, nome: str) -> str | None:
-    """Millstone alla fine del turno avversario, come «Conceding Dreams» (Wak Wak): con Field of Dreams in campo si
+    """Millstone alla fine del turno avversario. Prima la mossa disperata (vedi mossa_disperata); poi come
+    «Conceding Dreams» (Wak Wak): con Field of Dreams in campo si
     guarda la cima dei grimori; si macina l'avversario solo se la sua prossima carta gli serve (tenendolo senza
     terre o senza magie buone), altrimenti la si lascia lì e, se la propria cima non serve, si macina sé stessi.
     Senza Field of Dreams si macina sempre l'avversario."""
     avv = p.avversario_di(nome)
+    io = p.giocatore(nome)
+    if mossa_disperata(p, nome):
+        return nome  # macina le carte inutili rimesse in cima con Sylvan Library per pescare una risposta
     if not _cima_rivelata(p):
         return avv.nome
-    io = p.giocatore(nome)
     if avv[Zona.GRIMORIO] and _carta_utile(p, avv.nome, avv[Zona.GRIMORIO][-1]):
         return avv.nome
     if io[Zona.GRIMORIO] and len(io[Zona.GRIMORIO]) > 10 and not _carta_utile(p, nome, io[Zona.GRIMORIO][-1]):

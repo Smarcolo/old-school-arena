@@ -42,6 +42,7 @@ def pesca(partita: Partita, giocatore: str, quante: int = 1) -> list[Carta]:
             break
         carta = g[Zona.GRIMORIO].pop()
         carta.pescata_nel_turno = partita.turno
+        carta.nota_in_cima = False
         g[Zona.MANO].append(carta)
         pescate.append(carta)
     _log(partita, giocatore, "pesca", f"{giocatore} pesca {len(pescate)} carta/e")
@@ -585,6 +586,7 @@ def _applica_scelta(partita: Partita, giocatore: str, azione: str, carta: Carta,
         if carta in g[Zona.MANO]:
             g[Zona.MANO].remove(carta)
             g[Zona.GRIMORIO].append(carta)  # l'ultima della lista è la cima
+            carta.nota_in_cima = True
             _log(partita, giocatore, "in_cima", f"{giocatore} rimette una carta in cima al grimorio ({fonte})")
     elif azione == "tieni_pagando":
         modifica_vita(partita, giocatore, -4, f"({fonte}: tiene {carta.nome})")

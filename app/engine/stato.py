@@ -70,6 +70,7 @@ class Carta:
     danneggiata_da: set[str] = field(default_factory=set)  # id delle fonti che l'hanno danneggiata in questo turno
     passaforeste_fino_al_turno: int = 0  # Erhnam Djinn
     pescata_nel_turno: int = 0  # Sylvan Library: «cards drawn this turn»
+    nota_in_cima: bool = False  # rimessa in cima al grimorio dal proprietario (Sylvan Library): lui sa cos'è
     disintegrata: bool = False  # Disintegrate: fino a fine turno niente rigenerazione e, se muore, rimossa dal gioco
     statico_forza: int = 0  # da aure e incantesimi globali, ricalcolati da statici.aggiorna
     statico_costituzione: int = 0

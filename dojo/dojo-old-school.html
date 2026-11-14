@@ -1,0 +1,246 @@
+<title>Il Dojo Old School</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700;800&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: un rotolo di carta di riso che scende; ogni lezione è un «kata» con il sigillo del maestro a sinistra */
+:root {
+  --carta: #eef0e4;
+  --carta-scura: #e2e5d4;
+  --inchiostro: #1d2420;
+  --inchiostro-tenue: #4e5a52;
+  --bambu: #4f7a3a;
+  --sigillo: #b8352b;
+  --filo: #c9cdb8;
+  --display: "Shippori Mincho B1", "Hiragino Mincho ProN", Georgia, serif;
+  --testo: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --carta: #171b19; --carta-scura: #1f2522; --inchiostro: #e6e8dc; --inchiostro-tenue: #a9b2a6;
+    --bambu: #8fbf6e; --sigillo: #e0675b; --filo: #343c37; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --carta: #171b19; --carta-scura: #1f2522; --inchiostro: #e6e8dc; --inchiostro-tenue: #a9b2a6;
+  --bambu: #8fbf6e; --sigillo: #e0675b; --filo: #343c37; color-scheme: dark;
+}
+body {
+  background: var(--carta); color: var(--inchiostro); font: 17px/1.6 var(--testo);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+}
+main { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+header { display: flex; flex-direction: column; gap: 14px; border-bottom: 2px solid var(--inchiostro); padding-bottom: 28px; }
+.occhiello { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--bambu); font-weight: 700; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(38px, 7vw, 60px); line-height: 1.05; margin: 0; text-wrap: balance; }
+.intro { font-size: 19px; color: var(--inchiostro-tenue); margin: 0; max-width: 62ch; }
+.maestro { font-family: var(--display); font-size: 21px; margin: 0; border-left: 4px solid var(--sigillo); padding-left: 16px; }
+.kata { display: grid; grid-template-columns: 64px 1fr; gap: 20px; }
+.sigillo {
+  width: 56px; height: 56px; border: 2.5px solid var(--sigillo); color: var(--sigillo); border-radius: 6px;
+  display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 26px; transform: rotate(-4deg);
+}
+.corpo { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+h2 { font-family: var(--display); font-size: clamp(24px, 4vw, 30px); line-height: 1.2; margin: 0; text-wrap: balance; }
+.detto { font-family: var(--display); font-style: italic; color: var(--bambu); margin: 0; font-size: 18px; }
+.corpo p { margin: 0; max-width: 66ch; }
+.esempio { background: var(--carta-scura); border-radius: 6px; padding: 12px 16px; font-size: 16px; }
+.esempio strong, .esercizio strong { color: var(--inchiostro); }
+.esercizio { border-top: 1px dashed var(--filo); padding-top: 10px; font-size: 16px; color: var(--inchiostro-tenue); }
+.stato { align-self: flex-start; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700;
+  padding: 3px 10px; border-radius: 999px; border: 1.5px solid currentColor; }
+.stato.fatto { color: var(--bambu); }
+.stato.prossimo { color: var(--inchiostro-tenue); }
+.carta { font-weight: 600; font-style: normal; }
+footer { border-top: 2px solid var(--inchiostro); padding-top: 22px; display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: var(--inchiostro-tenue); }
+footer h3 { font-family: var(--display); font-size: 20px; color: var(--inchiostro); margin: 0; }
+footer ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+footer a { color: var(--bambu); overflow-wrap: anywhere; }
+@media (max-width: 480px) { .kata { grid-template-columns: 1fr; gap: 10px; } }
+</style>
+
+<main>
+  <header>
+    <span class="occhiello">Old School 93/94 · Swedish</span>
+    <h1>Il Dojo Old School</h1>
+    <p class="intro">Quattordici kata per giocare come un maestro. Ogni lezione viene dagli articoli dei giocatori più esperti del formato e da come ho insegnato a giocare all'avversaria del tuo gioco. Leggine una alla volta, poi falla in partita finché non diventa automatica.</p>
+    <p class="maestro">«Marco-san, prima impara a capire chi sei in questa partita. Poi impara a colpire.»</p>
+  </header>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">一</div>
+    <div class="corpo">
+      <h2>Chi picchia e chi si difende</h2>
+      <p class="detto">«Due mazzi aggressivi: uno deve diventare la parete.»</p>
+      <p>In ogni partita un giocatore deve essere l'aggressore e l'altro il controllo. Lo decidi guardando i due mazzi: chi ha più danni e creature attacca; chi ha più rimozioni, contromagie e pescate controlla. Sbagliare ruolo è il modo più comune di perdere una partita già vinta.</p>
+      <p class="esempio"><strong>Esempio:</strong> con Zoo contro The Deck sei l'aggressore: devi vincere prima che Library of Alexandria e le contromagie ti seppelliscano. Con lo stesso Zoo contro un mono rosso più veloce, diventi tu il controllo: blocca, scambia, sopravvivi.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> prima di tenere la mano, di' ad alta voce «oggi attacco» oppure «oggi resisto». A fine partita chiediti se avevi ragione.</p>
+      <span class="stato prossimo">Provato sull'avversaria: su 300 partite nessun miglioramento, è una lezione per te</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">二</div>
+    <div class="corpo">
+      <h2>Metti la cera: prima l'esca</h2>
+      <p class="detto">«Contro chi ha due isole stappate, lancia prima quello che puoi permetterti di perdere.»</p>
+      <p>Il giocatore di controllo vince scambiando una carta per una minaccia. Se lanci subito la minaccia migliore, la neutralizza. Se lanci prima una minaccia minore, spesso la neutralizza lo stesso; a quel punto è tappato e la tua minaccia vera arriva sul tavolo.</p>
+      <p class="esempio"><strong>Esempio:</strong> hai <span class="carta">Erhnam Djinn</span> e <span class="carta">Serendib Efreet</span>, lui ha {U}{U} aperti e ha già mostrato <span class="carta">Counterspell</span>. Lancia prima l'Efreet. Se lo neutralizza, l'Erhnam passa al turno dopo o nello stesso turno se hai mana.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> per una settimana, contro i mazzi blu, conta quante volte la tua seconda magia del turno è arrivata in campo.</p>
+      <span class="stato fatto">L'avversaria lo fa già</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">三</div>
+    <div class="corpo">
+      <h2>Togli la cera: non scoprirti</h2>
+      <p class="detto">«Chi mette tutto sul tavolo, perde tutto con un solo Wrath.»</p>
+      <p>Contro un mazzo bianco che può avere <span class="carta">Wrath of God</span> o <span class="carta">Balance</span>, se hai già abbastanza pressione in campo tieni le altre creature in mano. Dopo la spazzata le rimetti giù e la pressione riparte. Fai eccezione solo quando stai per vincere.</p>
+      <p class="esempio"><strong>Esempio:</strong> hai due <span class="carta">Savannah Lions</span> e un <span class="carta">White Knight</span> in campo, lui è a 14 vita con una pianura stappata e quattro carte in mano. Il terzo Lions resta in mano.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> prima di lanciare una creatura chiediti: «se adesso arriva Wrath, quante carte perdo?»</p>
+      <span class="stato fatto">L'avversaria lo fa già</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">四</div>
+    <div class="corpo">
+      <h2>Il mana rubato</h2>
+      <p class="detto">«Il controllo non aspetta soltanto: quando prende, restituisce il doppio.»</p>
+      <p>La mossa classica di The Deck è proattiva: neutralizzi una magia con <span class="carta">Mana Drain</span> e al turno dopo usi il mana rubato per <span class="carta">Mind Twist</span> o <span class="carta">Braingeyser</span> grandi. L'avversario resta senza mano, oppure tu hai cinque carte in più.</p>
+      <p class="esempio"><strong>Esempio:</strong> neutralizzi un Juzám Djinn (4 mana) con Mana Drain: al tuo turno hai 4 mana in più per un Mind Twist da 6.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> quando giochi Millstone Dreams, tieni Mana Drain per la magia più costosa dell'avversario, non per la prima che arriva.</p>
+      <span class="stato fatto">L'avversaria usa il mana rubato in automatico</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">五</div>
+    <div class="corpo">
+      <h2>Rispondere costa meno</h2>
+      <p class="detto">«Una carta piccola che ferma una carta grande è una vittoria.»</p>
+      <p>Il controllo vince in quattro modi: risponde alle minacce con carte più economiche, non dà bersagli alle tue rimozioni, ignora le minacce che da sole non fanno niente, e allunga la partita finché le sue carte potenti prendono il sopravvento.</p>
+      <p class="esempio"><strong>Esempio:</strong> <span class="carta">Swords to Plowshares</span> (1 mana) su un <span class="carta">Juzám Djinn</span> (4 mana). Oppure: non disincantare <span class="carta">Crusade</span> se hai appena tolto tutte le creature bianche.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> a fine partita conta: quanto mana hai speso tu per rispondere, e quanto ha speso lui per le minacce?</p>
+      <span class="stato fatto">L'avversaria lo valuta nella previsione</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">六</div>
+    <div class="corpo">
+      <h2>Le terre da rompere</h2>
+      <p class="detto">«Non rompere la terra più bella. Rompi quella che gli serve.»</p>
+      <p>Con <span class="carta">Strip Mine</span>, <span class="carta">Sinkhole</span> o <span class="carta">Stone Rain</span>: prima <span class="carta">Maze of Ith</span> se hai creature, poi <span class="carta">Library of Alexandria</span> se ha 6-7 carte in mano, poi l'ultima fonte di un colore che usa. Togliere l'ultima isola vuol dire niente Counterspell; togliere l'ultima pianura, niente Swords sulla tua creatura.</p>
+      <p class="esempio"><strong>Esempio:</strong> contro The Deck con una creatura in campo: lui ha due Plains, un'Island e una Tundra. Rompi la Tundra o l'Island, quella che lascia il blu più scoperto.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> prima di usare Strip Mine, conta le sue fonti di ogni colore. Rompi solo se cambia qualcosa.</p>
+      <span class="stato fatto">L'avversaria lo fa già</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">七</div>
+    <div class="corpo">
+      <h2>La fabbrica che osserva</h2>
+      <p class="detto">«Una terra stappata può essere un muro. Guarda prima di attaccare.»</p>
+      <p>Una <span class="carta">Mishra's Factory</span> stappata con un altro mana disponibile è un bloccante 2/2 che si pompa a 3/3. Non attaccare con creature che ci morirebbero contro, a meno che tu non abbia in mano Swords, Disenchant, Shatter o Bolt per toglierla quando si anima.</p>
+      <p class="esempio"><strong>Esempio:</strong> il tuo <span class="carta">Kird Ape</span> 2/3 contro una Factory pronta: resta a casa. Lo stesso Ape con <span class="carta">Lightning Bolt</span> e una montagna stappata: attacca, e se la Factory blocca, Bolt.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> in difesa fai il contrario: tieni la tua Factory stappata e un mana libero, e guarda l'avversaria che non attacca.</p>
+      <span class="stato fatto">L'avversaria lo fa già</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">八</div>
+    <div class="corpo">
+      <h2>Orb contro Orb</h2>
+      <p class="detto">«Quando il suo Orb vola, il tuo deve già essere in aria.»</p>
+      <p><span class="carta">Chaos Orb</span> funziona solo se è ancora in campo quando si risolve. Se l'avversario lo lancia sulla tua carta migliore, rispondi con il tuo Orb sul suo: il suo non cade su niente.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> tieni sempre un mana libero quando entrambi avete un Chaos Orb in campo.</p>
+      <span class="stato fatto">L'avversaria lo fa già</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">九</div>
+    <div class="corpo">
+      <h2>Il tempo delle giocate</h2>
+      <p class="detto">«Il maestro agisce alla fine del giorno dell'altro.»</p>
+      <p>Gli istantanei che non devono rispondere a niente si giocano alla fine del turno avversario: <span class="carta">Ancestral Recall</span>, <span class="carta">Library of Alexandria</span>, <span class="carta">Jayemdae Tome</span>, Millstone. Così tieni il mana aperto per le contromagie durante il suo turno e non gli mostri niente in anticipo.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> per una partita intera, non lanciare mai un istantaneo nel tuo turno se non è necessario.</p>
+      <span class="stato fatto">L'avversaria lo fa già</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">十</div>
+    <div class="corpo">
+      <h2>La sideboard guarda avanti</h2>
+      <p class="detto">«Non prepararti all'avversario di ieri. Preparati a quello di domani.»</p>
+      <p>Tra una partita e l'altra non reagire a quello che hai visto in gara 1: anticipa cosa farà lui con la sua sideboard. Cambia carte una per una, tieni la curva di mana e le terre come sono, e non esagerare se stai già vincendo il confronto. Togli prima le carte che funzionano solo insieme ad altre; tieni quelle che stanno in piedi da sole.</p>
+      <p class="esempio"><strong>Esempio:</strong> hai vinto gara 1 con Moat contro le sue creature terrestri. Lui metterà Disenchant: aggiungi un secondo modo di vincere invece di un altro Moat.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> prima di aprire il consiglio di sideboard del gioco, scrivi tu i tuoi tre cambi. Poi confronta.</p>
+      <span class="stato prossimo">Prossimo passo per l'avversaria</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">十一</div>
+    <div class="corpo">
+      <h2>Chi inizia e chi pesca</h2>
+      <p class="detto">«Chi parte secondo ha una carta in più: usala per rispondere.»</p>
+      <p>Se inizi tu sei avanti di un tempo: spingi. Se peschi per primo hai una carta in più ma sei indietro: dopo la sideboard puoi togliere una terra e qualche minaccia economica, e mettere risposte efficienti per recuperare.</p>
+      <span class="stato prossimo">Prossimo passo per l'avversaria</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">十二</div>
+    <div class="corpo">
+      <h2>Il grimorio è una risorsa</h2>
+      <p class="detto">«Se sai cosa c'è in cima e non ti serve, toglilo.»</p>
+      <p>Con <span class="carta">Sylvan Library</span> vedi le prime carte. Se non ti servono, <span class="carta">Millstone</span> può macinare il tuo grimorio invece del suo, e pescherai qualcosa di meglio.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> nel gioco tocca Millstone e scegli «Macina il tuo grimorio» quando la cima è inutile.</p>
+      <span class="stato fatto">Nel gioco dalla versione 2026.10.28-5</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">十三</div>
+    <div class="corpo">
+      <h2>Due per uno</h2>
+      <p class="detto">«Un solo colpo, due avversari a terra.»</p>
+      <p>Il vantaggio carte non viene solo dal pescare di più. Viene anche dal far valere una tua carta due delle sue. Il momento classico: l'avversario lancia <span class="carta">Giant Growth</span> sulla sua creatura e tu rispondi con <span class="carta">Lightning Bolt</span> prima che si risolva. Muore la creatura e il Giant Growth va sprecato: due carte sue per una tua. Lo stesso con <span class="carta">Wrath of God</span> o <span class="carta">Balance</span> su più creature.</p>
+      <p class="esempio"><strong>Esempio:</strong> lui ha un Kird Ape 2/3 e lancia Giant Growth per vincere il combattimento. Tu Bolt in risposta: l'Ape ha ancora 3 di costituzione, muore, e il Giant Growth non trova più il bersaglio.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> quando hai Bolt in mano, non usarlo subito sulla creatura: aspetta che lui ci investa sopra un'altra carta.</p>
+      <span class="stato fatto">L'avversaria lo fa già</span>
+    </div>
+  </section>
+
+  <section class="kata">
+    <div class="sigillo" aria-hidden="true">十四</div>
+    <div class="corpo">
+      <h2>Il ritmo</h2>
+      <p class="detto">«Chi gioca due magie mentre l'altro ne gioca una, detta il ritmo.»</p>
+      <p>Il tempo è la velocità con cui metti minacce in campo. Resti indietro ogni volta che salti una giocata, non puoi attaccare o non puoi bloccare. Vai avanti quando lanci due magie in un turno, o quando una carta economica annulla una carta costosa dell'avversario: <span class="carta">Unsummon</span> su un <span class="carta">Shivan Dragon</span> fa sprecare all'avversario sei mana e un turno intero.</p>
+      <p class="esempio"><strong>Esempio:</strong> al quarto turno, invece di una creatura da 4, lancia una da 2 e tieni un trucco da 2: vinci il combattimento e resti con due creature in campo.</p>
+      <p class="esercizio"><strong>Esercizio:</strong> a ogni turno, prima di passare, controlla se hai lasciato del mana inutilizzato. Ogni mana sprecato è ritmo perso.</p>
+      <span class="stato fatto">L'avversaria usa Unsummon sugli attaccanti grossi</span>
+    </div>
+  </section>
+
+  <footer>
+    <h3>Da dove vengono le lezioni</h3>
+    <ul>
+      <li>Allan Linderup Smed, <a href="https://www.orkerhulen.dk/onewebmedia/Deck%20Archetypes%20and%20Strategies.pdf">Deck Types and Strategies</a> (93/94 Old School MTG): ruoli, archetipi, sideboard, gioco in pescata.</li>
+      <li><a href="https://mtg.wiki/page/The_Deck">The Deck</a> su mtg.wiki e <a href="https://oldschool-mtg.blogspot.com/2014/03/the-return-of-deck.html">The return of The Deck</a> sul blog Old School MTG: come gioca il controllo.</li>
+      <li><a href="https://oldschool-mtg.blogspot.com/p/decks-to-beat.html">Decks to Beat</a> (Old School MTG): i mazzi che vincono i tornei.</li>
+      <li>MTG Wiki: <a href="https://mtg.wiki/page/Card_advantage">Card advantage</a>, <a href="https://mtg.wiki/page/Tempo">Tempo</a> e <a href="https://mtg.wiki/page/Old_School">Old School</a>.</li>
+      <li>Le malizie che mi hai insegnato tu: Mishra's Factory, Library of Alexandria, spaccaterre, Millstone sul proprio grimorio.</li>
+    </ul>
+    <p>«Nessun cattivo allievo, Marco-san. Solo partite non ancora giocate.»</p>
+  </footer>
+</main>

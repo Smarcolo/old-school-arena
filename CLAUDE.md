@@ -177,7 +177,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   terre avversarie), Recall (`continua_recall`, `Effetto.rimuovi_dal_gioco`), Sylvan Library (innesco «sylvan»:
   pesca sempre 2 in più, poi per 2 carte pescate nel turno — `Carta.pescata_nel_turno` — «in_cima» o
   «tieni_pagando» 4 vita; scelte «azione:id» in `rispondi_scegli`), Field of Dreams (la vista mostra la cima dei
-  grimori, `cima`), incantesimi del mondo (ne resta uno, il più recente, in `_un_giro_di_controlli`).
+  grimori, `cima`; l'AI con Field of Dreams in campo usa Millstone come «Conceding Dreams» di Wak Wak:
+  `politiche.bersaglio_millstone` macina l'avversario solo se la sua cima gli serve, altrimenti sé stessa se la
+  propria cima è inutile), incantesimi del mondo (ne resta uno, il più recente, in `_un_giro_di_controlli`).
 - Liste incollate da TCDecks: `mazzi.analizza_testo` salta «Tipo [N]», «Deck Name:», «X playing Y Position: N» e
   mette in sideboard le carte oltre il totale delle sezioni.
 - Regole di singole carte (`engine/speciali.py`): Moat, Ali from Cairo, Juggernaut, Kird Ape/Sedge Troll,

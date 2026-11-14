@@ -193,3 +193,19 @@ def test_ai_lancia_l_orb_sulla_sylvan_library(p):
     p.giocatore("B").terre_giocate_nel_turno = 1
     avversaria.agisci(p, "B")
     assert p.pila and p.pila[-1].carta is orb and p.pila[-1].bersagli == [f"carta:{libreria.id}"]
+
+
+def test_millstone_con_field_of_dreams_come_conceding_dreams(p):
+    """Field of Dreams in campo: macina l'avversario solo se la sua prossima carta gli serve, altrimenti la lascia
+    in cima; se la propria cima non serve (una terra con già 8 terre in campo) macina sé stessa."""
+    from app.ai.politiche import bersaglio_millstone
+    assert bersaglio_millstone(p, "B") == "A"  # senza Field of Dreams: sempre l'avversario
+    in_campo(p, "B", carta("Field of Dreams"))
+    a, b = p.giocatore("A"), p.giocatore("B")
+    a[Zona.GRIMORIO].append(Carta("Lightning Bolt", "Instant", "{R}"))
+    assert bersaglio_millstone(p, "B") == "A"  # un Bolt in cima: via
+    a[Zona.GRIMORIO].append(Carta("Mountain", "Basic Land — Mountain"))  # con 8 terre in campo una terra non gli serve
+    b[Zona.GRIMORIO].append(Carta("Island", "Basic Land — Island"))
+    assert bersaglio_millstone(p, "B") == "B"  # la lascia lì e si toglie la propria terra inutile
+    b[Zona.GRIMORIO].append(Carta("Ancestral Recall", "Instant", "{U}"))
+    assert bersaglio_millstone(p, "B") is None  # la propria cima è buona: Millstone resta ferma

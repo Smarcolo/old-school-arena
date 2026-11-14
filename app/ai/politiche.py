@@ -387,6 +387,34 @@ def _bersaglio_chaos_orb(p: Partita, nome: str, orb: Carta) -> Carta | None:
     return max(candidati, key=lambda t: (pericolo(t), valore_carta(t))) if candidati else None
 
 
+def _cima_rivelata(p: Partita) -> bool:
+    """Field of Dreams in campo: la prima carta dei grimori è scoperta e la si può guardare."""
+    return any(c.nome == "Field of Dreams" for g in p.giocatori for c in g[Zona.CAMPO])
+
+
+def _carta_utile(p: Partita, chi: str, carta: Carta) -> bool:
+    """Una terra serve a chi ne ha poche; una magia serve sempre."""
+    if not carta.is_terra:
+        return True
+    return sum(1 for c in p.giocatore(chi)[Zona.CAMPO] if c.is_terra) < 5
+
+
+def bersaglio_millstone(p: Partita, nome: str) -> str | None:
+    """Millstone alla fine del turno avversario, come «Conceding Dreams» (Wak Wak): con Field of Dreams in campo si
+    guarda la cima dei grimori; si macina l'avversario solo se la sua prossima carta gli serve (tenendolo senza
+    terre o senza magie buone), altrimenti la si lascia lì e, se la propria cima non serve, si macina sé stessi.
+    Senza Field of Dreams si macina sempre l'avversario."""
+    avv = p.avversario_di(nome)
+    if not _cima_rivelata(p):
+        return avv.nome
+    io = p.giocatore(nome)
+    if avv[Zona.GRIMORIO] and _carta_utile(p, avv.nome, avv[Zona.GRIMORIO][-1]):
+        return avv.nome
+    if io[Zona.GRIMORIO] and len(io[Zona.GRIMORIO]) > 10 and not _carta_utile(p, nome, io[Zona.GRIMORIO][-1]):
+        return nome
+    return None
+
+
 def scegli_abilita(p: Partita, nome: str):
     """Abilità di utilità: Strip Mine sulla terra che conviene togliere (terra_da_distruggere), Library of Alexandria e Jayemdae Tome a fine turno
     avversario, Icy Manipulator sulla creatura migliore avversaria nel suo mantenimento."""
@@ -402,7 +430,8 @@ def scegli_abilita(p: Partita, nome: str):
             if ab.tipo == "pesca" and _fine_turno_avversario(p, nome):
                 return c, ab, []
             if ab.tipo == "macina" and _fine_turno_avversario(p, nome):  # Millstone
-                return c, ab, [f"giocatore:{avv.nome}"]
+                if (chi := bersaglio_millstone(p, nome)) is not None:
+                    return c, ab, [f"giocatore:{chi}"]
             if ab.tipo == "scambia_vita" and avv.vita - p.giocatore(nome).vita >= 8:  # Mirror Universe
                 return c, ab, [f"giocatore:{avv.nome}"]
             if ab.tipo == "chaos_orb" and (scelta := _bersaglio_chaos_orb(p, nome, c)):

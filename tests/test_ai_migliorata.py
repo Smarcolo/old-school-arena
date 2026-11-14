@@ -207,3 +207,53 @@ def test_niente_strip_sulla_propria_terra_senza_artefatti():
     b[Zona.CAMPO][:] = [carta("Island") for _ in range(6)]
     b[Zona.MANO][:] = [carta("Island") for _ in range(6)]
     assert strip_per_balance(p, "AI") is None  # senza Mox né Sol Ring resterebbe a secco come lui
+
+
+SCAVENGER = "{G}, {T}, Sacrifice Scavenger Folk: Destroy target artifact."
+
+
+def test_scavenger_folk_blocca_poi_si_sacrifica_su_un_artefatto():
+    """Come in torneo: Scavenger Folk blocca un 4/4 e prima dei danni si sacrifica per
+    distruggere un artefatto. L'attaccante resta bloccato: niente danni al giocatore, e l'artefatto se ne va."""
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    folk = Carta("Scavenger Folk", "Creature — Human", "{G}", 1, 1, SCAVENGER)
+    ai[Zona.CAMPO][:] = [folk, carta("Forest")]
+    sol = carta("Sol Ring")
+    bestia = cr("Bestia", 4, 4)
+    b[Zona.CAMPO][:] = [bestia, sol]
+    p.attivo = p.priorita = 1  # turno di B
+    azioni.passa_priorita(p, "B")
+    azioni.passa_priorita(p, "AI")
+    combattimento.dichiara_attaccanti(p, "B", [bestia])
+    azioni.passa_priorita(p, "B")
+    azioni.passa_priorita(p, "AI")
+    agisci(p, "AI")  # blocca con il Folk
+    assert folk.id in p.combattimento.bloccanti()
+    vita = ai.vita
+    for _ in range(20):
+        if p.fase != Fase.COMBATTIMENTO:
+            break
+        if p.giocatore_con_priorita.nome == "AI":
+            agisci(p, "AI")
+        else:
+            azioni.passa_priorita(p, "B")
+    assert sol in b[Zona.CIMITERO] and folk in ai[Zona.CIMITERO]
+    assert ai.vita == vita  # la bestia è rimasta bloccata
+
+
+def test_scavenger_folk_non_blocca_senza_artefatti():
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    folk = Carta("Scavenger Folk", "Creature — Human", "{G}", 1, 1, SCAVENGER)
+    ai[Zona.CAMPO][:] = [folk, carta("Forest")]
+    bestia = cr("Bestia", 4, 4)
+    b[Zona.CAMPO][:] = [bestia]
+    p.attivo = p.priorita = 1
+    azioni.passa_priorita(p, "B")
+    azioni.passa_priorita(p, "AI")
+    combattimento.dichiara_attaccanti(p, "B", [bestia])
+    azioni.passa_priorita(p, "B")
+    azioni.passa_priorita(p, "AI")
+    agisci(p, "AI")
+    assert folk.id not in p.combattimento.bloccanti()

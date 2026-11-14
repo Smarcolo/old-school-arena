@@ -423,6 +423,12 @@ def scegli_bloccanti(partita: Partita, nome: str) -> list[tuple[Carta, Carta]]:
         if scelta:
             blocchi.append((scelta, a))
             disponibili.remove(scelta)
+    # Scavenger Folk e simili: bloccano l'attaccante libero più forte e poi, prima dei danni, si sacrificano per
+    # distruggere un artefatto (politiche._sacrificio_in_combattimento). Contro travolgere il blocco non ferma niente.
+    for a in [a for a in attaccanti if a.id not in {x.id for _, x in blocchi} and not a.ha("trample")]:
+        if folk := next((b for b in legali(a) if politiche.pronta_a_sacrificarsi(partita, nome, b)), None):
+            blocchi.append((folk, a))
+            disponibili.remove(folk)
     bloccati = {a.id for _, a in blocchi}
     liberi = [a for a in attaccanti if a.id not in bloccati]
     if sum(a.forza_attuale for a in liberi) >= partita.giocatore(nome).vita:

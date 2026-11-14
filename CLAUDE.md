@@ -140,7 +140,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   sue carte in campo e cimitero), bianco e blu pesano di più se l'AI ha creature (Swords, Wrath, Counterspell);
   poi terre utili (Library, Factory, Strip Mine) e doppie. Strip Mine solo con punteggio ≥ 6. Giocata di Marco contro The Deck (`strip_per_balance`): con Balance in mano, Strip Mine
   sulla propria terra se dopo Balance si paga ancora (Mox, Sol Ring), l'avversario perde ≥ 3 terre, il vantaggio
-  di Balance è ≥ 4 e lei ha più mana da artefatti (non Lotus) di lui; intanto la politica di Balance aspetta. Maze of Ith come
+  di Balance è ≥ 4 e lei ha più mana da artefatti (non Lotus) di lui; intanto la politica di Balance aspetta.
+  Scavenger Folk e creature che si sacrificano per distruggere un artefatto (`politiche.pronta_a_sacrificarsi`,
+  `_sacrificio_in_combattimento`): l'AI blocca l'attaccante libero più forte (non travolgere) e prima dei danni si
+  sacrifica sull'artefatto più pericoloso; fuori dal combattimento solo con `pericolo` ≥ 6. Maze of Ith come
   carta non ha ancora la sua abilità nel motore.
 - L'AI decide le magie in `ai/politiche.py` (POLITICHE per nome carta, anche Dark Ritual solo se sblocca una carta, Balance se
   conviene, Earthquake/Hurricane, Unsummon/Boomerang sugli attaccanti) e le abilità di utilità in `scegli_abilita`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.

@@ -487,12 +487,70 @@ def bersaglio_millstone(p: Partita, nome: str) -> str | None:
     return None
 
 
+# --- Creature che si sacrificano per distruggere un artefatto (Scavenger Folk) ---------------------------
+
+def abilita_sacrificio_artefatto(c: Carta):
+    """«{G}, {T}, Sacrifice Scavenger Folk: Destroy target artifact.» e simili, su una creatura; altrimenti None."""
+    if not c.is_creatura:
+        return None
+    return next((ab for ab in analizza_abilita(c) if ab.tipo == "distruggi" and ab.sacrifica_se
+                 and ab.bersaglio in ("artefatto", "artefatto_o_incantesimo")), None)
+
+
+def artefatto_da_colpire(p: Partita, nome: str, fonte: Carta, tipo: str) -> Carta | None:
+    """L'artefatto (o incantesimo) avversario più importante che quell'abilità può distruggere."""
+    candidati = [c for c in p.avversario_di(nome)[Zona.CAMPO] if bersaglio_legale(p, tipo, f"carta:{c.id}", fonte)]
+    return max(candidati, key=lambda c: (pericolo(c), valore_carta(c))) if candidati else None
+
+
+def pronta_a_sacrificarsi(p: Partita, nome: str, c: Carta) -> Carta | None:
+    """Mentre si dichiarano i bloccanti (senza priorità): la creatura potrà poi sacrificarsi, cioè è stappata,
+    non ha debolezza da evocazione se l'abilità la tappa, il mana c'è con le altre fonti e c'è un bersaglio?
+    Ritorna il bersaglio."""
+    ab = abilita_sacrificio_artefatto(c)
+    if ab is None or c.tappata or (ab.tappa and p.ha_debolezza_da_evocazione(c)):
+        return None
+    g = p.giocatore(nome)
+    terre_avv = p.avversario_di(nome)[Zona.CAMPO]
+    fonti = [f for x in g[Zona.CAMPO] if x is not c and not x.tappata
+             and not (x.is_creatura and p.ha_debolezza_da_evocazione(x))
+             and (f := mana.fonte_in_partita(x, terre_avv))]
+    if mana.piano_pagamento(g.riserva, fonti, mana.analizza_costo(ab.costo_mana)) is None:
+        return None
+    return artefatto_da_colpire(p, nome, c, ab.bersaglio)
+
+
+def _sacrificio_in_combattimento(p: Partita, nome: str):
+    """La giocata dei maestri con Scavenger Folk: blocca, poi prima dei danni si sacrifica e distrugge un
+    artefatto. L'attaccante resta bloccato (non colpisce il giocatore) e l'artefatto se ne va: due carte per una.
+    Lo stesso se attacca ed è stata bloccata. Altrimenti, nella sua fase principale o alla fine del turno
+    avversario, solo contro un artefatto pericoloso (pericolo ≥ 6)."""
+    comb = p.combattimento
+    in_combattimento = set()
+    if comb and comb.bloccanti_dichiarati:
+        in_combattimento = set(comb.bloccanti()) | {a for a in comb.blocchi if comb.blocchi[a]}
+    for c in list(p.giocatore(nome)[Zona.CAMPO]):
+        ab = abilita_sacrificio_artefatto(c)
+        if ab is None or puo_attivare(p, nome, c, ab) is not None:
+            continue
+        bersaglio = artefatto_da_colpire(p, nome, c, ab.bersaglio)
+        if bersaglio is None:
+            continue
+        if c.id in in_combattimento and not p.pila:
+            return c, ab, [f"carta:{bersaglio.id}"]
+        if (_mia_principale(p, nome) or _fine_turno_avversario(p, nome)) and pericolo(bersaglio) >= 6:
+            return c, ab, [f"carta:{bersaglio.id}"]
+    return None
+
+
 def scegli_abilita(p: Partita, nome: str):
     """Abilità di utilità: Strip Mine sulla terra che conviene togliere (terra_da_distruggere), Library of Alexandria e Jayemdae Tome a fine turno
     avversario, Icy Manipulator sulla creatura migliore avversaria nel suo mantenimento."""
     avv = p.avversario_di(nome)
     if combinazione := strip_per_balance(p, nome):
         return combinazione
+    if sacrificio := _sacrificio_in_combattimento(p, nome):
+        return sacrificio
     for c in list(p.giocatore(nome)[Zona.CAMPO]):
         for ab in analizza_abilita(c):
             if puo_attivare(p, nome, c, ab) is not None:

@@ -445,8 +445,21 @@ def _cima_rivelata(p: Partita) -> bool:
     return any(c.nome == "Field of Dreams" for g in p.giocatori for c in g[Zona.CAMPO])
 
 
+def _fonti_in_campo(p: Partita, chi: str) -> int:
+    """Permanenti che producono mana (terre, Mox, Sol Ring...), tappati o no."""
+    return sum(1 for c in p.giocatore(chi)[Zona.CAMPO] if c.is_terra or mana.mana_prodotto(c))
+
+
+def _mana_value(carta: Carta) -> int:
+    return sum(mana.analizza_costo(carta.costo).values()) if carta.costo else 0
+
+
 def _carta_utile(p: Partita, chi: str, carta: Carta) -> bool:
-    """Una terra serve a chi ne ha poche; una magia serve sempre."""
+    """Una terra serve a chi ne ha poche; una magia serve sempre. Ma a chi è rimasto senza mana (niente terre,
+    Mox rotti: la partita di Marco con Field of Dreams, Strip Mine e Disenchant) servono solo le fonti di mana:
+    una magia che costa qualcosa non la può lanciare, quindi la si lascia in cima e si macinano le terre."""
+    if _fonti_in_campo(p, chi) == 0:
+        return carta.is_terra or bool(mana.mana_prodotto(carta)) or _mana_value(carta) == 0
     if not carta.is_terra:
         return True
     return sum(1 for c in p.giocatore(chi)[Zona.CAMPO] if c.is_terra) < 5

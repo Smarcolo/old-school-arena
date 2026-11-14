@@ -186,7 +186,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   `politiche.bersaglio_millstone` macina l'avversario solo se la sua cima gli serve, altrimenti sé stessa se la
   propria cima è inutile; prima ancora la «mossa disperata» di Marco, `mossa_disperata`: creatura avversaria
   pericolosa, nessuna risposta in mano e due carte inutili rimesse in cima con Sylvan (`Carta.nota_in_cima`) →
-  macina sé stessa per pescare una risposta), incantesimi del mondo (ne resta uno, il più recente, in `_un_giro_di_controlli`).
+  macina sé stessa per pescare una risposta); contro chi non ha più fonti di mana in campo (`_carta_utile`) la mira si capovolge:
+  gli servono solo terre, fonti di mana e magie a costo 0, quindi si macinano quelle e gli si lasciano in cima le magie, incantesimi del mondo (ne resta uno, il più recente, in `_un_giro_di_controlli`).
 - Liste incollate da TCDecks: `mazzi.analizza_testo` salta «Tipo [N]», «Deck Name:», «X playing Y Position: N» e
   mette in sideboard le carte oltre il totale delle sezioni.
 - Regole di singole carte (`engine/speciali.py`): Moat, Ali from Cairo, Juggernaut, Kird Ape/Sedge Troll,

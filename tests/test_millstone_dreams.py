@@ -211,6 +211,23 @@ def test_millstone_con_field_of_dreams_come_conceding_dreams(p):
     assert bersaglio_millstone(p, "B") is None  # la propria cima è buona: Millstone resta ferma
 
 
+def test_field_of_dreams_contro_chi_e_rimasto_senza_mana(p):
+    """La partita di Marco: Strip Mine e Disenchant hanno tolto all'avversario tutte le terre, i Mox e la Factory.
+    Ora la strategia si capovolge: si macinano le terre (e le fonti di mana) e gli si lasciano in cima le magie,
+    che non può lanciare."""
+    from app.ai.politiche import bersaglio_millstone
+    in_campo(p, "B", carta("Field of Dreams"))
+    a, b = p.giocatore("A"), p.giocatore("B")
+    a[Zona.CAMPO][:] = [Carta("Orso", "Creature — Bear", "{1}{G}", 2, 2)]  # niente terre né Mox
+    b[Zona.GRIMORIO].append(Carta("Ancestral Recall", "Instant", "{U}"))  # la propria cima è buona
+    a[Zona.GRIMORIO].append(Carta("Serra Angel", "Creature — Angel", "{3}{W}{W}", 4, 4))
+    assert bersaglio_millstone(p, "B") is None  # l'Angelo non lo può evocare: resta lì
+    a[Zona.GRIMORIO].append(Carta("Mountain", "Basic Land — Mountain"))
+    assert bersaglio_millstone(p, "B") == "A"  # la terra lo farebbe ripartire: via
+    a[Zona.GRIMORIO][-1] = Carta("Mox Ruby", "Artifact", "{0}", testo="{T}: Add {R}.")
+    assert bersaglio_millstone(p, "B") == "A"  # anche un Mox
+
+
 def test_mossa_disperata_millstone_su_di_se_dopo_sylvan(p):
     """Creatura avversaria che fa male, niente risposte in mano, due carte inutili rimesse in cima con Sylvan
     Library: Millstone sul proprio grimorio per pescare una carta nuova (magari Swords to Plowshares)."""

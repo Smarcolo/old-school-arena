@@ -257,3 +257,88 @@ def test_scavenger_folk_non_blocca_senza_artefatti():
     azioni.passa_priorita(p, "AI")
     agisci(p, "AI")
     assert folk.id not in p.combattimento.bloccanti()
+
+
+# --- Lezioni dai report dei tornei (blog Old School MTG) ------------------------------------------------
+
+def test_i_danni_si_contano_per_mana_non_per_carte():
+    """Mondiale 2022: due Bolt e una sola fonte rossa contro un avversario a 6 non fanno 6. Il Bolt va sulla
+    minaccia, non in faccia."""
+    from app.ai.avversaria import bersaglio_bolt
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Mountain")]
+    ai[Zona.MANO][:] = [carta("Lightning Bolt"), carta("Lightning Bolt")]
+    drago = cr("Drago", 3, 3, "Flying")
+    b[Zona.CAMPO][:] = [drago]
+    b.vita = 6
+    assert bersaglio_bolt(p, "AI") == f"carta:{drago.id}"
+    ai[Zona.CAMPO].append(carta("Mountain"))  # con due fonti rosse è letale
+    assert bersaglio_bolt(p, "AI") == "giocatore:B"
+
+
+def test_con_mirror_universe_pronto_niente_bolt_in_faccia_a_piccoli_passi():
+    from app.ai.avversaria import bersaglio_bolt
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Mountain")]
+    ai[Zona.MANO][:] = [carta("Lightning Bolt")]
+    specchio = carta("Mirror Universe")
+    b[Zona.CAMPO][:] = [specchio]
+    b.vita = 8
+    assert bersaglio_bolt(p, "AI") is None
+    specchio.tappata = True
+    assert bersaglio_bolt(p, "AI") == "giocatore:B"
+    specchio.tappata = False
+    b.vita = 3
+    assert bersaglio_bolt(p, "AI") == "giocatore:B"  # letale: va bene anche col Mirror
+
+
+def test_niente_bolt_sulle_creature_in_risposta_al_balance():
+    from app.ai.avversaria import bersaglio_bolt
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Mountain"), cr("Orso", 2, 2), cr("Lupo", 2, 2)]
+    ai[Zona.MANO][:] = [carta("Lightning Bolt")]
+    elfo = cr("Elfo", 1, 1)
+    b[Zona.CAMPO][:] = [carta("Plains"), carta("Plains"), elfo]
+    b[Zona.MANO][:] = [carta("Balance")]
+    p.attivo = p.priorita = 1
+    azioni.lancia(p, "B", b[Zona.MANO][0])
+    azioni.passa_priorita(p, "B")
+    assert bersaglio_bolt(p, "AI") is None  # ucciderle farebbe sacrificare a lei una creatura in più
+
+
+def test_con_earthquake_in_mano_tiene_le_creature_piccole():
+    """n00bcon 13: «He started with Llanowar Elves and I didn't play my Lion, hoping to two-for-one him»."""
+    p = p_base()
+    ai = p.giocatore("AI")
+    ai[Zona.CAMPO][:] = [carta("Mountain"), carta("Mountain")]
+    leone = cr("Leone", 2, 1)
+    ai[Zona.MANO][:] = [carta("Earthquake"), leone]
+    ai.terre_giocate_nel_turno = 1
+    agisci(p, "AI")
+    assert leone in ai[Zona.MANO] and not p.pila
+
+
+def test_la_contromagia_si_tiene_per_le_carte_decisive():
+    from app.ai.politiche import vale_una_contromagia
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.MANO][:] = [carta("Counterspell")]
+    b[Zona.MANO][:] = [carta("Island") for _ in range(4)]
+    assert not vale_una_contromagia(p, "AI", cr("Orso", 2, 2))
+    assert vale_una_contromagia(p, "AI", carta("Serra Angel"))
+    assert vale_una_contromagia(p, "AI", Carta("Underworld Dreams", "Enchantment", "{B}{B}{B}"))
+    ai[Zona.MANO].append(carta("Counterspell"))  # con due contromagie si può essere meno avari
+    assert vale_una_contromagia(p, "AI", Carta("Grizzly Bears", "Creature — Bear", "{1}{G}", 2, 2))
+
+
+def test_disenchant_prima_sul_permanente_che_fa_vincere():
+    from app.ai.politiche import distruggi_permanente
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Plains"), carta("Plains")]
+    sogni = Carta("Underworld Dreams", "Enchantment", "{B}{B}{B}")
+    b[Zona.CAMPO][:] = [Carta("Clay Statue", "Artifact Creature — Golem", "{4}", 3, 1), sogni]
+    assert distruggi_permanente(p, "AI", carta("Disenchant")) == ([f"carta:{sogni.id}"], 0)

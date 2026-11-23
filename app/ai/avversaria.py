@@ -116,13 +116,47 @@ def bersaglio_growth(partita: Partita, nome: str, growth: Carta | None = None) -
     return None
 
 
+def bolt_pagabili(partita: Partita, nome: str) -> int:
+    """Quanti Lightning Bolt della mano si possono lanciare adesso con il mana che c'è: i danni si contano per
+    mana, non per carte (Valerio Gregori, Mondiale 2022: due Bolt e una sola fonte rossa non fanno 6)."""
+    from app.engine.validazione import fonti_di_mana
+    g = partita.giocatore(nome)
+    in_mano = sum(1 for c in g[Zona.MANO] if c.nome == "Lightning Bolt")
+    fonti = fonti_di_mana(partita, nome)
+    for n in range(in_mano, 0, -1):
+        if mana.piano_pagamento(g.riserva, fonti, {"generico": 0, "R": n}) is not None:
+            return n
+    return 0
+
+
+def mirror_pronto(partita: Partita, chi: str) -> bool:
+    """`chi` ha un Mirror Universe stappato: portarlo a poca vita a piccoli passi è un regalo (n00bcon 2024)."""
+    return any(c.nome == "Mirror Universe" and not c.tappata for c in partita.giocatore(chi)[Zona.CAMPO])
+
+
+def risposta_a_balance(partita: Partita, nome: str) -> bool:
+    """In cima alla pila c'è un Balance avversario e lei ha più creature: uccidere le sue creature adesso le
+    farebbe solo sacrificare di più (report di DreamyDiamondWalls)."""
+    if not partita.pila:
+        return False
+    cima = partita.pila[-1]
+    if cima.carta.nome != "Balance" or cima.controllore == nome or cima.abilita:
+        return False
+    def creature(chi):
+        return sum(1 for c in partita.giocatore(chi)[Zona.CAMPO] if c.is_creatura)
+    return creature(nome) > creature(partita.avversario_di(nome).nome)
+
+
 def bersaglio_bolt(partita: Partita, nome: str, bolt: Carta | None = None) -> str | None:
     avversario = partita.avversario_di(nome)
-    bolt_in_mano = sum(1 for c in partita.giocatore(nome)[Zona.MANO] if c.nome == "Lightning Bolt")
-    if avversario.vita <= DANNI_BOLT * bolt_in_mano:
+    if avversario.vita <= DANNI_BOLT * bolt_pagabili(partita, nome):
         return f"giocatore:{avversario.nome}"
+    if risposta_a_balance(partita, nome):
+        return None
     if migliore := _creatura_uccidibile(partita, nome, DANNI_BOLT, bolt):
         return f"carta:{migliore.id}"
+    if mirror_pronto(partita, avversario.nome):
+        return None  # o lo si uccide in un colpo o niente: con il Mirror scambierebbe la vita
     if (not partita.pila and partita.giocatore_attivo.nome == nome and partita.fase in FASI_PRINCIPALI
             and (avversario.vita <= 10 or len(partita.giocatore(nome)[Zona.MANO]) >= 6)):
         # in faccia solo verso la fine (o con la mano piena): prima conviene tenerlo per le creature
@@ -305,6 +339,20 @@ def teme_spazzata(partita: Partita, nome: str) -> bool:
         return False  # sta per vincere: niente prudenza
     bianco = any((f := mana.mana_prodotto(c)) and "W" in f.colori for c in partita.giocatore(avv)[Zona.CAMPO])
     return (bool(_viste(partita, avv) & SPAZZATE) or bianco) and len(partita.giocatore(avv)[Zona.MANO]) >= 2
+
+
+def tiene_per_la_propria_spazzata(partita: Partita, nome: str, carta: Carta) -> bool:
+    """Con Earthquake o Wrath of God in mano non cala le creature che la propria spazzata ucciderebbe: aspetta che
+    l'avversario esponga le sue e poi fa due per uno (n00bcon 13: «I didn't play my Lion, hoping to two-for-one
+    him»). Con la mano troppo piena gioca comunque."""
+    mano = partita.giocatore(nome)[Zona.MANO]
+    if len(mano) > 7:
+        return False
+    if any(c.nome == "Wrath of God" for c in mano):
+        return True
+    if any(c.nome == "Earthquake" for c in mano):
+        return not carta.ha("flying") and (carta.costituzione or 0) <= 2
+    return False
 
 
 def teme_contromagia(partita: Partita, nome: str) -> bool:
@@ -681,6 +729,7 @@ def agisci(partita: Partita, nome: str) -> None:
                       and lascia_contromagia(partita, nome, c)]
         if lanciabili and teme_spazzata(partita, nome):
             lanciabili = []  # ha già abbastanza pressione in campo: le altre creature restano in mano
+        lanciabili = [c for c in lanciabili if not tiene_per_la_propria_spazzata(partita, nome, c)]
         if not lanciabili:  # poi le aure, sulla sua creatura migliore
             for aura in (c for c in mano if c.is_aura and puo_lanciare(partita, nome, c) is None):
                 if bersaglio := bersaglio_aura(partita, nome, aura):
@@ -688,7 +737,7 @@ def agisci(partita: Partita, nome: str) -> None:
                     return
         if not lanciabili:  # poi gli altri permanenti (artefatti, incantesimi globali)
             lanciabili = [c for c in mano if c.is_permanente and not c.is_terra and not c.is_aura
-                          and puo_lanciare(partita, nome, c) is None and permanente_utile(partita, nome, c)
+                          and not c.is_creatura and puo_lanciare(partita, nome, c) is None and permanente_utile(partita, nome, c)
                           and lascia_contromagia(partita, nome, c)]
         if lanciabili:
             costo = lambda c: sum(mana.analizza_costo(c.costo).values())

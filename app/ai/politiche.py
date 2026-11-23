@@ -48,12 +48,29 @@ def contromagia(p: Partita, nome: str, carta: Carta):
     mi_colpisce = any(rif_b.startswith("giocatore:" + nome) or
                       (rif_b.startswith("carta:") and (t := p.trova_in_campo(rif_b[6:])) and t[0].nome == nome)
                       for rif_b in cima.bersagli)
-    if mana.valore(cima.carta.costo) >= 2 or mi_colpisce or cima.carta.nome in CARTE_MIGLIORI:
+    if mi_colpisce or cima.carta.nome in CARTE_MIGLIORI or vale_una_contromagia(p, nome, cima.carta):
         return [rif], 0
     return None
 
 
+def vale_una_contromagia(p: Partita, nome: str, carta: Carta) -> bool:
+    """La contromagia va tenuta per le carte decisive (n00bcon 13: «Counterspell su Greed, poi è passato Underworld
+    Dreams»): permanenti pericolosi, creature che fanno male, magie potenti. Con due o più contromagie in mano,
+    o con l'avversario quasi senza carte, basta che la magia costi almeno 2."""
+    contromagie = sum(1 for c in p.giocatore(nome)[Zona.MANO] if c.nome in ("Counterspell", "Mana Drain"))
+    if contromagie >= 2 or len(p.avversario_di(nome)[Zona.MANO]) <= 1:
+        return mana.valore(carta.costo) >= 2
+    if carta.is_creatura:
+        return (carta.forza or 0) >= 3 or carta.ha("flying") or "discards" in carta.testo
+    if carta.is_permanente:
+        return pericolo(carta) >= 5 or mana.valore(carta.costo) >= 4
+    return mana.valore(carta.costo) >= 3 or "{X}" in carta.costo or carta.nome in RISPOSTE_ALLE_CREATURE
+
+
 def rimozione(p: Partita, nome: str, carta: Carta):
+    from app.ai.avversaria import risposta_a_balance
+    if risposta_a_balance(p, nome):
+        return None
     tipo = "creatura_non_nera_non_artefatto" if carta.nome == "Terror" else "creatura"
     comb = p.combattimento
     if comb and comb.attaccanti and p.giocatore_attivo.nome != nome and not p.pila:
@@ -141,7 +158,8 @@ def distruggi_permanente(p: Partita, nome: str, carta: Carta):
     candidate = [c for c in avv[Zona.CAMPO] if bersaglio_legale(p, tipo, f"carta:{c.id}", carta)]
     if not candidate:
         return None
-    return [f"carta:{max(candidate, key=valore_carta).id}"], 0
+    # prima il permanente con cui l'avversario vince o pesca (Underworld Dreams, Ivory Tower, Mirror Universe...)
+    return [f"carta:{max(candidate, key=lambda c: (pericolo(c), valore_carta(c))).id}"], 0
 
 
 def pescate(p: Partita, nome: str, carta: Carta):
@@ -406,7 +424,8 @@ def scegli_magia(p: Partita, nome: str):
 PERMANENTI_PERICOLOSI = {"Sylvan Library": 9, "Moat": 9, "The Abyss": 9, "Mirror Universe": 8, "Millstone": 8,
                          "Black Vise": 7, "Jayemdae Tome": 7, "Library of Alexandria": 8, "Icy Manipulator": 7,
                          "Disrupting Scepter": 7, "Howling Mine": 5, "Bad Moon": 6, "Crusade": 6, "Sol Ring": 6,
-                         "Chaos Orb": 6, "Ivory Tower": 5}
+                         "Chaos Orb": 6, "Ivory Tower": 6, "Underworld Dreams": 9, "Winter Orb": 7,
+                         "Time Vault": 8, "Land Tax": 5, "Copy Artifact": 5, "Nevinyrral's Disk": 7}
 
 
 def pericolo(t: Carta) -> int:

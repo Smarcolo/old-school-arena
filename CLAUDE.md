@@ -121,6 +121,12 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   con già 2+ creature e 5+ di forza tiene le altre in mano contro un mazzo bianco o che ha mostrato spazzate
   (`teme_spazzata`); con {U}{U} avversari stappati e contromagie viste lancia prima la carta meno cara, l'esca
   (`teme_contromagia`). Misurate: neutre contro sé stessa (50% su 300 partite), tenute perché contano contro un umano.
+  Dai report dei tornei (blog Old School MTG, 2026-11-23): Bolt in faccia solo se letale col mana di adesso
+  (`bolt_pagabili`), niente colpi a piccoli passi contro Mirror Universe stappato (`mirror_pronto`), niente
+  rimozioni sulle creature avversarie in risposta a un Balance avversario se lei ne ha di più (`risposta_a_balance`),
+  con Earthquake/Wrath in mano tiene le creature che morirebbero (`tiene_per_la_propria_spazzata`), contromagia
+  solo sulle carte decisive se ne ha una sola (`politiche.vale_una_contromagia`), Disenchant/Shatter per `pericolo`.
+  Le creature non passano più dal giro «altri permanenti» (prima così `teme_spazzata` non aveva effetto).
 - Previsione (`ai/previsione.py`): nei momenti importanti l'AI confronta le alternative giocandole su copie della
   partita (pickle) 2 turni avanti con le regole normali per entrambi, carte nascoste rimescolate (non bara), max 1 s:
   attaccanti (regole, tutti, nessuno, solo i sicuri), bloccanti (anche sacrificio, scambio, blocco doppio) e

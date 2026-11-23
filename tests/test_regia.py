@@ -100,7 +100,8 @@ def test_ti_fermi_se_l_avversaria_risponde():
     tu[Zona.CAMPO].extend(Carta("Forest", "Basic Land — Forest") for _ in range(2))
     tu[Zona.MANO].append(Carta("Grizzly Bears", "Creature — Bear", "{1}{G}", 2, 2))
     ai[Zona.CAMPO].extend(Carta("Island", "Basic Land — Island") for _ in range(2))
-    ai[Zona.MANO][:] = [Carta("Counterspell", "Instant", "{U}{U}")]
+    # due contromagie: con una sola l'AI la terrebbe per una carta più importante di un orso
+    ai[Zona.MANO][:] = [Carta("Counterspell", "Instant", "{U}{U}"), Carta("Counterspell", "Instant", "{U}{U}")]
     esegui_comando(p, "Tu", "AI", "gioca grizzly bears")
     assert p.pila and p.pila[-1].carta.nome == "Counterspell" and p.giocatore_con_priorita.nome == "Tu"
 

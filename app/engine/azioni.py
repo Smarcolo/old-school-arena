@@ -237,6 +237,14 @@ def colori_che_servono(g, esclusa: Carta | None = None) -> str:
     return "".join(sorted(conta, key=lambda k: -conta[k]))
 
 
+def piano_con_riserva_tenuta(riserva: dict[str, int], fonti: list, costo: dict[str, int], preferiti: str) -> list:
+    """Il mana in riserva dei colori che servono alle altre carte in mano si tiene, se il generico si può pagare
+    con altre fonti: si prova prima senza quel mana in più, poi con tutta la riserva."""
+    tenuta = {k: (min(v, costo.get(k, 0)) if k in preferiti else v) for k, v in riserva.items()}
+    piano = mana.piano_pagamento(tenuta, fonti, costo, preferiti)
+    return piano if piano is not None else mana.piano_pagamento(riserva, fonti, costo, preferiti)
+
+
 def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] | None = None, x: int = 0) -> None:
     """Paga il costo (tappando da solo le fonti necessarie, con X scelto) e mette la magia in pila.
     Chi lancia mantiene la priorità."""
@@ -245,10 +253,10 @@ def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] |
     carta.proprietario = carta.proprietario or giocatore
     g = partita.giocatore(giocatore)
     costo = costo_di_lancio(carta, x, len(bersagli))
-    for fonte, colore in mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore), costo,
-                                              colori_che_servono(g, carta)):
+    preferiti = colori_che_servono(g, carta)
+    for fonte, colore in piano_con_riserva_tenuta(g.riserva, fonti_di_mana(partita, giocatore), costo, preferiti):
         tappa(partita, giocatore, fonte.carta, colore)
-    g.riserva = mana.paga(g.riserva, costo)
+    g.riserva = mana.paga(g.riserva, costo, preferiti)
     g[Zona.MANO].remove(carta)
     partita.pila.append(OggettoPila(carta, giocatore, bersagli, x=x))
     partita.passaggi = 0

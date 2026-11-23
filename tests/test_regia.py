@@ -254,3 +254,28 @@ def test_black_lotus_due_mana_per_una_magia_e_uno_per_un_altra():
     assert tu.riserva["R"] == 1 and "in riserva" in messaggio
     esegui_comando(p, "Tu", "AI", "gioca lightning bolt su avversaria")
     assert p.giocatore("AI").vita == 17
+
+
+def test_black_lotus_due_bianchi_per_serra_e_il_terzo_resta_per_wrath():
+    """Il caso di Marco: Lotus tappato per il bianco, Serra Angel prende 2 dei 3 bianchi e il generico da Mishra's
+    Factory, Strip Mine e una Tropical Island; il terzo bianco e il Mox Pearl restano per Wrath of God."""
+    p = partita_con_ai()
+    tu = p.giocatore("Tu")
+    def c(nome, tipo, testo):
+        x = Carta(nome, tipo, "", None, None, testo)
+        x.entrata_nel_turno = 0
+        return x
+    lotus = c("Black Lotus", "Artifact", "{T}, Sacrifice Black Lotus: Add three mana of any one color.")
+    pearl = c("Mox Pearl", "Artifact", "{T}: Add {W}.")
+    fabbrica = c("Mishra's Factory", "Land", "{T}: Add {C}.")
+    strip = c("Strip Mine", "Land", "{T}: Add {C}.\n{T}, Sacrifice Strip Mine: Destroy target land.")
+    trop1 = c("Tropical Island", "Land — Forest Island", "")
+    trop2 = c("Tropical Island", "Land — Forest Island", "")
+    tu[Zona.CAMPO][:] = [lotus, pearl, fabbrica, strip, trop1, trop2]
+    tu[Zona.MANO][:] = [Carta("Serra Angel", "Creature — Angel", "{3}{W}{W}", 4, 4, "Flying, vigilance"),
+                        Carta("Wrath of God", "Sorcery", "{2}{W}{W}", None, None, "Destroy all creatures. They can't be regenerated.")]
+    esegui_comando(p, "Tu", "AI", f"tappa {lotus.id} per w")
+    esegui_comando(p, "Tu", "AI", "gioca serra angel")
+    assert any(x.nome == "Serra Angel" for x in tu[Zona.CAMPO])
+    assert tu.riserva["W"] == 1 and not pearl.tappata  # il terzo bianco e il Mox Pearl sono ancora lì
+    assert fabbrica.tappata and strip.tappata and [trop1.tappata, trop2.tappata].count(True) == 1

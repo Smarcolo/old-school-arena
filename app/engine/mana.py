@@ -132,9 +132,10 @@ def formatta(riserva: dict[str, int]) -> str:
     return "".join(f"{{{c}}}" * n for c, n in riserva.items() if n) or "vuota"
 
 
-def paga(riserva: dict[str, int], costo: dict[str, int]) -> dict[str, int] | None:
-    """Ritorna la riserva dopo il pagamento, o None se non basta. Il generico usa prima l'incolore,
-    poi i colori più abbondanti."""
+def paga(riserva: dict[str, int], costo: dict[str, int], preferiti: str = "") -> dict[str, int] | None:
+    """Ritorna la riserva dopo il pagamento, o None se non basta. Il generico usa prima l'incolore, poi i colori
+    più abbondanti; i colori in `preferiti` (servono alle altre carte in mano) per ultimi: con Black Lotus tappato
+    per {W}{W}{W}, Serra Angel prende due bianchi e il generico dalle altre fonti, il terzo bianco resta per Wrath."""
     resto = dict(riserva)
     for colore, n in costo.items():
         if colore in ("generico", "X"):
@@ -143,7 +144,7 @@ def paga(riserva: dict[str, int], costo: dict[str, int]) -> dict[str, int] | Non
             return None
         resto[colore] -= n
     generico = costo.get("generico", 0)
-    for colore in sorted(resto, key=lambda c: (c != "C", -resto[c])):
+    for colore in sorted(resto, key=lambda c: (c != "C", c in preferiti, -resto[c])):
         presi = min(generico, resto[colore])
         resto[colore] -= presi
         generico -= presi
@@ -166,7 +167,10 @@ def piano_pagamento(riserva: dict[str, int], fonti: list[FonteMana], costo: dict
         (lo studio del mazzo Dreams perdeva Counterspell per un'isola tappata)."""
         simulata, scelte, restanti = dict(simulata), [], list(disponibili)
         while paga(simulata, costo) is None and restanti:
-            fonte = min(restanti, key=lambda f: (f.costo_d_uso[:3], f.colori != "C", len(f.colori)))
+            # dopo le incolori, prima le fonti che non danno i colori che servono dopo (Tropical Island prima
+            # del Mox Pearl, se in mano c'è Wrath of God)
+            fonte = min(restanti, key=lambda f: (f.costo_d_uso[:3], f.colori != "C",
+                                                 any(c in preferiti for c in f.colori), len(f.colori)))
             restanti.remove(fonte)
             colore = "C" if "C" in fonte.colori else next((c for c in preferiti if c in fonte.colori), fonte.colori[0])
             scelte.append((fonte, colore))

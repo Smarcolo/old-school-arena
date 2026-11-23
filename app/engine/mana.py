@@ -150,11 +150,14 @@ def paga(riserva: dict[str, int], costo: dict[str, int]) -> dict[str, int] | Non
     return resto if generico == 0 else None
 
 
-def piano_pagamento(riserva: dict[str, int], fonti: list[FonteMana], costo: dict[str, int]) -> list[tuple[FonteMana, str]] | None:
+def piano_pagamento(riserva: dict[str, int], fonti: list[FonteMana], costo: dict[str, int],
+                    preferiti: str = "") -> list[tuple[FonteMana, str]] | None:
     """Sceglie quali fonti usare (e per quale colore) per pagare il costo, usando prima la riserva.
     Per i colori usa prima le fonti meno flessibili; Lotus, City of Brass e creature solo se servono.
     Se una scelta porta a un vicolo cieco (Tundra e Plateau per {W}{U}) torna indietro e prova un'altra fonte;
-    tra fonti identiche ne prova una sola. None se il costo non è pagabile."""
+    tra fonti identiche ne prova una sola. None se il costo non è pagabile.
+    preferiti: i colori che servono dopo (le altre carte in mano), in ordine: una fonte a più colori usata per il
+    generico (Black Lotus, City of Brass) dà quello, così il mana che avanza nella riserva è utile."""
 
     def generico(simulata: dict[str, int], disponibili: list[FonteMana]) -> list[tuple[FonteMana, str]] | None:
         """Il generico si paga prima con le fonti incolori (Sol Ring, Mishra's Factory, Library): le fonti colorate
@@ -165,7 +168,7 @@ def piano_pagamento(riserva: dict[str, int], fonti: list[FonteMana], costo: dict
         while paga(simulata, costo) is None and restanti:
             fonte = min(restanti, key=lambda f: (f.costo_d_uso[:3], f.colori != "C", len(f.colori)))
             restanti.remove(fonte)
-            colore = "C" if "C" in fonte.colori else fonte.colori[0]
+            colore = "C" if "C" in fonte.colori else next((c for c in preferiti if c in fonte.colori), fonte.colori[0])
             scelte.append((fonte, colore))
             simulata[colore] = simulata.get(colore, 0) + fonte.quantita
         return scelte if paga(simulata, costo) is not None else None

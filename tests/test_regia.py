@@ -238,3 +238,19 @@ def test_con_field_of_dreams_ti_fermi_nel_mantenimento_per_millstone():
     cima = ai[Zona.GRIMORIO][-1]
     esegui_comando(p, "Tu", "AI", f"attiva {macina.id} 1 su avversaria")
     assert cima in ai[Zona.CIMITERO] and len(ai[Zona.CIMITERO]) == 2  # macinata prima che la pescasse
+
+
+def test_black_lotus_due_mana_per_una_magia_e_uno_per_un_altra():
+    """Il Lotus dà 3 mana: con Millstone ({2}) il mana che avanza è del colore che serve alla carta in mano
+    (il Bolt), resta nella riserva e il gioco lo ricorda."""
+    p = partita_con_ai()
+    tu = p.giocatore("Tu")
+    lotus = Carta("Black Lotus", "Artifact", "{0}", None, None, "{T}, Sacrifice Black Lotus: Add three mana of any one color.")
+    lotus.entrata_nel_turno = 0
+    tu[Zona.CAMPO].append(lotus)
+    tu[Zona.MANO][:] = [Carta("Millstone", "Artifact", "{2}", None, None, MILLSTONE),
+                        Carta("Lightning Bolt", "Instant", "{R}", None, None, "Lightning Bolt deals 3 damage to any target.")]
+    messaggio = esegui_comando(p, "Tu", "AI", "gioca millstone")
+    assert tu.riserva["R"] == 1 and "in riserva" in messaggio
+    esegui_comando(p, "Tu", "AI", "gioca lightning bolt su avversaria")
+    assert p.giocatore("AI").vita == 17

@@ -93,6 +93,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Mana: `engine/mana.py`. A fine fase le riserve si svuotano con mana burn. `lancia` tappa da solo le fonti
   necessarie (`piano_pagamento`), usando prima la riserva e, per il generico, prima le fonti incolori (Sol Ring,
   Factory: le terre colorate restano libere per il Counterspell), poi le altre, creature e Lotus per ultimi.
+  Una fonte a più colori usata per il generico (Lotus, City) dà il colore che serve alle altre carte in mano
+  (`azioni.colori_che_servono`, parametro `preferiti`): il mana che avanza resta in riserva e la regia lo ricorda.
 - Istantanei e stregonerie si lanciano solo se il loro effetto è registrato con `@effetto("Nome Carta", bersaglio=...)`
   in `engine/carte_implementate.py` (oggi 33 carte, con Shatterstorm e Twiddle: Power 9 incluse, StP, Terror, Counterspell, Mana Drain,
   Disenchant, Fireball, Mind Twist, Demonic Tutor, Balance, Wrath...). I tipi di bersaglio sono in

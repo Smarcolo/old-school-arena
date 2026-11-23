@@ -226,6 +226,17 @@ def tappa(partita: Partita, giocatore: str, carta: Carta, colore: str | None = N
         modifica_vita(partita, giocatore, -fonte.danno, f"(danni da {carta.nome})", danno=True)
 
 
+def colori_che_servono(g, esclusa: Carta | None = None) -> str:
+    """I colori delle altre carte in mano, dal più richiesto: il mana che avanza (Black Lotus) va di quel colore."""
+    conta: dict[str, int] = {}
+    for c in g[Zona.MANO]:
+        if c is not esclusa:
+            for k, n in mana.analizza_costo(c.costo).items():
+                if k in mana.COLORI:
+                    conta[k] = conta.get(k, 0) + n
+    return "".join(sorted(conta, key=lambda k: -conta[k]))
+
+
 def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] | None = None, x: int = 0) -> None:
     """Paga il costo (tappando da solo le fonti necessarie, con X scelto) e mette la magia in pila.
     Chi lancia mantiene la priorità."""
@@ -234,7 +245,8 @@ def lancia(partita: Partita, giocatore: str, carta: Carta, bersagli: list[str] |
     carta.proprietario = carta.proprietario or giocatore
     g = partita.giocatore(giocatore)
     costo = costo_di_lancio(carta, x, len(bersagli))
-    for fonte, colore in mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore), costo):
+    for fonte, colore in mana.piano_pagamento(g.riserva, fonti_di_mana(partita, giocatore), costo,
+                                              colori_che_servono(g, carta)):
         tappa(partita, giocatore, fonte.carta, colore)
     g.riserva = mana.paga(g.riserva, costo)
     g[Zona.MANO].remove(carta)

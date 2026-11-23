@@ -134,6 +134,10 @@ def suggerimento(partita: Partita, umano: str) -> str:
             return ("Danni di «attacca per primo» fatti: puoi lanciare un istantaneo o attivare un'abilità "
                     "prima dei danni normali, o passare.")
         return "Blocchi fatti: puoi lanciare un istantaneo o attivare un'abilità prima dei danni, o passare."
+    g = partita.giocatore(umano)
+    if any(g.riserva.values()):
+        from app.engine import mana
+        return f"Hai {mana.formatta(g.riserva)} in riserva: usalo in questa fase, alla fine della fase si perde."
     return ""
 
 

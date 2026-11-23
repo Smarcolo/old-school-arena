@@ -431,3 +431,53 @@ def test_draw_go_bolt_in_faccia_a_fine_turno_contro_chi_non_ha_creature():
     assert bersaglio_bolt(p, "AI") == "giocatore:B"
     b[Zona.CAMPO].append(cr("Orso", 2, 4))
     assert bersaglio_bolt(p, "AI") is None  # ha una creatura: il Bolt resta per le creature
+
+
+def test_mulligan_conta_mox_e_sol_ring_come_fonti():
+    """Una terra, Mox e Sol Ring: è una mano da tenere (mtg.wiki, Mulligan). Senza terre no."""
+    from app.engine import mulligan as mull
+    p = nuova_partita({"AI": [carta("Island") for _ in range(30)], "B": [carta("Forest") for _ in range(30)]},
+                      seed=40, mulligan=True)
+    from app.ai.avversaria import decidi_mulligan
+    ai = p.giocatore("AI")
+    ai[Zona.MANO][:] = [carta("Island"), carta("Mox Sapphire"), carta("Sol Ring"), carta("Counterspell"),
+                        carta("Ancestral Recall"), carta("Serra Angel"), carta("Swords to Plowshares")]
+    decidi_mulligan(p, "AI")
+    assert p.mulligan["AI"].tenuta and p.mulligan["AI"].fatti == 0
+
+
+def test_fellwar_stone_subito_come_i_mox():
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Island"), carta("Island")]
+    fellwar = carta("Fellwar Stone")
+    ai[Zona.MANO][:] = [fellwar, carta("Counterspell")]
+    ai.terre_giocate_nel_turno = 1
+    b[Zona.CAMPO][:] = [carta("Swamp")]
+    b[Zona.MANO][:] = [carta("Swamp") for _ in range(5)]
+    agisci(p, "AI")
+    assert p.pila and p.pila[-1].carta is fellwar  # più mana domani batte il Counterspell tenuto oggi
+
+
+def test_moat_conta_le_mishra_s_factory_avversarie():
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    b[Zona.CAMPO][:] = [Carta("Mishra's Factory", "Land", "", None, None, FACTORY_VERA) for _ in range(2)]
+    assert permanente_utile(p, "AI", carta("Moat"))
+
+
+def test_niente_contromagia_su_un_bolt_in_faccia_a_vita_piena():
+    from app.ai.politiche import contromagia
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Island"), carta("Island")]
+    contro = carta("Counterspell")
+    ai[Zona.MANO][:] = [contro]
+    b[Zona.CAMPO][:] = [carta("Mountain")]
+    b[Zona.MANO][:] = [carta("Lightning Bolt"), carta("Mountain"), carta("Mountain")]
+    p.attivo = p.priorita = 1
+    azioni.lancia(p, "B", b[Zona.MANO][0], ["giocatore:AI"])
+    azioni.passa_priorita(p, "B")
+    assert contromagia(p, "AI", contro) is None  # 3 danni a 20 vita: si tiene per Ball Lightning
+    ai.vita = 5
+    assert contromagia(p, "AI", contro) is not None

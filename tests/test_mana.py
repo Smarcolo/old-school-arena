@@ -125,3 +125,15 @@ def test_dice_quale_colore_manca():
     campo = Carta("Field of Dreams", "World Enchantment", "{W}{U}", None, None, "")
     a[Zona.MANO][:] = [campo]
     assert puo_lanciare(p, "A", campo).endswith("ti manca il bianco")
+
+
+def test_il_generico_si_paga_prima_con_le_fonti_incolori():
+    """Millstone ({2}) con due Island e Sol Ring: paga Sol Ring, le Island restano per il Counterspell."""
+    isola1 = Carta("Island", "Basic Land — Island")
+    isola2 = Carta("Island", "Basic Land — Island")
+    sol = Carta("Sol Ring", "Artifact", "{1}", None, None, "{T}: Add {C}{C}.")
+    piano = piano_pagamento(VUOTA, fonti(isola1, isola2, sol), analizza_costo("{2}"))
+    assert [f.carta for f, _ in piano] == [sol]
+    # anche per {1}: il mana in più resta nella riserva, e l'isola libera vale di più
+    piano = piano_pagamento(VUOTA, fonti(isola1, sol), analizza_costo("{1}"))
+    assert [f.carta for f, _ in piano] == [sol]

@@ -356,6 +356,13 @@ def comando(id_partita: str, richiesta: RichiestaComando) -> dict:
     return {"messaggio": messaggio, "partita": vista_incontro(inc)}
 
 
+@app.get("/api/partite/{id_partita}/maestro")
+def consiglio_del_maestro(id_partita: str) -> dict:
+    """Cosa farebbe l'avversaria al posto dell'umano, e perché (app/ai/maestro.py). Non cambia la partita."""
+    from app.ai import maestro
+    return maestro.consiglio(_incontro(id_partita).partita, UMANO)
+
+
 # «Annulla»: lo stato dell'incontro prima di ognuna delle ultime mosse dell'umano (in memoria, non nei salvataggi)
 MOSSE_ANNULLABILI = 15
 storia: dict[str, list[bytes]] = {}

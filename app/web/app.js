@@ -432,8 +432,14 @@ function azioniTurno() {
   if (mio && p.fase === "principale 2") return [bottone("Fine turno", () => invia("fine turno"))];
   if (mio && p.fase === "combattimento" && comb && comb.bloccanti_dichiarati && !comb.danni_inflitti && comb.attaccanti.length)
     return [bottone("Vai ai danni", () => invia("passa"))];
-  if (mio && p.fase === "mantenimento")
-    return [...bottoniAbilita((a) => a.tipo === "scambia_vita", (c) => `Usa ${c.nome}`), bottone("Avanti", () => invia("passa"))];
+  if (p.fase === "mantenimento") {  // Mirror Universe (solo nel tuo) e Millstone con la cima scoperta (anche nel suo)
+    const mill = partita.giocatori[0].campo.flatMap((c) => (c.attivabili || []).map((a, i) => [c, a, i]))
+      .filter(([, a]) => a.ora && a.tipo === "macina").flatMap(([c, , i]) => [
+        bottone("Macina l'avversaria", () => invia(`attiva ${c.id} ${i + 1} su avversaria`)),
+        bottone("Macina il tuo grimorio", () => invia(`attiva ${c.id} ${i + 1} su me`))]);
+    return [...(mio ? bottoniAbilita((a) => a.tipo === "scambia_vita", (c) => `Usa ${c.nome}`) : []), ...mill,
+      bottone("Avanti", () => invia("passa"))];
+  }
   if (mio) return [bottone("Avanti", () => invia("passa")), bottone("Fine turno", () => invia("fine turno"))];
   if (comb && comb.bloccanti_dichiarati && !comb.danni_inflitti && comb.attaccanti.length) return [bottone("Vai ai danni", () => invia("passa"))];
   if (comb && comb.attaccanti_dichiarati && !comb.bloccanti_dichiarati && comb.attaccanti.length)
@@ -701,6 +707,16 @@ function apriPannello(id) {
   if (id === "pannello-giudice" && !$(id).hidden) $("domanda").focus();
 }
 $("apri-giudice").onclick = () => apriPannello("pannello-giudice");
+// «Maestro»: cosa farebbe l'avversaria (con le sue regole da esperta) al posto tuo, con il tuo mazzo, e perché
+$("maestro").onclick = async () => {
+  if (!partita || inAttesa) return;
+  try {
+    const r = await api(`/api/partite/${partita.id}/maestro`);
+    avvisa(`🥋 Il Maestro: ${r.mossa}${r.perche ? " — Perché: " + r.perche : ""}`);
+  } catch (e) {
+    avvisa(`Il Maestro non risponde: ${e.message}`);
+  }
+};
 $("apri-registro").onclick = () => apriPannello("pannello-registro");
 document.querySelectorAll("[data-chiudi]").forEach((b) => (b.onclick = () => { $(b.dataset.chiudi).hidden = true; }));
 

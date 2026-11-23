@@ -25,6 +25,15 @@ def ha_abilita_del_mantenimento(partita: Partita, umano: str) -> bool:
                for c in partita.giocatore(umano)[Zona.CAMPO] for ab in analizza_abilita(c))
 
 
+def millstone_con_cima_scoperta(partita: Partita, umano: str) -> bool:
+    """Millstone pronto e Field of Dreams in campo: nel mantenimento (tuo o dell'avversaria) vedi la prima carta
+    del grimorio e puoi macinarla prima che venga pescata, la tua se non ti serve, la sua se le serve."""
+    if not any(c.nome == "Field of Dreams" for g in partita.giocatori for c in g[Zona.CAMPO]):
+        return False
+    return any(ab.tipo == "macina" and puo_attivare(partita, umano, c, ab) is None
+               for c in partita.giocatore(umano)[Zona.CAMPO] for ab in analizza_abilita(c))
+
+
 def deve_fermarsi(partita: Partita, umano: str) -> bool:
     """Vedi sotto; in più: le scelte in sospeso dell'umano lo fermano sempre; quello che l'umano ha messo in pila
     si risolve senza chiedergli niente (se l'avversaria risponde, l'umano si ferma sulla sua risposta); un innesco
@@ -55,6 +64,8 @@ def _deve_fermarsi(partita: Partita, umano: str) -> bool:
         return ha_istantanei(partita, umano)  # ti attaccano: prima dei blocchi (es. animare Mishra's Factory)
     if turno_avversario and partita.fase == Fase.FINALE:
         return ha_istantanei(partita, umano)  # fine del turno avversario: Ancestral Recall, Library of Alexandria...
+    if partita.fase == Fase.MANTENIMENTO and millstone_con_cima_scoperta(partita, umano):
+        return True  # Field of Dreams: si vede la carta in cima e la si può macinare prima della pescata
     if not turno_avversario and partita.fase == Fase.MANTENIMENTO:
         return ha_abilita_del_mantenimento(partita, umano)  # Mirror Universe si usa solo qui
     return partita.giocatore_attivo.nome == umano and partita.fase in FASI_PRINCIPALI

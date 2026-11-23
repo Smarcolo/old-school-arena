@@ -219,3 +219,22 @@ def test_millstone_anche_sul_proprio_grimorio():
     prima = len(tu[Zona.GRIMORIO])
     esegui_comando(p, "Tu", "AI", f"attiva {macina.id} 1 su me")
     assert len(tu[Zona.GRIMORIO]) == prima - 2 and len(tu[Zona.CIMITERO]) == 2
+
+
+def test_con_field_of_dreams_ti_fermi_nel_mantenimento_per_millstone():
+    """Field of Dreams scopre la prima carta dei grimori: nel mantenimento, prima della pescata, puoi macinare con
+    Millstone la tua carta inutile o quella buona dell'avversaria. Il gioco si ferma lì (anche nel suo turno)."""
+    p = partita_con_ai()
+    tu, ai = p.giocatore("Tu"), p.giocatore("AI")
+    macina = Carta("Millstone", "Artifact", "{2}", None, None, MILLSTONE)
+    sogni = Carta("Field of Dreams", "World Enchantment", "{W}{U}", None, None,
+                  "Players play with the top card of their libraries revealed.")
+    for c in (macina, sogni):
+        c.entrata_nel_turno = 0
+    tu[Zona.CAMPO].extend([macina, sogni, Carta("Forest", "Basic Land — Forest"), Carta("Forest", "Basic Land — Forest")])
+    ai[Zona.MANO].clear()
+    esegui_comando(p, "Tu", "AI", "fine turno")
+    assert p.giocatore_attivo.nome == "AI" and p.fase == Fase.MANTENIMENTO  # fermo nel suo mantenimento
+    cima = ai[Zona.GRIMORIO][-1]
+    esegui_comando(p, "Tu", "AI", f"attiva {macina.id} 1 su avversaria")
+    assert cima in ai[Zona.CIMITERO] and len(ai[Zona.CIMITERO]) == 2  # macinata prima che la pescasse

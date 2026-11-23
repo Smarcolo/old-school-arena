@@ -91,7 +91,8 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Priorità: chi lancia la mantiene; due passaggi di fila risolvono la cima della pila (poi priorità al giocatore
   attivo) o, a pila vuota, chiudono la fase. Le abilità di mana non usano la pila.
 - Mana: `engine/mana.py`. A fine fase le riserve si svuotano con mana burn. `lancia` tappa da solo le fonti
-  necessarie (`piano_pagamento`), usando prima la riserva e, per il generico, prima le terre delle creature.
+  necessarie (`piano_pagamento`), usando prima la riserva e, per il generico, prima le fonti incolori (Sol Ring,
+  Factory: le terre colorate restano libere per il Counterspell), poi le altre, creature e Lotus per ultimi.
 - Istantanei e stregonerie si lanciano solo se il loro effetto è registrato con `@effetto("Nome Carta", bersaglio=...)`
   in `engine/carte_implementate.py` (oggi 33 carte, con Shatterstorm e Twiddle: Power 9 incluse, StP, Terror, Counterspell, Mana Drain,
   Disenchant, Fireball, Mind Twist, Demonic Tutor, Balance, Wrath...). I tipi di bersaglio sono in
@@ -134,9 +135,18 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   (`poche_creature`), rimozioni prima su chi ruba carte e sulle creature con un'aura (`politiche.valore_bersaglio`),
   Maze of Ith dopo i blocchi (`_maze_of_ith`), con Underworld Dreams Ancestral/Wheel come danni, Shatterstorm quando
   conviene, Twiddle sull'unico bloccante per chiudere. Sideboard: Shatterstorm, Control Magic, Karma, Circle.
-  Banco (scratchpad/banco/banco.py, 4 mazzi di carte_base, previsione spenta, posti scambiati) contro la versione
+  Banco (`strumenti/banco/banco.py N`, prima `sh strumenti/banco/vecchia.sh <commit>`; 4 mazzi di carte_base, previsione spenta, posti scambiati) contro la versione
   2026.11.14-5: 49,75% su 4000 partite = alla pari (contro sé stessa queste malizie non contano; servono contro
   l'umano). Con Wrath in mano NON tiene le creature: The Deck teneva le Serra Angel per sempre (-6%).
+- Maestro (`ai/maestro.py`, `/api/partite/{id}/maestro`, pulsante «🥋 Maestro» nel tavolo): gioca una mossa per l'umano
+  su una copia (carte nascoste rimescolate, seme proprio: non tocca `partita.rng`) e la spiega con le regole dell'AI.
+- Studio di un mazzo (`strumenti/banco/studio.py mazzo.txt N`, rivedi.py, mani.py, debug.py): fa giocare il mazzo
+  contro i mazzi del banco e lo confronta con la versione vecchia (VECCHIA=1). Sul mazzo Millstone Dreams di prova ha
+  trovato: mulligan che ignorava Mox/Sol Ring/Fellwar (ora contano come fonti, serve una terra), Fellwar Stone non
+  giocato subito, Moat non giocato contro le Factory (`_forza_terrestre` conta le terre che si animano), generico
+  pagato con le Island, contromagia su un Bolt in faccia a vita piena (ora solo se il danno pesa). 39,7% → 42,7%.
+- Regia: con Field of Dreams in campo e Millstone pronto l'umano si ferma in ogni mantenimento
+  (`millstone_con_cima_scoperta`); nel tavolo i pulsanti «Macina l'avversaria» / «Macina il tuo grimorio».
 - Previsione (`ai/previsione.py`): nei momenti importanti l'AI confronta le alternative giocandole su copie della
   partita (pickle) 2 turni avanti con le regole normali per entrambi, carte nascoste rimescolate (non bara), max 1 s:
   attaccanti (regole, tutti, nessuno, solo i sicuri), bloccanti (anche sacrificio, scambio, blocco doppio) e

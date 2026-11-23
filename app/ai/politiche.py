@@ -52,9 +52,16 @@ def contromagia(p: Partita, nome: str, carta: Carta):
             "Blue Elemental Blast": "rosso"}[carta.nome]
     if not bersaglio_legale(p, tipo, rif, carta):
         return None
-    mi_colpisce = any(rif_b.startswith("giocatore:" + nome) or
-                      (rif_b.startswith("carta:") and (t := p.trova_in_campo(rif_b[6:])) and t[0].nome == nome)
-                      for rif_b in cima.bersagli)
+    colpisce_i_miei = any(rif_b.startswith("carta:") and (t := p.trova_in_campo(rif_b[6:])) and t[0].nome == nome
+                          for rif_b in cima.bersagli)
+    # un Bolt in faccia a 20 vita non vale la contromagia (lo studio del mazzo Dreams spendeva Mana Drain così
+    # e poi non aveva niente contro Ball Lightning): solo se il danno pesa davvero
+    danno = danno_in_arrivo_su_di_me(p, nome)
+    vita = p.giocatore(nome).vita
+    if f"giocatore:{nome}" in cima.bersagli and cima.carta.nome in DANNI_FISSI | {"Fireball": 0, "Disintegrate": 0}:
+        return ([rif], 0) if danno * 2 >= vita or vita <= 8 else None
+    else:
+        mi_colpisce = colpisce_i_miei or f"giocatore:{nome}" in cima.bersagli
     if mi_colpisce or cima.carta.nome in CARTE_MIGLIORI or vale_una_contromagia(p, nome, cima.carta):
         return [rif], 0
     return None

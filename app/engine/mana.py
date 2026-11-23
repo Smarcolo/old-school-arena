@@ -157,10 +157,14 @@ def piano_pagamento(riserva: dict[str, int], fonti: list[FonteMana], costo: dict
     tra fonti identiche ne prova una sola. None se il costo non è pagabile."""
 
     def generico(simulata: dict[str, int], disponibili: list[FonteMana]) -> list[tuple[FonteMana, str]] | None:
-        simulata, scelte = dict(simulata), []
-        for fonte in disponibili:
-            if paga(simulata, costo) is not None:
-                break
+        """Il generico si paga prima con le fonti incolori (Sol Ring, Mishra's Factory, Library): le fonti colorate
+        restano libere per le magie dopo, per esempio il Counterspell tenuto aperto. Anche se Sol Ring dà un mana
+        in più del necessario: resta nella riserva per un'altra magia della fase, e un colore libero vale di più
+        (lo studio del mazzo Dreams perdeva Counterspell per un'isola tappata)."""
+        simulata, scelte, restanti = dict(simulata), [], list(disponibili)
+        while paga(simulata, costo) is None and restanti:
+            fonte = min(restanti, key=lambda f: (f.costo_d_uso[:3], f.colori != "C", len(f.colori)))
+            restanti.remove(fonte)
             colore = "C" if "C" in fonte.colori else fonte.colori[0]
             scelte.append((fonte, colore))
             simulata[colore] = simulata.get(colore, 0) + fonte.quantita

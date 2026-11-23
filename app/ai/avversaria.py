@@ -202,7 +202,13 @@ def lascia_contromagia(partita: Partita, nome: str, carta: Carta) -> bool:
 
 
 def _forza_terrestre(partita: Partita, chi: str) -> int:
-    return sum(c.forza_attuale for c in partita.giocatore(chi)[Zona.CAMPO] if c.is_creatura and not c.ha("flying"))
+    """Forza delle creature senza volare, contando anche le terre che si animano (Mishra's Factory, 2): per Moat
+    le Factory sono attaccanti come le altre (lo studio del mazzo Dreams teneva Moat in mano mentre lo picchiavano)."""
+    campo = partita.giocatore(chi)[Zona.CAMPO]
+    creature = sum(c.forza_attuale for c in campo if c.is_creatura and not c.ha("flying"))
+    terre_animabili = sum(ab.forza for c in campo if c.is_terra and not c.is_creatura
+                          for ab in analizza_abilita(c) if ab.tipo == "anima")
+    return creature + terre_animabili
 
 
 def permanente_utile(partita: Partita, nome: str, carta: Carta) -> bool:
@@ -266,7 +272,10 @@ def decidi_mulligan(partita: Partita, nome: str) -> None:
     mano = partita.giocatore(nome)[Zona.MANO]
     if not stato.tenuta:
         terre = sum(c.is_terra for c in mano)
-        if (2 <= terre <= 5 and not senza_colori(mano)) or stato.fatti >= 2:
+        # Mox, Sol Ring e Fellwar Stone contano come fonti (mtg.wiki, Mulligan), ma serve almeno una terra vera
+        fonti = terre + sum(1 for c in mano if not c.is_terra and "Artifact" in c.tipo
+                            and (mana.mana_prodotto(c) or mana.da_terre_avversarie(c)))
+        if (terre >= 1 and 2 <= fonti and terre <= 5 and not senza_colori(mano)) or stato.fatti >= 2:
             mulligan.tieni(partita, nome)
         else:
             mulligan.fai_mulligan(partita, nome)
@@ -756,7 +765,8 @@ def agisci(partita: Partita, nome: str) -> None:
         if terra:
             azioni.gioca_terra(partita, nome, terra)
             return
-        acceleratori = [c for c in mano if "Artifact" in c.tipo and not c.is_creatura and mana.mana_prodotto(c)
+        acceleratori = [c for c in mano if "Artifact" in c.tipo and not c.is_creatura
+                        and (mana.mana_prodotto(c) or mana.da_terre_avversarie(c))  # anche Fellwar Stone
                         and puo_lanciare(partita, nome, c) is None]
         if acceleratori:  # Mox, Sol Ring, Black Lotus: subito, sono mana in più
             azioni.lancia(partita, nome, acceleratori[0])

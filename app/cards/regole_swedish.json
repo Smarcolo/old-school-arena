@@ -1,5 +1,5 @@
 {
-  "_nota": "Liste confermate da Marco il 2026-10-16: 23 ristrette (incluso Shahrazad) e 7 bandite (le carte con l'ante). Niente mana burn, mulligan London, chi inizia salta la prima pescata. Fonti consultate prima della conferma: mtgoldframe.com, oldschoolmagic.nl, MTG Salvation. La lista viene rivista ogni anno dopo il campionato mondiale: ricontrollarla sul blog oldschool-mtg.blogspot.com (pagina Rules).",
+  "_nota": "Liste confermate da Marco il 2026-10-16: 23 ristrette e 7 bandite (le carte con l'ante); dal 2026-11-23 Shahrazad è tra le bandite (Marco: «non la giochiamo»; ad Arvika è stata tolta dalle ristrette). Niente mana burn, mulligan London, chi inizia salta la prima pescata. Fonti consultate prima della conferma: mtgoldframe.com, oldschoolmagic.nl, MTG Salvation. La lista viene rivista ogni anno dopo il campionato mondiale: ricontrollarla sul blog oldschool-mtg.blogspot.com (pagina Rules).",
   "verificato": true,
   "set_ammessi": [
     "lea",
@@ -22,7 +22,8 @@
     "Demonic Attorney",
     "Jeweled Bird",
     "Rebirth",
-    "Tempest Efreet"
+    "Tempest Efreet",
+    "Shahrazad"
   ],
   "ristrette": [
     "Ancestral Recall",
@@ -42,7 +43,6 @@
     "Mox Ruby",
     "Mox Sapphire",
     "Regrowth",
-    "Shahrazad",
     "Sol Ring",
     "Strip Mine",
     "Time Walk",

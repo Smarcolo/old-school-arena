@@ -342,3 +342,92 @@ def test_disenchant_prima_sul_permanente_che_fa_vincere():
     sogni = Carta("Underworld Dreams", "Enchantment", "{B}{B}{B}")
     b[Zona.CAMPO][:] = [Carta("Clay Statue", "Artifact Creature — Golem", "{4}", 3, 1), sogni]
     assert distruggi_permanente(p, "AI", carta("Disenchant")) == ([f"carta:{sogni.id}"], 0)
+
+
+def test_swords_sulla_propria_creatura_contro_un_bolt_letale():
+    """n00bfest 2023: a 3 vita contro un Bolt in pila, Swords sulla propria creatura fa guadagnare vita."""
+    from app.ai.politiche import rimozione
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai.vita = 3
+    ai[Zona.CAMPO][:] = [carta("Plains"), cr("Orso", 2, 2)]
+    b[Zona.CAMPO][:] = [carta("Mountain"), cr("Drago", 4, 4)]
+    b[Zona.MANO][:] = [carta("Lightning Bolt")]
+    p.attivo = p.priorita = 1
+    azioni.lancia(p, "B", b[Zona.MANO][0], ["giocatore:AI"])
+    azioni.passa_priorita(p, "B")
+    orso = ai[Zona.CAMPO][1]
+    assert rimozione(p, "AI", carta("Swords to Plowshares")) == ([f"carta:{orso.id}"], 0)
+
+
+def test_mind_twist_aspetta_che_l_avversario_si_tappi():
+    from app.ai.politiche import mind_twist
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Swamp") for _ in range(4)]
+    b[Zona.CAMPO][:] = [carta("Island"), carta("Island")]
+    b[Zona.MANO][:] = [carta("Island") for _ in range(3)]
+    twist = Carta("Mind Twist", "Sorcery", "{X}{B}")
+    ai[Zona.MANO][:] = [twist]
+    assert mind_twist(p, "AI", twist) is None  # tre carte e {U}{U} aperti: può rispondere
+    for isola in b[Zona.CAMPO]:
+        isola.tappata = True
+    assert mind_twist(p, "AI", twist) == (["giocatore:B"], 3)
+
+
+def test_mulligan_se_la_mano_non_ha_i_colori_delle_magie():
+    from app.ai.avversaria import senza_colori
+    mano = [carta("Island"), carta("Island"), carta("Sol Ring"), Carta("Mind Twist", "Sorcery", "{X}{B}"),
+            carta("Lightning Bolt"), carta("Swords to Plowshares")]
+    assert senza_colori(mano)
+    mano.append(carta("Counterspell"))
+    assert not senza_colori(mano)
+
+
+def test_le_creature_nuove_si_giocano_dopo_il_combattimento():
+    p = p_base()
+    ai = p.giocatore("AI")
+    pronto = cr("Pronto", 2, 2)
+    pronto.entrata_nel_turno = 1
+    nuovo = cr("Nuovo", 3, 3)
+    ai[Zona.CAMPO][:] = [carta("Forest"), carta("Forest"), pronto]
+    ai[Zona.MANO][:] = [nuovo]
+    ai.terre_giocate_nel_turno = 1
+    agisci(p, "AI")
+    assert nuovo in ai[Zona.MANO]  # prima fase principale: prima si attacca
+    p.fase, p.priorita = Fase.PRINCIPALE_2, 0  # dopo il combattimento
+    agisci(p, "AI")
+    assert p.pila and p.pila[-1].carta is nuovo
+
+
+def test_prima_le_creature_che_rubano_carte_e_quelle_con_l_aura():
+    from app.ai.politiche import rimozione
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Plains")]
+    gigante = carta("Hill Giant")
+    spettro = carta("Hypnotic Specter")
+    b[Zona.CAMPO][:] = [gigante, spettro]
+    assert rimozione(p, "AI", carta("Swords to Plowshares")) == ([f"carta:{spettro.id}"], 0)
+    orso = carta("Grizzly Bears")
+    forza = carta("Holy Strength")
+    forza.attaccata_a = orso.id
+    b[Zona.CAMPO][:] = [gigante, orso, forza]
+    assert rimozione(p, "AI", carta("Swords to Plowshares")) == ([f"carta:{orso.id}"], 0)  # due carte in una
+
+
+def test_draw_go_bolt_in_faccia_a_fine_turno_contro_chi_non_ha_creature():
+    from app.ai.avversaria import bersaglio_bolt
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Mountain")]
+    ai[Zona.MANO][:] = [carta("Lightning Bolt")]
+    b[Zona.CAMPO][:] = [carta("Island")]
+    b[Zona.CIMITERO][:] = [carta("Counterspell"), carta("Ancestral Recall"), carta("Disenchant"),
+                           carta("Swords to Plowshares"), carta("Balance"), carta("Time Walk")]  # The Deck
+    p.attivo = p.priorita = 1
+    assert bersaglio_bolt(p, "AI") is None  # nel suo turno, a metà: si tiene
+    p.fase = Fase.FINALE
+    assert bersaglio_bolt(p, "AI") == "giocatore:B"
+    b[Zona.CAMPO].append(cr("Orso", 2, 4))
+    assert bersaglio_bolt(p, "AI") is None  # ha una creatura: il Bolt resta per le creature

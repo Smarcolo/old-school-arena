@@ -72,6 +72,7 @@ class Carta:
     pescata_nel_turno: int = 0  # Sylvan Library: «cards drawn this turn»
     nota_in_cima: bool = False  # rimessa in cima al grimorio dal proprietario (Sylvan Library): lui sa cos'è
     disintegrata: bool = False  # Disintegrate: fino a fine turno niente rigenerazione e, se muore, rimossa dal gioco
+    labirinto: bool = False  # Maze of Ith: fino a fine turno niente danni da combattimento fatti o subiti
     statico_forza: int = 0  # da aure e incantesimi globali, ricalcolati da statici.aggiorna
     statico_costituzione: int = 0
     parole_extra: set[str] = field(default_factory=set)
@@ -125,6 +126,7 @@ class Carta:
         self.animata = None
         self.danneggiata_da = set()
         self.disintegrata = False
+        self.labirinto = False
 
     def lascia_il_campo(self) -> None:
         """Una carta che lascia il campo diventa un oggetto nuovo: niente di quello che aveva in campo resta."""

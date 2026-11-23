@@ -46,6 +46,14 @@ def pesca(partita: Partita, giocatore: str, quante: int = 1) -> list[Carta]:
         g[Zona.MANO].append(carta)
         pescate.append(carta)
     _log(partita, giocatore, "pesca", f"{giocatore} pesca {len(pescate)} carta/e")
+    # Underworld Dreams: «Whenever an opponent draws a card, Underworld Dreams deals 1 damage to that player.»
+    # Semplificato: il danno arriva subito, senza passare dalla pila.
+    if pescate:
+        for altro in partita.giocatori:
+            if altro.nome == giocatore:
+                continue
+            for sogni in [c for c in altro[Zona.CAMPO] if c.nome == "Underworld Dreams"]:
+                infliggi_danno(partita, sogni, f"giocatore:{giocatore}", len(pescate))
     return pescate
 
 
@@ -320,6 +328,11 @@ def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
         bersaglio = partita.risolvi_bersaglio(oggetto.bersagli[0])
         bersaglio.tappata = True
         _log(partita, chi, "tappa", f"{fonte.nome} tappa {bersaglio.nome}")
+    elif ab.tipo == "labirinto":
+        bersaglio = partita.risolvi_bersaglio(oggetto.bersagli[0])
+        bersaglio.tappata = False
+        bersaglio.labirinto = True
+        _log(partita, chi, "labirinto", f"{fonte.nome}: {bersaglio.nome} si stappa e non fa né subisce danni da combattimento")
     elif ab.tipo == "macina":
         macina(partita, partita.risolvi_bersaglio(oggetto.bersagli[0]).nome, ab.quante, f"({fonte.nome})")
     elif ab.tipo == "scambia_vita":

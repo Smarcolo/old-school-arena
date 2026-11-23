@@ -320,9 +320,11 @@ def _passo_di_danno(partita: Partita, passo: str | None) -> None:
 
     from app.engine.azioni import danni_a_creatura, danni_a_giocatore
     for fonte, bersaglio, n in danni_creature:
-        danni_a_creatura(partita, fonte, bersaglio, n)
+        if not (fonte.labirinto or bersaglio.labirinto):  # Maze of Ith previene i danni fatti e subiti
+            danni_a_creatura(partita, fonte, bersaglio, n)
     for fonte, n in danni_giocatore:
-        danni_a_giocatore(partita, fonte, difensore, n)
+        if not fonte.labirinto:
+            danni_a_giocatore(partita, fonte, difensore, n)
     azioni_di_stato(partita)
 
 

@@ -93,7 +93,7 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
 - Mana: `engine/mana.py`. A fine fase le riserve si svuotano con mana burn. `lancia` tappa da solo le fonti
   necessarie (`piano_pagamento`), usando prima la riserva e, per il generico, prima le terre delle creature.
 - Istantanei e stregonerie si lanciano solo se il loro effetto è registrato con `@effetto("Nome Carta", bersaglio=...)`
-  in `engine/carte_implementate.py` (oggi 31 carte: Power 9 incluse, StP, Terror, Counterspell, Mana Drain,
+  in `engine/carte_implementate.py` (oggi 33 carte, con Shatterstorm e Twiddle: Power 9 incluse, StP, Terror, Counterspell, Mana Drain,
   Disenchant, Fireball, Mind Twist, Demonic Tutor, Balance, Wrath...). I tipi di bersaglio sono in
   `effetti._tipi()` (creatura, magia in pila «pila:<id>», carta nel tuo cimitero «cimitero:<id>», terra, ...).
   Costi con X: `OggettoPila.x`, `mana.con_x`, comando «gioca fireball x=5 su avversaria».
@@ -127,6 +127,16 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   con Earthquake/Wrath in mano tiene le creature che morirebbero (`tiene_per_la_propria_spazzata`), contromagia
   solo sulle carte decisive se ne ha una sola (`politiche.vale_una_contromagia`), Disenchant/Shatter per `pericolo`.
   Le creature non passano più dal giro «altri permanenti» (prima così `teme_spazzata` non aveva effetto).
+  Seconda tornata (report + mtg.wiki, 2026-11-23): Swords sulla propria creatura contro un danno letale in pila
+  (`politiche.swords_per_salvarsi`), Mind Twist aspetta che l'avversario con poche carte si tappi, mulligan se la mano
+  non ha i colori delle sue magie (`senza_colori`), creature nuove nella seconda fase principale se ha già attaccanti
+  (`dopo_il_combattimento`), «draw-go»: Bolt in faccia a fine turno avversario contro chi non ha creature
+  (`poche_creature`), rimozioni prima su chi ruba carte e sulle creature con un'aura (`politiche.valore_bersaglio`),
+  Maze of Ith dopo i blocchi (`_maze_of_ith`), con Underworld Dreams Ancestral/Wheel come danni, Shatterstorm quando
+  conviene, Twiddle sull'unico bloccante per chiudere. Sideboard: Shatterstorm, Control Magic, Karma, Circle.
+  Banco (scratchpad/banco/banco.py, 4 mazzi di carte_base, previsione spenta, posti scambiati) contro la versione
+  2026.11.14-5: 49,75% su 4000 partite = alla pari (contro sé stessa queste malizie non contano; servono contro
+  l'umano). Con Wrath in mano NON tiene le creature: The Deck teneva le Serra Angel per sempre (-6%).
 - Previsione (`ai/previsione.py`): nei momenti importanti l'AI confronta le alternative giocandole su copie della
   partita (pickle) 2 turni avanti con le regole normali per entrambi, carte nascoste rimescolate (non bara), max 1 s:
   attaccanti (regole, tutti, nessuno, solo i sicuri), bloccanti (anche sacrificio, scambio, blocco doppio) e
@@ -149,8 +159,7 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   di Balance è ≥ 4 e lei ha più mana da artefatti (non Lotus) di lui; intanto la politica di Balance aspetta.
   Scavenger Folk e creature che si sacrificano per distruggere un artefatto (`politiche.pronta_a_sacrificarsi`,
   `_sacrificio_in_combattimento`): l'AI blocca l'attaccante libero più forte (non travolgere) e prima dei danni si
-  sacrifica sull'artefatto più pericoloso; fuori dal combattimento solo con `pericolo` ≥ 6. Maze of Ith come
-  carta non ha ancora la sua abilità nel motore.
+  sacrifica sull'artefatto più pericoloso; fuori dal combattimento solo con `pericolo` ≥ 6.
 - L'AI decide le magie in `ai/politiche.py` (POLITICHE per nome carta, anche Dark Ritual solo se sblocca una carta, Balance se
   conviene, Earthquake/Hurricane, Unsummon/Boomerang sugli attaccanti) e le abilità di utilità in `scegli_abilita`. I permanenti si lanciano sempre, ma le loro abilità (tranne quelle di mana) non sono attive.
 - Bersagli: stringhe `"giocatore:<nome>"` o `"carta:<id>"`, risolte con `Partita.risolvi_bersaglio`. Se alla
@@ -182,6 +191,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   (`Carta.attaccata_a`); i bonus statici vanno in `statico_forza/statico_costituzione/parole_extra`, ricalcolati
   da `statici.aggiorna` dentro `azioni_di_stato` (che ora ripete i controlli finché qualcosa cambia).
   Abilità di un'aura su «Enchanted creature» (Firebreathing): `AbilitaAttivata.su_incantata`.
+- Carte aggiunte il 2026-11-23: Underworld Dreams (in `azioni.pesca`, danno subito senza pila), Shatterstorm, Twiddle
+  (tappa se stappato, altrimenti stappa), Maze of Ith (abilità «labirinto», bersaglio «attaccante», `Carta.labirinto`
+  fino a fine turno: niente danni da combattimento fatti o subiti). Shahrazad è tra le bandite (Marco: non la giochiamo).
 - Carte di Millstone Dreams: Millstone (abilità «macina», `azioni.macina`), Mirror Universe («scambia_vita»,
   `solo_nel_mantenimento`, bersaglio «avversario»), Chaos Orb (il lancio fisico è reso come «distrugge un permanente
   a scelta, poi Chaos Orb»: `abilita.py`, tipo «chaos_orb»), Fellwar Stone (`mana.fonte_in_partita`: colori delle

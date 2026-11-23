@@ -147,6 +147,16 @@ def risposta_a_balance(partita: Partita, nome: str) -> bool:
     return creature(nome) > creature(partita.avversario_di(nome).nome)
 
 
+def poche_creature(partita: Partita, chi: str) -> bool:
+    """`chi` gioca un mazzo quasi senza creature: nessuna in campo e, tra almeno 6 magie viste, al massimo una
+    creatura. Contro di lui le rimozioni sono carte morte e i danni diretti vanno in faccia (mtg.wiki, Card
+    advantage). Con meno carte viste non si sa: le creature potrebbero solo non essere ancora uscite."""
+    g = partita.giocatore(chi)
+    viste = [c for c in [*g[Zona.CAMPO], *g[Zona.CIMITERO]] if not c.is_terra or c.nome == "Mishra's Factory"]
+    creature = sum(1 for c in viste if c.is_creatura or c.nome == "Mishra's Factory")
+    return len(viste) >= 6 and creature <= 1 and not any(c.is_creatura for c in g[Zona.CAMPO])
+
+
 def bersaglio_bolt(partita: Partita, nome: str, bolt: Carta | None = None) -> str | None:
     avversario = partita.avversario_di(nome)
     if avversario.vita <= DANNI_BOLT * bolt_pagabili(partita, nome):
@@ -157,6 +167,11 @@ def bersaglio_bolt(partita: Partita, nome: str, bolt: Carta | None = None) -> st
         return f"carta:{migliore.id}"
     if mirror_pronto(partita, avversario.nome):
         return None  # o lo si uccide in un colpo o niente: con il Mirror scambierebbe la vita
+    if partita.giocatore_attivo.nome != nome:
+        # «draw-go» contro un mazzo quasi senza creature (The Deck): il mana tenuto aperto per le risposte non si
+        # spreca, alla fine del turno avversario il Bolt va in faccia (mtg.wiki, Control deck)
+        fine_turno = partita.fase == Fase.FINALE and not partita.pila
+        return f"giocatore:{avversario.nome}" if fine_turno and poche_creature(partita, avversario.nome) else None
     if (not partita.pila and partita.giocatore_attivo.nome == nome and partita.fase in FASI_PRINCIPALI
             and (avversario.vita <= 10 or len(partita.giocatore(nome)[Zona.MANO]) >= 6)):
         # in faccia solo verso la fine (o con la mano piena): prima conviene tenerlo per le creature
@@ -231,6 +246,19 @@ def factory_da_animare(partita: Partita, nome: str, per_attaccare: bool):
     return None
 
 
+def senza_colori(mano: list[Carta]) -> bool:
+    """Le fonti della mano (terre, Mox) non lanciano nessuna delle sue magie per colore (n00bfest 2023: «2 Mox,
+    Sol Ring, 1 land ... Mind Twist, but no black mana»: tenuta e persa)."""
+    colori = set()
+    for c in mano:
+        if (c.is_terra or "Artifact" in c.tipo) and (f := mana.mana_prodotto(c)):
+            colori |= set(f.colori)
+    magie = [c for c in mano if not c.is_terra and not mana.mana_prodotto(c)]
+    def lanciabile(c):
+        return all(k in colori for k in mana.analizza_costo(c.costo) if k in "WUBRG")
+    return len(magie) >= 2 and not any(lanciabile(c) for c in magie)
+
+
 def decidi_mulligan(partita: Partita, nome: str) -> None:
     """Tiene con 2-5 terre su 7 (o dopo due mulligan); poi mette in fondo le carte che servono di meno."""
     from app.engine import mulligan
@@ -238,7 +266,7 @@ def decidi_mulligan(partita: Partita, nome: str) -> None:
     mano = partita.giocatore(nome)[Zona.MANO]
     if not stato.tenuta:
         terre = sum(c.is_terra for c in mano)
-        if 2 <= terre <= 5 or stato.fatti >= 2:
+        if (2 <= terre <= 5 and not senza_colori(mano)) or stato.fatti >= 2:
             mulligan.tieni(partita, nome)
         else:
             mulligan.fai_mulligan(partita, nome)
@@ -342,17 +370,24 @@ def teme_spazzata(partita: Partita, nome: str) -> bool:
 
 
 def tiene_per_la_propria_spazzata(partita: Partita, nome: str, carta: Carta) -> bool:
-    """Con Earthquake o Wrath of God in mano non cala le creature che la propria spazzata ucciderebbe: aspetta che
+    """Con Earthquake in mano non cala le creature che il terremoto ucciderebbe (senza volare, costituzione ≤ 2): aspetta che
     l'avversario esponga le sue e poi fa due per uno (n00bcon 13: «I didn't play my Lion, hoping to two-for-one
     him»). Con la mano troppo piena gioca comunque."""
     mano = partita.giocatore(nome)[Zona.MANO]
     if len(mano) > 7:
         return False
-    if any(c.nome == "Wrath of God" for c in mano):
-        return True
+    # (con Wrath of God no: al banco The Deck teneva in mano le Serra Angel per sempre e perdeva il 6% in più)
     if any(c.nome == "Earthquake" for c in mano):
         return not carta.ha("flying") and (carta.costituzione or 0) <= 2
     return False
+
+
+def dopo_il_combattimento(partita: Partita, nome: str) -> bool:
+    """Arvika: «he kept announcing that he was going to second main before playing his spells». Nella prima fase
+    principale, se ha creature pronte ad attaccare, le nuove creature (che non attaccherebbero comunque) si
+    giocano dopo il combattimento: l'avversario blocca senza sapere cosa ha in mano e con il suo mana stappato."""
+    return (partita.fase == Fase.PRINCIPALE_1 and partita.giocatore_attivo.nome == nome
+            and bool(combattimento.possibili_attaccanti(partita, nome)))
 
 
 def teme_contromagia(partita: Partita, nome: str) -> bool:
@@ -652,7 +687,7 @@ def _creatura_uccidibile(partita: Partita, nome: str, danni: int, fonte: Carta |
     avversario = partita.avversario_di(nome)
     uccidibili = [c for c in avversario[Zona.CAMPO] if c.is_creatura and not c.protetta_da(fonte)
                   and 0 < _vita(c) - _danni_in_arrivo(partita, nome, c) <= danni]
-    return max(uccidibili, key=lambda c: (c.forza_attuale, c.costituzione_attuale)) if uccidibili else None
+    return max(uccidibili, key=lambda c: politiche.valore_bersaglio(partita, c)) if uccidibili else None
 
 
 def agisci(partita: Partita, nome: str) -> None:
@@ -711,7 +746,8 @@ def agisci(partita: Partita, nome: str) -> None:
     bolt = next((c for c in mano if c.nome == "Lightning Bolt" and puo_lanciare(partita, nome, c) is None), None)
     if bolt:
         rif = bersaglio_bolt(partita, nome, bolt)
-        if rif and rif.startswith("carta:"):
+        # in faccia fuori dal proprio turno solo se letale o nel «draw-go» (bersaglio_bolt decide quando)
+        if rif and (rif.startswith("carta:") or partita.giocatore_attivo.nome != nome):
             azioni.lancia(partita, nome, bolt, [rif])
             return
 
@@ -730,6 +766,8 @@ def agisci(partita: Partita, nome: str) -> None:
         if lanciabili and teme_spazzata(partita, nome):
             lanciabili = []  # ha già abbastanza pressione in campo: le altre creature restano in mano
         lanciabili = [c for c in lanciabili if not tiene_per_la_propria_spazzata(partita, nome, c)]
+        if lanciabili and dopo_il_combattimento(partita, nome):
+            lanciabili = [c for c in lanciabili if c.ha("haste")]
         if not lanciabili:  # poi le aure, sulla sua creatura migliore
             for aura in (c for c in mano if c.is_aura and puo_lanciare(partita, nome, c) is None):
                 if bersaglio := bersaglio_aura(partita, nome, aura):

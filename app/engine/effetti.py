@@ -78,6 +78,8 @@ def _tipi():
                                        and ("Artifact" in o.tipo_attuale or o.is_creatura or o.is_terra)),
         "assembly_worker": ("una creatura Assembly-Worker", lambda p, o, f: in_campo(p, o) and o.is_creatura
                             and "Assembly-Worker" in o.tipo_attuale),
+        "attaccante": ("una creatura che attacca", lambda p, o, f: in_campo(p, o) and o.is_creatura
+                       and p.combattimento is not None and o.id in p.combattimento.attaccanti),
         "magia": ("una magia in pila", lambda p, o, f: isinstance(o, OggettoPila) and o.abilita is None and o.innesco is None),
         "blu": ("una magia o un permanente blu", _di_colore("U")),
         "rosso": ("una magia o un permanente rosso", _di_colore("R")),

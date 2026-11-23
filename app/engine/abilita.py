@@ -9,6 +9,8 @@
 - «Tap target artifact, creature, or land.»                                              -> tappa
 - «Target player mills two cards.» (Millstone)                                           -> macina
 - «Exchange life totals with target opponent. Activate only during your upkeep.»          -> scambia_vita
+- «Untap target attacking creature. Prevent all combat damage that would be dealt to and dealt by it this turn.»
+                                                                                         -> labirinto (Maze of Ith)
 - Chaos Orb: lancio fisico sul tavolo, reso come «distruggi un permanente a scelta, poi Chaos Orb» -> chaos_orb
 
 Le abilità di mana («...: Add ...») stanno in mana.py e non usano la pila.
@@ -31,6 +33,8 @@ _POMPA_BERSAGLIO = re.compile(r"^Target Assembly-Worker creature gets (?P<f>[+-]
 _SCARTA = re.compile(r"^Target player discards a card\.(?P<turno> Activate only during your turn\.)?$")
 _MACINA = re.compile(r"^Target player (?:mills (?P<n>\w+) cards?|puts the top (?P<n2>\w+) cards? of (?:their|his or her) library into (?:their|his or her) graveyard)\.$")
 _SCAMBIA_VITA = re.compile(r"^Exchange life totals with target opponent\.(?P<mantenimento> Activate only during your upkeep\.)?$")
+_LABIRINTO = re.compile(r"^Untap target attacking creature\. Prevent all combat damage that would be dealt to and "
+                        r"dealt by it this turn\.$")
 _NUMERI = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
 _BERSAGLI = {"any target": "qualsiasi", "target creature": "creatura", "target player": "giocatore"}
 _DISTRUGGIBILI = {"land": "terra", "artifact": "artefatto", "creature": "creatura",
@@ -129,6 +133,8 @@ def _analizza_abilita(carta: Carta) -> list[AbilitaAttivata]:
         elif sv := _SCAMBIA_VITA.match(effetto):
             trovate.append(AbilitaAttivata(**base, tipo="scambia_vita", bersaglio="avversario",
                                            solo_nel_mantenimento=bool(sv["mantenimento"])))
+        elif _LABIRINTO.match(effetto):
+            trovate.append(AbilitaAttivata(**base, tipo="labirinto", bersaglio="attaccante"))
         elif sc := _SCARTA.match(effetto):
             trovate.append(AbilitaAttivata(**base, tipo="scarta", bersaglio="giocatore", solo_nel_tuo_turno=bool(sc["turno"])))
     return trovate

@@ -157,6 +157,23 @@ def armageddon(partita, oggetto):
     _distruggi_tutti(partita, lambda c: c.is_terra, "(Armageddon)", rigenerabile=True)
 
 
+@effetto("Shatterstorm")
+def shatterstorm(partita, oggetto):
+    """Destroy all artifacts. They can't be regenerated."""
+    _distruggi_tutti(partita, lambda c: "Artifact" in c.tipo_attuale, "(Shatterstorm)", rigenerabile=False)
+
+
+@effetto("Twiddle", bersaglio="artefatto_creatura_o_terra")
+def twiddle(partita, oggetto):
+    """You may tap or untap target artifact, creature, or land. Qui: tappa se è stappato, altrimenti lo stappa."""
+    carta = _bersaglio(partita, oggetto)
+    if carta is None:
+        return
+    carta.tappata = not carta.tappata
+    _az()._log(partita, oggetto.controllore, "twiddle",
+               f"Twiddle {'tappa' if carta.tappata else 'stappa'} {carta.nome}", carta=carta.id)
+
+
 # --- Contromagie -------------------------------------------------------------------------------
 
 @effetto("Counterspell", bersaglio="magia")

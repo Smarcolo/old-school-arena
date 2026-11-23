@@ -28,10 +28,17 @@ def _forza_totale(p: Partita, chi: str) -> int:
     return sum(c.forza_attuale for c in p.giocatore(chi)[Zona.CAMPO] if c.is_creatura)
 
 
+def valore_bersaglio(p: Partita, c: Carta) -> tuple:
+    """Quale creatura avversaria togliere per prima: quelle che rubano carte (Hypnotic Specter) e quelle con
+    un'aura addosso (due carte in una, «2-for-1»: mtg.wiki) prima delle grosse ma «stupide»."""
+    aure = sum(1 for g in p.giocatori for a in g[Zona.CAMPO] if a.attaccata_a == c.id)
+    return (pericolo(c) + 4 * aure, c.forza_attuale, c.costituzione_attuale)
+
+
 def _migliore_creatura_avversaria(p: Partita, nome: str, fonte: Carta, tipo: str) -> Carta | None:
     avv = p.avversario_di(nome)
     candidate = [c for c in avv[Zona.CAMPO] if c.is_creatura and bersaglio_legale(p, tipo, f"carta:{c.id}", fonte)]
-    return max(candidate, key=lambda c: (c.forza_attuale, c.costituzione_attuale)) if candidate else None
+    return max(candidate, key=lambda c: valore_bersaglio(p, c)) if candidate else None
 
 
 def contromagia(p: Partita, nome: str, carta: Carta):
@@ -67,8 +74,40 @@ def vale_una_contromagia(p: Partita, nome: str, carta: Carta) -> bool:
     return mana.valore(carta.costo) >= 3 or "{X}" in carta.costo or carta.nome in RISPOSTE_ALLE_CREATURE
 
 
+DANNI_FISSI = {"Lightning Bolt": 3, "Psionic Blast": 4, "Chain Lightning": 3}
+
+
+def danno_in_arrivo_su_di_me(p: Partita, nome: str) -> int:
+    """I danni che la magia avversaria in cima alla pila sta per fare a lei (Bolt, Psionic Blast, Fireball...)."""
+    if not p.pila:
+        return 0
+    cima = p.pila[-1]
+    if cima.controllore == nome or cima.abilita or f"giocatore:{nome}" not in cima.bersagli:
+        return 0
+    if cima.carta.nome in DANNI_FISSI:
+        return DANNI_FISSI[cima.carta.nome]
+    if cima.carta.nome in ("Fireball", "Disintegrate"):
+        return (cima.x or 0) // max(1, len(cima.bersagli))
+    return 0
+
+
+def swords_per_salvarsi(p: Partita, nome: str, carta: Carta) -> Carta | None:
+    """n00bfest 2023: contro un danno letale in pila, Swords to Plowshares sulla PROPRIA creatura fa guadagnare
+    vita pari alla sua forza. Sceglie la creatura più piccola che basta."""
+    if carta.nome != "Swords to Plowshares":
+        return None
+    danno, vita = danno_in_arrivo_su_di_me(p, nome), p.giocatore(nome).vita
+    if danno < vita:
+        return None
+    mie = [c for c in p.giocatore(nome)[Zona.CAMPO] if c.is_creatura and vita + c.forza_attuale > danno
+           and bersaglio_legale(p, "creatura", f"carta:{c.id}", carta)]
+    return min(mie, key=lambda c: (c.forza_attuale, valore_carta(c))) if mie else None
+
+
 def rimozione(p: Partita, nome: str, carta: Carta):
     from app.ai.avversaria import risposta_a_balance
+    if mia := swords_per_salvarsi(p, nome, carta):
+        return [f"carta:{mia.id}"], 0
     if risposta_a_balance(p, nome):
         return None
     tipo = "creatura_non_nera_non_artefatto" if carta.nome == "Terror" else "creatura"
@@ -162,8 +201,47 @@ def distruggi_permanente(p: Partita, nome: str, carta: Carta):
     return [f"carta:{max(candidate, key=lambda c: (pericolo(c), valore_carta(c))).id}"], 0
 
 
+def _sogni_miei(p: Partita, nome: str) -> int:
+    """Quanti Underworld Dreams controlla lei: ogni carta che l'avversario pesca gli fa 1 danno."""
+    return sum(1 for c in p.giocatore(nome)[Zona.CAMPO] if c.nome == "Underworld Dreams")
+
+
+def shatterstorm(p: Partita, nome: str, carta: Carta):
+    """Distrugge tutti gli artefatti: si tiene finché non prende più artefatti all'avversario che a lei (n00bcon
+    2024: «an excellent X-for-1 that you can time and build up to perfectly»)."""
+    if not _mia_principale(p, nome):
+        return None
+    def peso(chi):
+        return sum(1 + pericolo(c) / 5 for c in p.giocatore(chi)[Zona.CAMPO] if "Artifact" in c.tipo_attuale)
+    return ([], 0) if peso(p.avversario_di(nome).nome) - peso(nome) >= 2.5 else None
+
+
+def twiddle(p: Partita, nome: str, carta: Carta):
+    """Twiddle per chiudere: prima del combattimento tappa l'unico bloccante che impedisce un attacco letale
+    (n00bcon 2024: «tapped my Flying Men on defense with a Twiddle and got the final damage through»)."""
+    if not (_mia_principale(p, nome) and p.fase == Fase.PRINCIPALE_1):
+        return None
+    from app.engine import combattimento
+    avv = p.avversario_di(nome)
+    attaccanti = combattimento.possibili_attaccanti(p, nome)
+    forza = sum(c.forza_attuale for c in attaccanti)
+    bloccanti = [b for b in avv[Zona.CAMPO] if b.is_creatura and not b.tappata]
+    if forza < avv.vita or len(bloccanti) != 1:
+        return None
+    if forza - max(c.forza_attuale for c in attaccanti) >= avv.vita:
+        return None  # è già letale anche se blocca
+    return [f"carta:{bloccanti[0].id}"], 0
+
+
 def pescate(p: Partita, nome: str, carta: Carta):
     mano = len(p.giocatore(nome)[Zona.MANO]) - 1
+    avv = p.avversario_di(nome)
+    if sogni := _sogni_miei(p, nome):
+        # con Underworld Dreams le pescate forzate diventano danni (DreamyDiamondWalls: «shoots him with it»)
+        if carta.nome == "Ancestral Recall" and avv.vita <= 3 * sogni:
+            return [f"giocatore:{avv.nome}"], 0
+        if carta.nome == "Wheel of Fortune" and _mia_principale(p, nome) and avv.vita <= 7 * sogni:
+            return [], 0
     if carta.nome == "Ancestral Recall" and (_fine_turno_avversario(p, nome) or (_mia_principale(p, nome) and mano <= 2)):
         return [f"giocatore:{nome}"], 0
     if carta.nome == "Braingeyser" and (_fine_turno_avversario(p, nome) or _mia_principale(p, nome)):
@@ -189,8 +267,15 @@ def tutor_e_turni(p: Partita, nome: str, carta: Carta):
 
 
 def mind_twist(p: Partita, nome: str, carta: Carta):
+    """Grosso, e quando l'avversario non può rispondere: se ha poche carte e {U}{U} stappati con una contromagia
+    possibile, si aspetta che si tappi (n00bcon 2024: «When he finally tapped out ... I played my Mind Twist»);
+    con la mano piena (dopo Timetwister o Wheel of Fortune) si lancia subito."""
     avv = p.avversario_di(nome).nome
-    if _mia_principale(p, nome) and len(p.giocatore(avv)[Zona.MANO]) >= 2:
+    from app.ai.avversaria import _fonti_stappate
+    carte = len(p.giocatore(avv)[Zona.MANO])
+    if carte <= 3 and _fonti_stappate(p, avv, "U") >= 2:
+        return None
+    if _mia_principale(p, nome) and carte >= 2:
         x = min(_x_massimo(p, nome, carta, [f"giocatore:{avv}"]), len(p.giocatore(avv)[Zona.MANO]))
         if x >= 2:
             return [f"giocatore:{avv}"], x
@@ -403,6 +488,7 @@ POLITICHE = {
     "Sinkhole": distruggi_permanente, "Ice Storm": distruggi_permanente,
     "Ancestral Recall": pescate, "Braingeyser": pescate, "Timetwister": pescate, "Wheel of Fortune": pescate,
     "Time Walk": tutor_e_turni, "Demonic Tutor": tutor_e_turni, "Regrowth": tutor_e_turni,
+    "Shatterstorm": shatterstorm, "Twiddle": twiddle,
     "Recall": recall, "Mind Twist": mind_twist, "Fireball": danni_x, "Disintegrate": danni_x, "Psionic Blast": danni_x,
     "Wrath of God": spazza, "Armageddon": spazza,
 }
@@ -575,6 +661,31 @@ def _sacrificio_in_combattimento(p: Partita, nome: str):
     return None
 
 
+def _maze_of_ith(p: Partita, nome: str):
+    """Maze of Ith nel combattimento avversario, dopo i blocchi: sull'attaccante che farebbe più male, cioè quello
+    non bloccato più forte, oppure quello bloccato che ucciderebbe il bloccante."""
+    comb = p.combattimento
+    if not comb or not comb.bloccanti_dichiarati or p.giocatore_attivo.nome == nome or p.pila:
+        return None
+    for c in p.giocatore(nome)[Zona.CAMPO]:
+        for ab in analizza_abilita(c):
+            if ab.tipo != "labirinto" or puo_attivare(p, nome, c, ab) is not None:
+                continue
+            def male(a: Carta) -> float:
+                if a.labirinto:
+                    return 0
+                bloccanti = [t[1] for i in comb.blocchi.get(a.id, []) if (t := p.trova_in_campo(i))]
+                if a.id not in comb.blocchi:
+                    return a.forza_attuale
+                uccisi = [b for b in bloccanti if a.forza_attuale >= b.costituzione_attuale - b.danni]
+                return max((pericolo(b) / 2 for b in uccisi), default=0)
+            attaccanti = [t[1] for i in comb.attaccanti if (t := p.trova_in_campo(i))]
+            candidati = [a for a in attaccanti if male(a) > 0 and bersaglio_legale(p, "attaccante", f"carta:{a.id}", c)]
+            if candidati:
+                return c, ab, [f"carta:{max(candidati, key=male).id}"]
+    return None
+
+
 def scegli_abilita(p: Partita, nome: str):
     """Abilità di utilità: Strip Mine sulla terra che conviene togliere (terra_da_distruggere), Library of Alexandria e Jayemdae Tome a fine turno
     avversario, Icy Manipulator sulla creatura migliore avversaria nel suo mantenimento."""
@@ -583,6 +694,8 @@ def scegli_abilita(p: Partita, nome: str):
         return combinazione
     if sacrificio := _sacrificio_in_combattimento(p, nome):
         return sacrificio
+    if labirinto := _maze_of_ith(p, nome):
+        return labirinto
     for c in list(p.giocatore(nome)[Zona.CAMPO]):
         for ab in analizza_abilita(c):
             if puo_attivare(p, nome, c, ab) is not None:

@@ -166,6 +166,10 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   stesse partite: contro Zoo/Nero −4 Millstone −2 Field −2 Sindbad +4 Erhnam +4 Juzám (66%, 42%); contro Robots
   −2 Field +2 Serra (52%); contro The Deck niente (REB 67%). `disenchant_pericolo` e `lotus_costo_min` provati e
   lasciati a 0 (peggioravano Dreams).
+  Lista v2 (`dreams_of_the_sea_v2.txt`): −1 Mind Twist −2 Sindbad +1 Moat +2 Fellwar Stone, 55,1% contro 50,2% su
+  2000 partite per versione (semi 7, 11, 13). Armageddon «da prigione» (`politiche.armageddon_prigione`, idea di Marco:
+  mana dagli artefatti ≥ `armageddon_artefatti` e più dell'avversario) provato: alla pari. Sideboard v2: −2 Field
+  +2 Serra contro The Deck/Zoo/Robots; contro Nero −4 Millstone −2 Field −2 Sylvan +4 Erhnam +4 Juzám.
 - Regia: con Field of Dreams in campo e Millstone pronto l'umano si ferma in ogni mantenimento
   (`millstone_con_cima_scoperta`); nel tavolo i pulsanti «Macina l'avversaria» / «Macina il tuo grimorio».
 - Previsione (`ai/previsione.py`): nei momenti importanti l'AI confronta le alternative giocandole su copie della

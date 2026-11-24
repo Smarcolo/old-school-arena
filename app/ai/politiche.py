@@ -362,7 +362,21 @@ def spazza(p: Partita, nome: str, carta: Carta):
             return [], 0
     if carta.nome == "Armageddon" and mie >= 5 and sue == 0:
         return [], 0
+    if carta.nome == "Armageddon" and armageddon_prigione(p, nome):
+        return [], 0
     return None
+
+
+def armageddon_prigione(p: Partita, nome: str) -> bool:
+    """Armageddon nel mazzo di controllo con tanti artefatti di mana (idea di Marco per Dreams of the Sea): dopo,
+    lei gioca ancora con Mox e Sol Ring (Millstone, contromagie), l'avversario no. Solo se ha almeno
+    `armageddon_artefatti` mana dagli artefatti e più dell'avversario, l'avversario ha almeno 3 terre, e il campo non
+    la vede perdere (non ha meno forza in campo dell'avversario)."""
+    avv = p.avversario_di(nome).nome
+    miei, suoi = _mana_senza_terre(p, nome), _mana_senza_terre(p, avv)
+    sue_terre = _quanti(p, avv, lambda c: c.is_terra)
+    return (miei >= parametri.P["armageddon_artefatti"] and miei > suoi and sue_terre >= 3
+            and _forza_totale(p, nome) >= _forza_totale(p, avv))
 
 
 def dark_ritual(p: Partita, nome: str, carta: Carta):

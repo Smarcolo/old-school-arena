@@ -39,5 +39,7 @@ P = {
     "disenchant_pericolo": 0,
     # Black Lotus si sacrifica solo per carte da almeno tanti mana (o le migliori, o le contromagie). 0 = sempre:
     # con 4 lo studio di Dreams of the Sea perdeva qualche partita (tempo perso)
-    "lotus_costo_min": 0,  # banco 2026-11-24: 51,5% su 8000 partite contro False
+    "lotus_costo_min": 0,
+    # Armageddon «da prigione»: mana minimo dagli artefatti (Mox, Sol Ring, Fellwar) per lanciarlo senza creature
+    "armageddon_artefatti": 3,  # banco 2026-11-24: 51,5% su 8000 partite contro False
 }

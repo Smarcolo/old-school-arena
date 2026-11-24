@@ -2,7 +2,7 @@
 succede. uso: python studio.py mazzo.txt N
 Stampa: vittorie per avversario, turno medio di fine, come finiscono le partite (vita, grimorio), carte più
 giocate nelle vittorie e nelle sconfitte, uso di Millstone (su chi), mulligan."""
-import json, random, sys
+import json, os, random, sys
 from collections import Counter
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent)); sys.path.insert(0, ".")
@@ -86,10 +86,9 @@ def main():
     mio, side, sconosciute = leggi(sys.argv[1])
     n = int(sys.argv[2])
     print(f"carte nel mazzo: {sum(mio.values())}  (sconosciute al banco, tolte: {sconosciute})")
-    rng = random.Random(7)
+    rng = random.Random(int(os.environ.get("SEME", "7")))
     totale = Counter(); vittorie = Counter(); turni = []; come = Counter(); in_vittoria = Counter()
     in_sconfitta = Counter(); partite_v = partite_s = 0; mulligan_fatti = 0
-    import os
     avversari = [m for m in MAZZI if not os.environ.get("CONTRO") or m in os.environ["CONTRO"].split(",")]
     for contro in avversari:
         for i in range(n):

@@ -501,3 +501,15 @@ def test_i_parametri_guidano_le_decisioni():
         assert bersaglio_bolt(p, "AI") == "giocatore:B"
     finally:
         parametri.P = vecchi
+
+
+def test_armageddon_da_prigione_con_i_mox():
+    """Idea di Marco per Dreams of the Sea: con tre Mox e Sol Ring, Armageddon lascia l'avversario senza mana."""
+    from app.ai.politiche import armageddon_prigione
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Plains"), carta("Mox Pearl"), carta("Mox Sapphire"), carta("Sol Ring")]
+    b[Zona.CAMPO][:] = [carta("Forest") for _ in range(4)]
+    assert armageddon_prigione(p, "AI")
+    b[Zona.CAMPO].append(cr("Orso", 3, 3))
+    assert not armageddon_prigione(p, "AI")  # le sue creature picchierebbero un campo vuoto

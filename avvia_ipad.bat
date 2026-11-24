@@ -9,6 +9,8 @@ if not exist .venv (
 ) else (
     call .venv\Scripts\activate.bat
 )
+REM Aggiornamento automatico: se su GitHub c'e' una versione nuova la scarica (i mazzi e i salvataggi restano)
+python -m app.aggiorna
 python -m app.avvio --rete
 pause
 goto :eof

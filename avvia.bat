@@ -9,6 +9,8 @@ if not exist .venv (
 ) else (
     call .venv\Scripts\activate.bat
 )
+REM Aggiornamento automatico: se su GitHub c'e' una versione nuova la scarica (i mazzi e i salvataggi restano)
+python -m app.aggiorna
 start "" http://127.0.0.1:8000
 python -m uvicorn app.api.main:app --host 127.0.0.1 --port 8000
 goto :eof

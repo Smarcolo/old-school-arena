@@ -71,6 +71,11 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   tiene l'incontro serializzato (pickle, max 15, solo in memoria); annullare lo rimette in `partite` (e nel torneo).
   La storia si svuota con la partita successiva e a incontro finito.
 - `app/versione.py` — `VERSIONE` mostrata in alto nel tavolo (`/api/versione`): **aggiornarla a ogni consegna**.
+- `app/aggiorna.py` — aggiornamento automatico all'avvio (`avvia.bat` e `avvia_ipad.bat` lanciano
+  `python -m app.aggiorna`): confronta `VERSIONE` con quella su raw.githubusercontent del ramo e, se è più nuova,
+  scarica lo zip del ramo da GitHub e lo copia sopra il codice, saltando data/, .venv/, docs/, dojo/, strumenti/ e i
+  .bat (Windows li legge mentre li esegue). Senza rete parte com'è; `OSA_NO_AGGIORNA=1` lo spegne. Quindi ogni push
+  con VERSIONE aumentata arriva da solo al PC del negozio; le modifiche ai .bat vanno ancora consegnate a mano.
   I file del sito si servono con `Cache-Control: no-cache` (`FileDelSito`) perché Safari non tenga i vecchi.
 - Versione per il browser (iPad senza PC, GitHub Pages): `app/browser.py` registra in `sys.modules` sostituti
   minimi di fastapi/pydantic/httpx e chiama direttamente le funzioni di main.py (`chiama(metodo, url, corpo)`);

@@ -33,5 +33,11 @@ P = {
     # tante carte in mano (99 = non tiene mai, sviluppa sempre)
     "tieni_uu_mano_avversaria": 2,
     # ... e solo se ha già una creatura in campo da proteggere (prima sviluppa)
-    "tieni_uu_solo_con_minaccia": True,  # banco 2026-11-24: 51,5% su 8000 partite contro False
+    "tieni_uu_solo_con_minaccia": True,
+    # Disenchant/Shatter: pericolo minimo del bersaglio. 0 = qualsiasi (anche un Mox): con 5 Dreams of the Sea
+    # perdeva 8 partite su 150 contro The Deck, togliere i Mox al controllo conta (studio 2026-11-24)
+    "disenchant_pericolo": 0,
+    # Black Lotus si sacrifica solo per carte da almeno tanti mana (o le migliori, o le contromagie). 0 = sempre:
+    # con 4 lo studio di Dreams of the Sea perdeva qualche partita (tempo perso)
+    "lotus_costo_min": 0,  # banco 2026-11-24: 51,5% su 8000 partite contro False
 }

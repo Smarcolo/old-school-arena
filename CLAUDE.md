@@ -159,6 +159,13 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   trovato: mulligan che ignorava Mox/Sol Ring/Fellwar (ora contano come fonti, serve una terra), Fellwar Stone non
   giocato subito, Moat non giocato contro le Factory (`_forza_terrestre` conta le terre che si animano), generico
   pagato con le Island, contromagia su un Bolt in faccia a vita piena (ora solo se il danno pesa). 39,7% → 42,7%.
+- Dreams of the Sea (mazzo di Marco, `strumenti/banco/dreams_of_the_sea.txt`; carte_base ora ha Maze of Ith e Sindbad;
+  Sindbad = abilità «sindbad» in abilita.py, l'AI la usa a fine turno avversario, con Field of Dreams solo se la
+  cima è una terra o inutile, `politiche.sindbad_conviene`). Studio 2026-11-24 (CONTRO=, PARAM= in studio.py):
+  pilota vecchio 20% → nuovo 52%; base: The Deck 80%, Zoo ~55%, Robots ~40%, Nero ~30%. Sideboard provata sulle
+  stesse partite: contro Zoo/Nero −4 Millstone −2 Field −2 Sindbad +4 Erhnam +4 Juzám (66%, 42%); contro Robots
+  −2 Field +2 Serra (52%); contro The Deck niente (REB 67%). `disenchant_pericolo` e `lotus_costo_min` provati e
+  lasciati a 0 (peggioravano Dreams).
 - Regia: con Field of Dreams in campo e Millstone pronto l'umano si ferma in ogni mantenimento
   (`millstone_con_cima_scoperta`); nel tavolo i pulsanti «Macina l'avversaria» / «Macina il tuo grimorio».
 - Previsione (`ai/previsione.py`): nei momenti importanti l'AI confronta le alternative giocandole su copie della

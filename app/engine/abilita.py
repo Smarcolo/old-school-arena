@@ -11,6 +11,7 @@
 - «Exchange life totals with target opponent. Activate only during your upkeep.»          -> scambia_vita
 - «Untap target attacking creature. Prevent all combat damage that would be dealt to and dealt by it this turn.»
                                                                                          -> labirinto (Maze of Ith)
+- «Draw a card and reveal it. If it isn't a land card, discard it.»                        -> sindbad
 - Chaos Orb: lancio fisico sul tavolo, reso come «distruggi un permanente a scelta, poi Chaos Orb» -> chaos_orb
 
 Le abilità di mana («...: Add ...») stanno in mana.py e non usano la pila.
@@ -35,6 +36,7 @@ _MACINA = re.compile(r"^Target player (?:mills (?P<n>\w+) cards?|puts the top (?
 _SCAMBIA_VITA = re.compile(r"^Exchange life totals with target opponent\.(?P<mantenimento> Activate only during your upkeep\.)?$")
 _LABIRINTO = re.compile(r"^Untap target attacking creature\. Prevent all combat damage that would be dealt to and "
                         r"dealt by it this turn\.$")
+_SINDBAD = re.compile(r"^Draw a card and reveal it\. If it isn't a land card, discard it\.$")
 _NUMERI = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
 _BERSAGLI = {"any target": "qualsiasi", "target creature": "creatura", "target player": "giocatore"}
 _DISTRUGGIBILI = {"land": "terra", "artifact": "artefatto", "creature": "creatura",
@@ -133,6 +135,8 @@ def _analizza_abilita(carta: Carta) -> list[AbilitaAttivata]:
         elif sv := _SCAMBIA_VITA.match(effetto):
             trovate.append(AbilitaAttivata(**base, tipo="scambia_vita", bersaglio="avversario",
                                            solo_nel_mantenimento=bool(sv["mantenimento"])))
+        elif _SINDBAD.match(effetto):
+            trovate.append(AbilitaAttivata(**base, tipo="sindbad"))
         elif _LABIRINTO.match(effetto):
             trovate.append(AbilitaAttivata(**base, tipo="labirinto", bersaglio="attaccante"))
         elif sc := _SCARTA.match(effetto):

@@ -116,3 +116,40 @@ def test_maze_of_ith_ferma_l_attaccante_e_l_ai_lo_usa():
             azioni.passa_priorita(p, "B")
     assert maze.tappata and not djinn.tappata
     assert ai.vita == 20  # danni prevenuti
+
+
+SINDBAD = "{T}: Draw a card and reveal it. If it isn't a land card, discard it."
+
+
+def test_sindbad_tiene_le_terre_e_scarta_il_resto():
+    from app.engine.abilita import analizza_abilita
+    p = p_base()
+    ai = p.giocatore("AI")
+    sindbad = metti(p, "AI", Carta("Sindbad", "Creature — Human", "{1}{U}", 1, 1, SINDBAD))
+    ab = analizza_abilita(sindbad)[0]
+    assert ab.tipo == "sindbad"
+    ai[Zona.GRIMORIO].append(Carta("Serra Angel", "Creature — Angel", "{3}{W}{W}", 4, 4))
+    azioni.attiva(p, "AI", sindbad, ab)
+    azioni.passa_priorita(p, "AI")
+    azioni.passa_priorita(p, "B")
+    assert any(c.nome == "Serra Angel" for c in ai[Zona.CIMITERO])  # non è una terra: scartata
+    sindbad.tappata = False
+    ai[Zona.GRIMORIO].append(terra("Island", "U"))
+    mano = len(ai[Zona.MANO])
+    azioni.attiva(p, "AI", sindbad, ab)
+    azioni.passa_priorita(p, "AI")
+    azioni.passa_priorita(p, "B")
+    assert len(ai[Zona.MANO]) == mano + 1  # una terra: resta in mano
+
+
+def test_ai_sindbad_con_field_of_dreams_solo_su_una_terra():
+    from app.ai.politiche import sindbad_conviene
+    p = p_base()
+    ai = p.giocatore("AI")
+    metti(p, "AI", Carta("Field of Dreams", "World Enchantment", "{W}{U}", None, None,
+                         "Players play with the top card of their libraries revealed."))
+    ai[Zona.CAMPO].extend([terra("Island", "U"), terra("Island", "U")])
+    ai[Zona.GRIMORIO].append(Carta("Ancestral Recall", "Instant", "{U}"))
+    assert not sindbad_conviene(p, "AI")  # non si butta via l'Ancestral
+    ai[Zona.GRIMORIO].append(terra("Island", "U"))
+    assert sindbad_conviene(p, "AI")

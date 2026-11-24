@@ -344,6 +344,11 @@ def _risolvi_abilita(partita: Partita, oggetto: OggettoPila) -> None:
         distruggi(partita, partita.risolvi_bersaglio(oggetto.bersagli[0]), f"({fonte.nome})")
     elif ab.tipo == "pesca":
         pesca(partita, chi)
+    elif ab.tipo == "sindbad":  # pesca e mostra: se non è una terra la scarta
+        for c in pesca(partita, chi):
+            _log(partita, chi, "rivela", f"{chi} rivela {c.nome} ({fonte.nome})", carta=c.id)
+            if not c.is_terra:
+                scarta(partita, chi, c, f"({fonte.nome}: non è una terra)")
     elif ab.tipo == "tappa":
         bersaglio = partita.risolvi_bersaglio(oggetto.bersagli[0])
         bersaglio.tappata = True

@@ -784,7 +784,8 @@ def agisci(partita: Partita, nome: str) -> None:
                       and lascia_contromagia(partita, nome, c)]
         if lanciabili and teme_spazzata(partita, nome):
             lanciabili = []  # ha già abbastanza pressione in campo: le altre creature restano in mano
-        lanciabili = [c for c in lanciabili if not tiene_per_la_propria_spazzata(partita, nome, c)]
+        lanciabili = [c for c in lanciabili if not tiene_per_la_propria_spazzata(partita, nome, c)
+                      and not politiche.spreca_il_lotus(partita, nome, c)]
         if lanciabili and dopo_il_combattimento(partita, nome):
             lanciabili = [c for c in lanciabili if c.ha("haste")]
         if not lanciabili:  # poi le aure, sulla sua creatura migliore
@@ -794,7 +795,7 @@ def agisci(partita: Partita, nome: str) -> None:
                     return
         if not lanciabili:  # poi gli altri permanenti (artefatti, incantesimi globali)
             lanciabili = [c for c in mano if c.is_permanente and not c.is_terra and not c.is_aura
-                          and not c.is_creatura and puo_lanciare(partita, nome, c) is None and permanente_utile(partita, nome, c)
+                          and not c.is_creatura and not politiche.spreca_il_lotus(partita, nome, c) and puo_lanciare(partita, nome, c) is None and permanente_utile(partita, nome, c)
                           and lascia_contromagia(partita, nome, c)]
         if lanciabili:
             costo = lambda c: sum(mana.analizza_costo(c.costo).values())

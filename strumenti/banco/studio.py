@@ -13,6 +13,13 @@ from app.engine.zone import Zona
 from banco import MAZZI, carta, BASE
 
 previsione.ABILITATA = False
+# PARAM="nome=valore,nome=valore": parametri cambiati solo per chi gioca il mazzo studiato
+import ast as _ast, os as _os
+from app.ai import parametri as _par
+_BASE = dict(_par.P)
+_MIEI = dict(_BASE)
+for _kv in filter(None, _os.environ.get("PARAM", "").split(",")):
+    _k, _v = _kv.split("="); _MIEI[_k] = _ast.literal_eval(_v)
 import os
 if os.environ.get("VECCHIA"):
     import vecchia.avversaria as pilota
@@ -51,12 +58,15 @@ def gioca(mio, contro, seme, io_primo):
         if mulligan.in_corso(p):
             n = next(n for n, s in p.mulligan.items() if not s.finito)
             prima = p.mulligan[n].fatti
+            _par.P = _MIEI if n == "Studio" else _BASE
             (pilota if n == "Studio" else avversaria).decidi_mulligan(p, n)
             mull += n == "Studio" and p.mulligan.get(n) is not None and p.mulligan[n].fatti > prima
         elif p.scelta:
-            n = p.scelta.giocatore; (pilota if n == "Studio" else avversaria).decidi_scelta(p, n)
+            n = p.scelta.giocatore; _par.P = _MIEI if n == "Studio" else _BASE
+            (pilota if n == "Studio" else avversaria).decidi_scelta(p, n)
         else:
-            n = p.giocatore_con_priorita.nome; (pilota if n == "Studio" else avversaria).agisci(p, n)
+            n = p.giocatore_con_priorita.nome; _par.P = _MIEI if n == "Studio" else _BASE
+            (pilota if n == "Studio" else avversaria).agisci(p, n)
     else:
         p.vincitore = max(p.giocatori, key=lambda g: g.vita).nome
     ev = p.registro.eventi
@@ -79,7 +89,9 @@ def main():
     rng = random.Random(7)
     totale = Counter(); vittorie = Counter(); turni = []; come = Counter(); in_vittoria = Counter()
     in_sconfitta = Counter(); partite_v = partite_s = 0; mulligan_fatti = 0
-    for contro in MAZZI:
+    import os
+    avversari = [m for m in MAZZI if not os.environ.get("CONTRO") or m in os.environ["CONTRO"].split(",")]
+    for contro in avversari:
         for i in range(n):
             vinta, turno, fine, giocate, mull = gioca(mio, contro, rng.randrange(10**6), i % 2 == 0)
             totale[contro] += 1; vittorie[contro] += vinta; turni.append(turno); come[(vinta, fine)] += 1
@@ -88,7 +100,7 @@ def main():
                 in_vittoria.update(set(giocate)); partite_v += 1
             else:
                 in_sconfitta.update(set(giocate)); partite_s += 1
-    print("vittorie:", {k: f"{vittorie[k]}/{totale[k]} ({100*vittorie[k]//totale[k]}%)" for k in MAZZI})
+    print("vittorie:", {k: f"{vittorie[k]}/{totale[k]} ({100*vittorie[k]//totale[k]}%)" for k in avversari})
     print(f"turno medio di fine: {sum(turni)/len(turni):.1f}")
     print("come finisce:", {("vinta" if v else "persa") + " per " + f: q for (v, f), q in come.items()})
     print(f"mulligan: {mulligan_fatti} su {sum(totale.values())} partite")

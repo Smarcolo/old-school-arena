@@ -205,8 +205,12 @@ def distruggi_permanente(p: Partita, nome: str, carta: Carta):
     candidate = [c for c in avv[Zona.CAMPO] if bersaglio_legale(p, tipo, f"carta:{c.id}", carta)]
     if not candidate:
         return None
-    # prima il permanente con cui l'avversario vince o pesca (Underworld Dreams, Ivory Tower, Mirror Universe...)
-    return [f"carta:{max(candidate, key=lambda c: (pericolo(c), valore_carta(c))).id}"], 0
+    # prima il permanente con cui l'avversario vince o pesca (Underworld Dreams, Ivory Tower, Mirror Universe...);
+    # su un bersaglio da poco (un Mox) si aspetta: contro Robots il Disenchant serve per Triskelion (studio Dreams)
+    migliore = max(candidate, key=lambda c: (pericolo(c), valore_carta(c)))
+    if pericolo(migliore) < parametri.P["disenchant_pericolo"] and len(p.giocatore(nome)[Zona.MANO]) < 7:
+        return None
+    return [f"carta:{migliore.id}"], 0
 
 
 def _sogni_miei(p: Partita, nome: str) -> int:
@@ -510,6 +514,23 @@ POLITICHE = {
 }
 
 
+def spreca_il_lotus(p: Partita, nome: str, carta: Carta, bersagli: list | None = None, x: int = 0) -> bool:
+    """Lanciare questa carta costringerebbe a sacrificare Black Lotus per una carta che non lo vale (studio del mazzo
+    Dreams: Lotus sacrificato al primo turno per un Millstone, due mana persi). Il Lotus si spende per le carte
+    migliori, le contromagie e le carte da almeno `lotus_costo_min` mana."""
+    from app.engine.validazione import costo_di_lancio, fonti_di_mana
+    fonti = fonti_di_mana(p, nome)
+    if not any(f.sacrifica for f in fonti):
+        return False
+    costo = costo_di_lancio(carta, x, len(bersagli or []))
+    senza = [f for f in fonti if not f.sacrifica]
+    if mana.piano_pagamento(p.giocatore(nome).riserva, senza, costo) is not None:
+        return False  # si paga anche senza
+    importante = (carta.nome in CARTE_MIGLIORI or carta.nome in ("Counterspell", "Mana Drain")
+                  or mana.valore(carta.costo) + x >= parametri.P["lotus_costo_min"])
+    return not importante
+
+
 def scegli_magia(p: Partita, nome: str):
     """La prima magia della mano che una politica vuole lanciare adesso: (carta, bersagli, x) o None."""
     for carta in list(p.giocatore(nome)[Zona.MANO]):
@@ -517,6 +538,8 @@ def scegli_magia(p: Partita, nome: str):
         if politica is None or puo_lanciare(p, nome, carta) is not None:
             continue
         scelta = politica(p, nome, carta)
+        if scelta and spreca_il_lotus(p, nome, carta, scelta[0], scelta[1]):
+            continue
         if scelta and puo_lanciare(p, nome, carta, scelta[0], scelta[1]) is None:
             return carta, scelta[0], scelta[1]
     return None
@@ -702,6 +725,19 @@ def _maze_of_ith(p: Partita, nome: str):
     return None
 
 
+def sindbad_conviene(p: Partita, nome: str) -> bool:
+    """Sindbad (pesca: se non è una terra la scarta) alla fine del turno avversario, quando non serve più per
+    bloccare. Con Field of Dreams la cima è scoperta: lo si usa se è una terra (carta in più) o una carta che non
+    serve (la si toglie di mezzo), mai su una magia buona."""
+    g = p.giocatore(nome)
+    if not g[Zona.GRIMORIO] or len(g[Zona.GRIMORIO]) <= 5:
+        return False  # niente pescate a grimorio quasi vuoto (Millstone avversario)
+    if _cima_rivelata(p):
+        cima = g[Zona.GRIMORIO][-1]
+        return cima.is_terra or not _carta_utile(p, nome, cima)
+    return True
+
+
 def scegli_abilita(p: Partita, nome: str):
     """Abilità di utilità: Strip Mine sulla terra che conviene togliere (terra_da_distruggere), Library of Alexandria e Jayemdae Tome a fine turno
     avversario, Icy Manipulator sulla creatura migliore avversaria nel suo mantenimento."""
@@ -721,6 +757,8 @@ def scegli_abilita(p: Partita, nome: str):
                 if terra := terra_da_distruggere(p, nome, c, minimo=parametri.P["strip_minimo"]):
                     return c, ab, [f"carta:{terra.id}"]
             if ab.tipo == "pesca" and _fine_turno_avversario(p, nome):
+                return c, ab, []
+            if ab.tipo == "sindbad" and _fine_turno_avversario(p, nome) and sindbad_conviene(p, nome):
                 return c, ab, []
             if ab.tipo == "macina" and _fine_turno_avversario(p, nome):  # Millstone
                 if (chi := bersaglio_millstone(p, nome)) is not None:

@@ -117,5 +117,7 @@
   {"nome": "Millstone", "tipo": "Artifact", "costo": "{2}", "testo": "{2}, {T}: Target player mills two cards."},
   {"nome": "Fellwar Stone", "tipo": "Artifact", "costo": "{2}", "testo": "{T}: Add one mana of any color that a land an opponent controls could produce."},
   {"nome": "Chaos Orb", "tipo": "Artifact", "costo": "{2}", "testo": "{1}, {T}: If Chaos Orb is on the battlefield, flip Chaos Orb onto the battlefield from a height of at least one foot. Destroy each nontoken permanent touched by Chaos Orb. Then destroy Chaos Orb."},
-  {"nome": "Mirror Universe", "tipo": "Artifact", "costo": "{6}", "testo": "{T}, Sacrifice Mirror Universe: Exchange life totals with target opponent. Activate only during your upkeep."}
+  {"nome": "Mirror Universe", "tipo": "Artifact", "costo": "{6}", "testo": "{T}, Sacrifice Mirror Universe: Exchange life totals with target opponent. Activate only during your upkeep."},
+  {"nome": "Maze of Ith", "tipo": "Land", "costo": "", "testo": "{T}: Untap target attacking creature. Prevent all combat damage that would be dealt to and dealt by it this turn."},
+  {"nome": "Sindbad", "tipo": "Creature — Human", "costo": "{1}{U}", "forza": 1, "costituzione": 1, "testo": "{T}: Draw a card and reveal it. If it isn't a land card, discard it."}
 ]

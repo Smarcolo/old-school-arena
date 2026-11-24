@@ -39,5 +39,6 @@ Sideboard
 2 Serra Angel
 4 Juzám Djinn
 4 Erhnam Djinn
-3 Red Elemental Blast
+2 Swords to Plowshares
 2 Ivory Tower
+1 Armageddon

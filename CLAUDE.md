@@ -170,6 +170,9 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   2000 partite per versione (semi 7, 11, 13). Armageddon «da prigione» (`politiche.armageddon_prigione`, idea di Marco:
   mana dagli artefatti ≥ `armageddon_artefatti` e più dell'avversario) provato: alla pari. Sideboard v2: −2 Field
   +2 Serra contro The Deck/Zoo/Robots; contro Nero −4 Millstone −2 Field −2 Sylvan +4 Erhnam +4 Juzám.
+  Side v2 ottimizzata (seme 21, 200 partite per prova): 2 Serra, 4 Juzám, 4 Erhnam, 2 Swords, 2 Ivory Tower,
+  1 Armageddon. The Deck/Robots solo +2 Serra (81%, 64%); Zoo +2 Serra +2 Swords (70%); Nero trasformazione +2
+  Swords (48%, base 40%). Peggiorano: Shatter/Disenchant contro Robots, Sindbad contro The Deck, Earthquake contro Zoo.
 - Regia: con Field of Dreams in campo e Millstone pronto l'umano si ferma in ogni mantenimento
   (`millstone_con_cima_scoperta`); nel tavolo i pulsanti «Macina l'avversaria» / «Macina il tuo grimorio».
 - Previsione (`ai/previsione.py`): nei momenti importanti l'AI confronta le alternative giocandole su copie della

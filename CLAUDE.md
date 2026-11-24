@@ -143,6 +143,15 @@ contro un'avversaria AI, con un giudice che risponde sulle regole e comandi scri
   Banco (`strumenti/banco/banco.py N`, prima `sh strumenti/banco/vecchia.sh <commit>`; 4 mazzi di carte_base, previsione spenta, posti scambiati) contro la versione
   2026.11.14-5: 49,75% su 4000 partite = alla pari (contro sé stessa queste malizie non contano; servono contro
   l'umano). Con Wrath in mano NON tiene le creature: The Deck teneva le Serra Angel per sempre (-6%).
+- Parametri (`ai/parametri.py`, `parametri.P`): i numeri delle decisioni (Bolt in faccia, Balance, Strip Mine, Chaos
+  Orb, mulligan, scambi, Wrath, quando tenere {U}{U}). Allenamento dall'esperienza: `strumenti/banco/allena.py N
+  nome=valore` (l'AI contro sé stessa con un parametro cambiato, posti scambiati, SEME per altri semi) e
+  `strumenti/banco/osserva.py N` (errori ricorrenti: passa con carte lanciabili, non attacca senza bloccanti, muore
+  con carte lanciabili in mano) e `guarda.py mazzoA mazzoB seme` (partita turno per turno). Risultati 2026-11-24:
+  quasi tutti i numeri sono già al punto giusto (49-51%); `tieni_uu_solo_con_minaccia` = True (prima sviluppa una
+  minaccia, poi tiene Counterspell per proteggerla) vince il 51,5% su 8000 partite. Wrath anche «urgente» (vita ≤ 8
+  o colpo letale in arrivo) senza effetto misurabile, tenuto perché lo dice la wiki. Contro la versione
+  2026.11.14-5 (commit ac94de0): 52,1% su 4000 partite. Le ultime varianti provate sono tutte alla pari.
 - Maestro (`ai/maestro.py`, `/api/partite/{id}/maestro`, pulsante «🥋 Maestro» nel tavolo): gioca una mossa per l'umano
   su una copia (carte nascoste rimescolate, seme proprio: non tocca `partita.rng`) e la spiega con le regole dell'AI.
 - Studio di un mazzo (`strumenti/banco/studio.py mazzo.txt N`, rivedi.py, mani.py, debug.py): fa giocare il mazzo

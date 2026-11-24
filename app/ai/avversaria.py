@@ -11,7 +11,7 @@ Priorità delle scelte:
 6. Nella fase finale dell'avversario: abilità di danno a {T} rimaste stappate sull'avversario.
 7. Altrimenti passa.
 """
-from app.ai import politiche, previsione
+from app.ai import parametri, politiche, previsione
 from app.engine import azioni, combattimento, mana
 from app.engine.abilita import analizza_abilita
 from app.engine.inneschi import analizza_inneschi
@@ -173,7 +173,8 @@ def bersaglio_bolt(partita: Partita, nome: str, bolt: Carta | None = None) -> st
         fine_turno = partita.fase == Fase.FINALE and not partita.pila
         return f"giocatore:{avversario.nome}" if fine_turno and poche_creature(partita, avversario.nome) else None
     if (not partita.pila and partita.giocatore_attivo.nome == nome and partita.fase in FASI_PRINCIPALI
-            and (avversario.vita <= 10 or len(partita.giocatore(nome)[Zona.MANO]) >= 6)):
+            and (avversario.vita <= parametri.P["bolt_faccia_vita"]
+                 or len(partita.giocatore(nome)[Zona.MANO]) >= parametri.P["bolt_faccia_mano"])):
         # in faccia solo verso la fine (o con la mano piena): prima conviene tenerlo per le creature
         return f"giocatore:{avversario.nome}"
     return None
@@ -191,8 +192,11 @@ CONTROMAGIE = ("Counterspell", "Mana Drain")
 def lascia_contromagia(partita: Partita, nome: str, carta: Carta) -> bool:
     """Con una contromagia in mano (e l'avversario con carte in mano) non spende il mana che serve a lanciarla."""
     g = partita.giocatore(nome)
-    if not any(c.nome in CONTROMAGIE for c in g[Zona.MANO]) or len(partita.avversario_di(nome)[Zona.MANO]) < 2:
+    if (not any(c.nome in CONTROMAGIE for c in g[Zona.MANO])
+            or len(partita.avversario_di(nome)[Zona.MANO]) < parametri.P["tieni_uu_mano_avversaria"]):
         return True
+    if parametri.P["tieni_uu_solo_con_minaccia"] and not any(c.is_creatura for c in g[Zona.CAMPO]):
+        return True  # prima si mette in campo una minaccia, poi la si protegge con la contromagia
     if len(g[Zona.MANO]) > 7:  # altrimenti a fine turno scarterebbe: meglio giocare le carte
         return True
     from app.engine.validazione import fonti_di_mana
@@ -275,7 +279,8 @@ def decidi_mulligan(partita: Partita, nome: str) -> None:
         # Mox, Sol Ring e Fellwar Stone contano come fonti (mtg.wiki, Mulligan), ma serve almeno una terra vera
         fonti = terre + sum(1 for c in mano if not c.is_terra and "Artifact" in c.tipo
                             and (mana.mana_prodotto(c) or mana.da_terre_avversarie(c)))
-        if (terre >= 1 and 2 <= fonti and terre <= 5 and not senza_colori(mano)) or stato.fatti >= 2:
+        if (terre >= 1 and 2 <= fonti and terre <= parametri.P["mulligan_terre_max"] and not senza_colori(mano)) \
+                or stato.fatti >= 2:
             mulligan.tieni(partita, nome)
         else:
             mulligan.fai_mulligan(partita, nome)
@@ -370,7 +375,7 @@ def teme_spazzata(partita: Partita, nome: str) -> bool:
     con già abbastanza pressione (2+ creature e 5+ di forza), tiene le altre in mano per ricostruire dopo."""
     avv = partita.avversario_di(nome).nome
     mie = [c for c in partita.giocatore(nome)[Zona.CAMPO] if c.is_creatura]
-    if len(mie) < 2 or sum(c.forza_attuale for c in mie) < 5:
+    if len(mie) < parametri.P["spazzata_creature"] or sum(c.forza_attuale for c in mie) < parametri.P["spazzata_forza"]:
         return False
     if partita.avversario_di(nome).vita <= sum(c.forza_attuale for c in mie):
         return False  # sta per vincere: niente prudenza
@@ -467,6 +472,9 @@ def scegli_attaccanti(partita: Partita, nome: str) -> list[Carta]:
         possibili += [b for b in nascosti if not a.ha("flying") and not a.protetta_da(b)]
         uccidono = [b for b in possibili if b.forza_attuale >= a.costituzione_attuale - a.danni and not a.protetta_da(b)]
         cattivo_scambio = any(a.forza_attuale < b.costituzione_attuale - b.danni or b.protetta_da(a) for b in uccidono)
+        alla_pari = any(a.forza_attuale >= b.costituzione_attuale - b.danni for b in uccidono)
+        if parametri.P["scambi_pari"] == "vantaggio" and alla_pari and not in_vantaggio:
+            cattivo_scambio = True
         if _muore_a_fine_turno(a) or not cattivo_scambio:
             scelti.append(a)
     # chi ha cautela non si tappa: resta un bloccante anche se attacca
@@ -511,7 +519,8 @@ def scegli_bloccanti(partita: Partita, nome: str) -> list[tuple[Carta, Carta]]:
                       if vita(b) > a.forza_attuale or b.protetta_da(a) or _potra_rigenerare(partita, nome, b)]
         scelta = (next((b for b in uccide if b in sopravvive), None)
                   or (min(sopravvive, key=lambda b: b.forza_attuale) if sopravvive else None)
-                  or next((b for b in uccide if b.forza_attuale <= a.forza_attuale), None))
+                  or (next((b for b in uccide if b.forza_attuale <= a.forza_attuale), None)
+                      if parametri.P["blocchi_scambio"] else None))
         if scelta:
             blocchi.append((scelta, a))
             disponibili.remove(scelta)
@@ -523,7 +532,7 @@ def scegli_bloccanti(partita: Partita, nome: str) -> list[tuple[Carta, Carta]]:
             disponibili.remove(folk)
     bloccati = {a.id for _, a in blocchi}
     liberi = [a for a in attaccanti if a.id not in bloccati]
-    if sum(a.forza_attuale for a in liberi) >= partita.giocatore(nome).vita:
+    if sum(a.forza_attuale for a in liberi) >= partita.giocatore(nome).vita - parametri.P["blocco_disperato_margine"]:
         for a in liberi:
             if not legali(a):
                 continue

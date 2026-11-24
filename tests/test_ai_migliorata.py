@@ -43,7 +43,9 @@ def test_tiene_mana_per_la_contromagia():
     orso.costo = "{1}"
     assert lascia_contromagia(p, "AI", orso)  # con 3 terre: {1} + {U}{U} si può
     gigante = Carta("Gigante", "Creature — Giant", "{3}", 3, 3)
-    assert not lascia_contromagia(p, "AI", gigante)  # {3} + {U}{U} = 5 > 3
+    assert lascia_contromagia(p, "AI", gigante)  # senza creature in campo prima sviluppa (banco: 51,5%)
+    ai[Zona.CAMPO].append(cr("Guardia", 2, 2))
+    assert not lascia_contromagia(p, "AI", gigante)  # con una minaccia da proteggere: {3} + {U}{U} = 5 > 3
     p.giocatore("B")[Zona.MANO][:] = []
     assert lascia_contromagia(p, "AI", gigante)  # l'avversario non ha carte: niente da neutralizzare
 
@@ -481,3 +483,21 @@ def test_niente_contromagia_su_un_bolt_in_faccia_a_vita_piena():
     assert contromagia(p, "AI", contro) is None  # 3 danni a 20 vita: si tiene per Ball Lightning
     ai.vita = 5
     assert contromagia(p, "AI", contro) is not None
+
+
+def test_i_parametri_guidano_le_decisioni():
+    """I numeri di app/ai/parametri.py si possono cambiare (allenamento al banco) e l'AI li usa davvero."""
+    from app.ai import parametri
+    from app.ai.avversaria import bersaglio_bolt
+    p = p_base()
+    ai, b = p.giocatore("AI"), p.giocatore("B")
+    ai[Zona.CAMPO][:] = [carta("Mountain")]
+    ai[Zona.MANO][:] = [carta("Lightning Bolt")]
+    b.vita = 12
+    assert bersaglio_bolt(p, "AI") is None  # 12 > 10: il Bolt si tiene
+    vecchi = dict(parametri.P)
+    try:
+        parametri.P = {**vecchi, "bolt_faccia_vita": 12}
+        assert bersaglio_bolt(p, "AI") == "giocatore:B"
+    finally:
+        parametri.P = vecchi

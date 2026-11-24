@@ -1,5 +1,6 @@
 """Quando e su cosa l'avversaria lancia le magie (e usa le abilità) diverse da creature, terre e Lightning Bolt.
 Ogni politica riceve (partita, nome, carta) e ritorna (bersagli, x) se vuole lanciarla adesso, altrimenti None."""
+from app.ai import parametri
 from app.engine import mana
 from app.engine.abilita import analizza_abilita
 from app.engine.carte_implementate import CARTE_MIGLIORI, valore_carta
@@ -124,7 +125,7 @@ def rimozione(p: Partita, nome: str, carta: Carta):
         attaccanti = [t[1] for t in in_campo if t and bersaglio_legale(p, tipo, f"carta:{t[1].id}", carta)]
         if attaccanti:
             return [f"carta:{max(attaccanti, key=lambda c: c.forza_attuale).id}"], 0
-    if _mia_principale(p, nome) and (c := _migliore_creatura_avversaria(p, nome, carta, tipo)) and c.forza_attuale >= 2:
+    if _mia_principale(p, nome) and (c := _migliore_creatura_avversaria(p, nome, carta, tipo)) and c.forza_attuale >= parametri.P["rimozione_forza"]:
         return [f"carta:{c.id}"], 0
     return None
 
@@ -345,8 +346,16 @@ def spazza(p: Partita, nome: str, carta: Carta):
         return None
     avv = p.avversario_di(nome).nome
     mie, sue = _forza_totale(p, nome), _forza_totale(p, avv)
-    if carta.nome == "Wrath of God" and sue >= mie + 4 and len([c for c in p.giocatore(avv)[Zona.CAMPO] if c.is_creatura]) >= 2:
-        return [], 0
+    if carta.nome == "Wrath of God":
+        loro = len([c for c in p.giocatore(avv)[Zona.CAMPO] if c.is_creatura])
+        if sue >= mie + parametri.P["wrath_differenza"] and loro >= 2:
+            return [], 0
+        # in pericolo non si aspetta il momento ideale (mtg.wiki, Card advantage): vita bassa o colpo letale in arrivo,
+        # e l'avversario ha più forza in campo, anche con una creatura sola (l'osservatore del banco: The Deck perdeva
+        # 78 partite su 300 con Wrath of God in mano)
+        vita = p.giocatore(nome).vita
+        if loro and sue > mie and (vita <= parametri.P["wrath_vita_urgente"] or sue >= vita):
+            return [], 0
     if carta.nome == "Armageddon" and mie >= 5 and sue == 0:
         return [], 0
     return None
@@ -445,7 +454,7 @@ def balance(p: Partita, nome: str, carta: Carta):
     sulla propria terra (strip_per_balance), aspetta: Balance arriva subito dopo."""
     if not _mia_principale(p, nome) or strip_per_balance(p, nome):
         return None
-    return ([], 0) if vantaggio_balance(p, nome) >= 3 else None
+    return ([], 0) if vantaggio_balance(p, nome) >= parametri.P["balance_vantaggio"] else None
 
 
 def terremoto(p: Partita, nome: str, carta: Carta):
@@ -548,7 +557,7 @@ def _bersaglio_chaos_orb(p: Partita, nome: str, orb: Carta) -> Carta | None:
         return None
     if not (_mia_principale(p, nome) or _fine_turno_avversario(p, nome)):
         return None
-    candidati = [t for t in avv[Zona.CAMPO] if legale(t) and pericolo(t) >= 6]
+    candidati = [t for t in avv[Zona.CAMPO] if legale(t) and pericolo(t) >= parametri.P["orb_pericolo"]]
     return max(candidati, key=lambda t: (pericolo(t), valore_carta(t))) if candidati else None
 
 
@@ -663,7 +672,7 @@ def _sacrificio_in_combattimento(p: Partita, nome: str):
             continue
         if c.id in in_combattimento and not p.pila:
             return c, ab, [f"carta:{bersaglio.id}"]
-        if (_mia_principale(p, nome) or _fine_turno_avversario(p, nome)) and pericolo(bersaglio) >= 6:
+        if (_mia_principale(p, nome) or _fine_turno_avversario(p, nome)) and pericolo(bersaglio) >= parametri.P["orb_pericolo"]:
             return c, ab, [f"carta:{bersaglio.id}"]
     return None
 
@@ -709,7 +718,7 @@ def scegli_abilita(p: Partita, nome: str):
                 continue
             if ab.tipo == "distruggi" and ab.bersaglio == "terra" and _mia_principale(p, nome):
                 # Strip Mine costa una terra anche a lei: solo per un bersaglio che vale (Maze, ultima fonte, Library)
-                if terra := terra_da_distruggere(p, nome, c, minimo=6):
+                if terra := terra_da_distruggere(p, nome, c, minimo=parametri.P["strip_minimo"]):
                     return c, ab, [f"carta:{terra.id}"]
             if ab.tipo == "pesca" and _fine_turno_avversario(p, nome):
                 return c, ab, []
